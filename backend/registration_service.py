@@ -46,7 +46,7 @@ class RegistrationService:
         # Competition
         if self.step == "competition":
 
-            self.data["competition"] = message
+            self.data["competition"] = message.title()
 
             self.step = "name"
 
@@ -133,6 +133,7 @@ class RegistrationService:
             save_registration(
 
                 self.data["name"],
+                self.data["block"],
                 self.data["flat_number"],
                 self.data["mobile"],
                 self.data["age"],
