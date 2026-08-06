@@ -1,11 +1,28 @@
-console.log("App.js loaded");
-
-window.addEventListener("beforeunload", () => {
-    console.log("PAGE IS RELOADING");
-});
 const sendButton = document.getElementById("send-btn");
 const userInput = document.getElementById("user-input");
 const chatContainer = document.getElementById("chat-container");
+// ======================================
+// Quick Registration Modal
+// ======================================
+
+const quickRegisterCard = document.getElementById("quick-register-card");
+
+const registrationModal = document.getElementById("registration-modal");
+
+const closeModal = document.getElementById("close-modal");
+
+const registerSubmitBtn = document.getElementById("register-submit");
+
+const competitionField = document.getElementById("competition");
+const nameField = document.getElementById("reg-name");
+const blockField = document.getElementById("reg-block");
+const flatField = document.getElementById("reg-flat");
+const mobileField = document.getElementById("reg-mobile");
+const ageField = document.getElementById("reg-age");
+
+// ======================================
+// Send Button
+// ======================================
 
 sendButton.addEventListener("click", function () {
 
@@ -24,6 +41,119 @@ userInput.addEventListener("keydown", function (event) {
         if (!sendButton.disabled) {
             sendMessage();
         }
+
+    }
+
+});
+
+// ======================================
+// Quick Registration Popup
+// ======================================
+
+quickRegisterCard.addEventListener("click", function () {
+
+    registrationModal.style.display = "block";
+
+});
+
+closeModal.addEventListener("click", function () {
+
+    registrationModal.style.display = "none";
+
+});
+
+window.addEventListener("click", function (event) {
+
+    if (event.target === registrationModal) {
+
+        registrationModal.style.display = "none";
+
+    }
+
+});
+
+registerSubmitBtn.addEventListener("click", async function () {
+
+    const registrationData = {
+        competition: competitionField.value,
+        name: nameField.value.trim(),
+        block: blockField.value,
+        flat: flatField.value.trim(),
+        mobile: mobileField.value.trim(),
+        age: ageField.value.trim()
+    };
+
+    // -----------------------------
+    // Basic validation
+    // -----------------------------
+    if (registrationData.name === "") {
+        alert("Please enter your name.");
+        nameField.focus();
+        return;
+    }
+
+    if (registrationData.flat === "") {
+        alert("Please enter your flat number.");
+        flatField.focus();
+        return;
+    }
+
+    if (!/^[0-9]{10}$/.test(registrationData.mobile)) {
+        alert("Please enter a valid 10-digit mobile number.");
+        mobileField.focus();
+        return;
+    }
+
+    if (registrationData.age === "" || Number(registrationData.age) <= 0) {
+        alert("Please enter a valid age.");
+        ageField.focus();
+        return;
+    }
+
+    registerSubmitBtn.disabled = true;
+    registerSubmitBtn.innerHTML = "Registering...";
+
+    try {
+
+        const response = await fetch("http://127.0.0.1:8000/register", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(registrationData)
+
+        });
+
+        if (!response.ok) {
+            throw new Error("Registration failed");
+        }
+
+        alert("✅ Registration successful for " + registrationData.name + "!");
+
+        // Reset form and close modal
+        nameField.value = "";
+        flatField.value = "";
+        mobileField.value = "";
+        ageField.value = "";
+        competitionField.selectedIndex = 0;
+        blockField.selectedIndex = 0;
+
+        registrationModal.style.display = "none";
+
+    }
+    catch (error) {
+
+        console.error(error);
+        alert("⚠️ Unable to submit registration. Please check your connection and try again.");
+
+    }
+    finally {
+
+        registerSubmitBtn.disabled = false;
+        registerSubmitBtn.innerHTML = "Register";
 
     }
 

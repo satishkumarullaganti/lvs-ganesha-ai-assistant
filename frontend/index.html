@@ -83,9 +83,9 @@
 
             <div class="feature-grid">
 
-                <div class="feature-card" id="register">
+                <div class="feature-card" id="quick-register-card">
                     <div class="card-icon">📝</div>
-                    <h3>Register</h3>
+                    <h3>Quick Register</h3>
                     <p>Competitions & Events</p>
                 </div>
 
@@ -122,6 +122,8 @@
             </div>
 
         </section>
+
+
 
         <!-- Chat Area -->
         <section id="chat-section">
@@ -191,6 +193,74 @@
 
     </footer>
 
+    <!-- ====================================== -->
+    <!-- Quick Registration Modal -->
+    <!-- ====================================== -->
+
+    <div id="registration-modal" class="modal">
+
+        <div class="modal-content">
+
+            <span id="close-modal" class="close">&times;</span>
+
+            <h2>📝 Quick Registration</h2>
+
+            <label>Competition</label>
+
+            <select id="competition">
+                <option>Drawing</option>
+                <option>Chess</option>
+                <option>Carrom</option>
+                <option>Tambola</option>
+                <option>Musical Chairs</option>
+            </select>
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                id="reg-name"
+                placeholder="Enter Name">
+
+            <label>Block</label>
+
+            <select id="reg-block">
+                <option>North</option>
+                <option>South</option>
+            </select>
+
+            <label>Flat Number</label>
+
+            <input
+                type="text"
+                id="reg-flat"
+                placeholder="Flat Number">
+
+            <label>Mobile</label>
+
+            <input
+                type="text"
+                id="reg-mobile"
+                placeholder="Mobile Number">
+
+            <label>Age</label>
+
+            <input
+                type="number"
+                id="reg-age"
+                placeholder="Age">
+
+            <button id="register-submit">
+
+                Register
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- app.js loaded last so all elements above already exist in the DOM -->
     <script src="js/app.js"></script>
 
 </body>
