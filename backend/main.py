@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from pydantic import BaseModel
 from backend.models import ChatRequest
 from backend.chat_service import get_ai_response
 from backend.registration_service import registration   
@@ -61,6 +61,39 @@ def about():
         "developer": "Satish Kumar Ullaganti"
     }
 
+
+# ============================================
+# Registration Model         
+# ============================================
+class RegistrationRequest(BaseModel):
+    competition: str
+    name: str
+    block: str
+    flat: str
+    mobile: str
+    age: str
+
+# ============================================
+# Register API               
+# ============================================
+
+@app.post("/register")
+def register(data: RegistrationRequest):
+
+    save_registration(
+        name=data.name,
+        block=data.block,
+        flat_number=data.flat,
+        mobile=data.mobile,
+         age=int(data.age),  
+        competition=data.competition
+    )
+
+    return {
+        "status": "success",
+        "message": f"Registration successful for {data.name}"
+    }
+
 # ============================================
 # Chat API
 # ============================================
@@ -104,7 +137,7 @@ def chat(request: ChatRequest):
 # ============================================
 
 @app.get("/registrations")
-def registrations():
+def registrations():    
 
     rows = get_registrations()
 

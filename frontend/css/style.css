@@ -642,6 +642,8 @@ width:100%;
 
     background:rgba(0,0,0,0.5);
 
+    overflow-y:auto; 
+
 }
 
 .modal-content{
@@ -650,11 +652,17 @@ width:100%;
 
     width:420px;
 
+    max-width:90%; 
+
     margin:60px auto;
 
     padding:25px;
 
     border-radius:12px;
+
+    max-height:80vh;
+
+    overflow-y:auto; 
 
 }
 
