@@ -1,0 +1,622 @@
+    /* ==========================================
+   RESET
+========================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+/* ==========================================
+   BODY
+========================================== */
+
+body{
+
+    font-family: Arial, Helvetica, sans-serif;
+
+    background:#FFF8E8;
+
+    color:#333;
+
+}
+
+/* ==========================================
+   HEADER
+========================================== */
+
+header{
+
+    background:linear-gradient(135deg,#ff9800,#ff6f00);
+
+    color:white;
+
+    text-align:center;
+
+    padding:20px;
+
+    box-shadow:0 4px 12px rgba(0,0,0,.15);
+
+}
+
+header h1{
+
+    font-size:42px;
+
+    margin-bottom:8px;
+
+}
+
+header p{
+
+    font-size:22px;
+
+}
+
+/* ==========================================
+   MAIN
+========================================== */
+
+main{
+
+    max-width:1200px;
+
+    margin:auto;
+
+    padding:40px 20px;
+
+}
+
+/* ==========================================
+   HERO SECTION
+========================================== */
+
+#hero{
+
+    text-align:center;
+
+}
+
+.app-logo{
+
+    width:90px;
+
+    margin-bottom:20px;
+
+}
+
+.hero-tagline{
+
+    color:#ff9800;
+
+    font-size:26px;
+
+    font-weight:bold;
+
+    margin-bottom:35px;
+
+}
+
+.society-logo{
+
+    width:180px;
+
+    margin-bottom:25px;
+
+}
+
+.ganesha-image{
+
+    width:420px;
+
+    max-width:100%;
+
+    border-radius:20px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.15);
+
+    margin-bottom:30px;
+
+}
+
+#hero h2{
+
+    color:#d35400;
+
+    font-size:42px;
+
+    margin-bottom:15px;
+
+}
+
+#hero h3{
+
+    font-size:34px;
+
+    margin-bottom:25px;
+
+}
+
+.hero-description{
+
+    max-width:800px;
+
+    margin:auto;
+
+    font-size:20px;
+
+    line-height:1.8;
+
+    color:#555;
+
+    margin-bottom:50px;
+
+}
+
+/* ==========================================
+   FEATURE CARDS
+========================================== */
+
+.section-title{
+
+    text-align:center;
+
+    font-size:36px;
+
+    color:#d35400;
+
+    margin-bottom:40px;
+
+}
+
+.feature-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+
+    gap:25px;
+
+}
+
+.feature-card{
+
+    background:white;
+
+    border-radius:18px;
+
+    padding:30px;
+
+    text-align:center;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.10);
+
+}
+
+.feature-card:hover{
+
+    transform:translateY(-8px);
+
+    box-shadow:0 18px 35px rgba(255,152,0,.30);
+
+}
+
+.card-icon{
+
+    font-size:50px;
+
+    margin-bottom:15px;
+
+}
+
+.feature-card h3{
+
+    margin-bottom:10px;
+
+}
+
+.feature-card p{
+
+    color:#666;
+
+    line-height:1.5;
+
+}
+
+/* ==========================================
+   CARD COLORS
+========================================== */
+
+#register{
+
+    border-top:6px solid #ff9800;
+
+}
+
+#schedule{
+
+    border-top:6px solid #2196F3;
+
+}
+
+#updates{
+
+    border-top:6px solid #F44336;
+
+}
+
+#volunteer{
+
+    border-top:6px solid #4CAF50;
+
+}
+
+#faq{
+
+    border-top:6px solid #9C27B0;
+
+}
+
+#chat{
+
+    border-top:6px solid #009688;
+
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+footer{
+
+    background:#333;
+
+    color:white;
+
+    text-align:center;
+
+    margin-top:60px;
+
+    padding:30px;
+
+}
+
+footer p{
+
+    margin:8px;
+
+}
+
+/* ==========================================
+   MOBILE
+========================================== */
+
+@media(max-width:768px){
+
+header h1{
+
+font-size:30px;
+
+}
+
+header p{
+
+font-size:18px;
+
+}
+
+.hero-tagline{
+
+font-size:20px;
+
+}
+
+#hero h2{
+
+font-size:30px;
+
+}
+
+#hero h3{
+
+font-size:24px;
+
+}
+
+.hero-description{
+
+font-size:17px;
+
+}
+
+.section-title{
+
+font-size:28px;
+
+}
+
+.ganesha-image{
+
+width:100%;
+
+}
+
+}
+/* ==========================================
+   CHAT SECTION
+========================================== */
+
+#chat-container{
+
+    background:white;
+
+    border-radius:20px;
+
+    padding:25px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.10);
+
+    min-height:250px;
+
+    margin-bottom:25px;
+
+}
+
+.bot-message{
+
+    display:flex;
+
+    gap:18px;
+
+    align-items:flex-start;
+
+}
+
+.avatar{
+
+    width:60px;
+
+    height:60px;
+
+    border-radius:50%;
+
+    background:#ff9800;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    flex-shrink:0;
+
+    overflow:hidden;
+
+}
+
+.avatar img{
+
+    width:42px;
+
+    height:42px;
+
+    object-fit:contain;
+
+}
+
+.message{
+
+    background:#FFF8E8;
+
+    padding:20px;
+
+    border-radius:18px;
+
+    line-height:1.8;
+
+    flex:1;
+
+}
+
+#chat-input-area{
+
+    display:flex;
+
+    gap:15px;
+
+}
+
+#user-input{
+
+    flex:1;
+
+    padding:16px;
+
+    border:2px solid #ddd;
+
+    border-radius:12px;
+
+    font-size:17px;
+
+}
+
+#user-input:focus{
+
+    outline:none;
+
+    border-color:#ff9800;
+
+}
+
+#send-btn{
+
+    background:#ff9800;
+
+    color:white;
+
+    border:none;
+
+    border-radius:12px;
+
+    padding:0 28px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    transition:.3s;
+
+}
+
+#send-btn:hover{
+
+    background:#f57c00;
+
+}
+
+/* ==========================================
+   USER MESSAGE
+========================================== */
+
+.user-message-wrapper{
+
+     display:flex;
+
+    justify-content:flex-end;
+
+    margin:20px 0;
+
+    width:100%;
+
+}
+
+.user-message{
+
+   display:inline-block;
+
+    min-width:80px;
+
+    max-width:75%;
+
+    background:#ff9800;
+
+    color:white;
+
+    padding:15px 20px;
+
+    border-radius:20px 20px 5px 20px;
+
+    font-size:16px;
+
+    line-height:1.6;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.12);
+
+    word-break:break-word;
+
+}
+
+.user-title{
+
+    text-align:right;
+
+    font-weight:bold;
+
+    margin-bottom:8px;
+
+    color:#444;
+
+}
+
+/* ==========================
+   AI TYPING INDICATOR
+========================== */
+
+.typing-box{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:12px;
+
+    margin-top:10px;
+
+}
+
+.typing-text{
+
+    color:#666;
+
+    font-size:15px;
+
+    font-style:italic;
+
+}
+
+.typing-indicator{
+
+    display:flex;
+
+    gap:8px;
+
+}
+
+.typing-dot{
+
+    width:10px;
+
+    height:10px;
+
+    background:#ff9800;
+
+    border-radius:50%;
+
+    animation:typing 1.2s infinite;
+
+}
+
+.typing-dot:nth-child(2){
+
+    animation-delay:.2s;
+
+}
+
+.typing-dot:nth-child(3){
+
+    animation-delay:.4s;
+
+}
+
+@keyframes typing{
+
+    0%{
+
+        opacity:.3;
+
+        transform:translateY(0);
+
+    }
+
+    50%{
+
+        opacity:1;
+
+        transform:translateY(-6px);
+
+    }
+
+    100%{
+
+        opacity:.3;
+
+        transform:translateY(0);
+
+    }
+
+}
