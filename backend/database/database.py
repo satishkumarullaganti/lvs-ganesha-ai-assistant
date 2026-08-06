@@ -53,6 +53,28 @@ def create_tables():
 
     """)
 
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS annaprasada_bookings(
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        coupon_id TEXT NOT NULL UNIQUE,
+
+        name TEXT NOT NULL,
+
+        block TEXT NOT NULL,
+
+        flat_number TEXT NOT NULL,
+
+        members TEXT NOT NULL,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    )
+
+    """)
+
     conn.commit()
 
     conn.close()
@@ -120,6 +142,53 @@ def save_registration(
 
 
 # ============================================
+# Save Annaprasada Booking
+# ============================================
+
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO annaprasada_bookings(
+
+        coupon_id,
+
+        name,
+
+        block,
+
+        flat_number,
+
+        members
+
+    )
+
+    VALUES(?,?,?,?,?)
+
+    """, (
+
+        coupon_id,
+
+        name,
+
+        block,
+
+        flat_number,
+
+        members
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+
+# ============================================
 # Get Registrations
 # ============================================
 
@@ -144,4 +213,3 @@ def get_registrations():
     conn.close()
 
     return rows
-

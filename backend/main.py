@@ -2,12 +2,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
+from fastapi.staticfiles import StaticFiles
 from backend.chat_service import get_ai_response
-from backend.registration_service import registration   
+from backend.registration_service import registration 
+from backend.annaprasada_service import annaprasada_service  
 from backend.database.database import (
     create_tables,
     get_registrations,
-    save_registration
+    save_registration,
+    save_annaprasada_booking 
 )
 
 # ============================================
@@ -18,7 +21,7 @@ app = FastAPI(
     title="LVS Ganesha AI Assistant",
     version="2.0"
 )
-
+app.mount("/static", StaticFiles(directory="static"), name="static") 
 # ============================================
 # Database Initialization
 # ============================================
@@ -85,7 +88,7 @@ def register(data: RegistrationRequest):
         block=data.block,
         flat_number=data.flat,
         mobile=data.mobile,
-         age=int(data.age),  
+        age=int(data.age),
         competition=data.competition
     )
 
@@ -102,6 +105,28 @@ def register(data: RegistrationRequest):
 def chat(request: ChatRequest):
 
     message = request.message.strip()
+
+    # ==========================================
+    # Continue Annaprasada Booking (if active)
+    # ==========================================
+
+    if annaprasada_service.active:
+
+        return {
+            "response": annaprasada_service.process_booking(message)
+        }
+
+    # ==========================================
+    # Start Annaprasada Coupon Booking
+    # ==========================================
+
+    if "annaprasada" in message.lower():
+
+        result = annaprasada_service.check_booking_status()
+
+        return {
+            "response": result["response"]
+        }
 
     # -----------------------------
     # Start Registration
@@ -131,7 +156,6 @@ def chat(request: ChatRequest):
     return {
         "response": reply
     }
-
 # ============================================
 # View Registrations
 # ============================================
@@ -159,4 +183,3 @@ def registrations():
         })
 
     return result
-
