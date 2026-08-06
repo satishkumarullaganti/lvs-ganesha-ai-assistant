@@ -232,7 +232,7 @@ main{
    CARD COLORS
 ========================================== */
 
-#register{
+#quick-register-card{
 
     border-top:6px solid #ff9800;
 
@@ -253,6 +253,18 @@ main{
 #volunteer{
 
     border-top:6px solid #4CAF50;
+
+}
+
+#annaprasada{
+
+    border-top:6px solid #795548;
+
+}
+
+#donation{
+
+    border-top:6px solid #FFC107;
 
 }
 
