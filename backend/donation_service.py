@@ -67,7 +67,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 📷 Or scan the QR code below:
 
-<img src="http://127.0.0.1:8000/{upi_qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
+<img src="/{upi_qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
 
 <br><br>
 
@@ -114,7 +114,7 @@ May Lord Ganesha bless you and your family. 🙏
 
 <br><br>
 
-<a href="http://127.0.0.1:8000/{receipt_path}" target="_blank" style="display:inline-block;background:#ff9800;color:white;padding:10px 20px;border-radius:10px;text-decoration:none;font-size:14px;">📥 Download Receipt (PDF)</a>
+<a href="/{receipt_path}" target="_blank" style="display:inline-block;background:#ff9800;color:white;padding:10px 20px;border-radius:10px;text-decoration:none;font-size:14px;">📥 Download Receipt (PDF)</a>
 """
 
 

@@ -21,3 +21,14 @@ BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)
 
 UPI_ID_GPAY = "lvsganesha@okaxis"
 UPI_ID_PHONEPE = "lvsganesha@ybl"
+
+# ==========================================
+# Public Base URL
+# ==========================================
+# This MUST be your current public ngrok URL, not a local
+# IP or 127.0.0.1 - it gets encoded directly into QR codes,
+# so volunteer/attendee phones on any network can reach it.
+# If your ngrok URL ever changes, update it here only.
+
+PUBLIC_BASE_URL = "https://agency-unwrapped-judicial.ngrok-free.dev"
+

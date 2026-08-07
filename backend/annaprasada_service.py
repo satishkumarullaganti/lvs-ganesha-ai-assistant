@@ -4,7 +4,8 @@ import random
 
 from backend.config import (
     ANNAPRASADA_DATE,
-    BOOKING_OPEN_DATE
+    BOOKING_OPEN_DATE,
+    PUBLIC_BASE_URL
 )
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_annaprasada_booking
@@ -148,7 +149,13 @@ Booking is now OPEN.
                 members=self.booking["members"]
             )
 
-            verify_url = f"http://192.168.0.110:8000/verify/{coupon_id}"
+            # -----------------------------------------------
+            # IMPORTANT: this URL gets encoded INTO the QR
+            # code itself, so it must be the PUBLIC ngrok URL,
+            # not a local IP or 127.0.0.1 - otherwise volunteer
+            # phones on different networks can't reach it.
+            # -----------------------------------------------
+            verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
             qr_path = generate_qr_code(verify_url, coupon_id)
 
             return f"""
@@ -172,10 +179,12 @@ Your Annaprasada Coupon is confirmed.
 
 📱 Show this QR code at the counter:
 
-<img src="http://192.168.0.110:8000/{qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
+<img src="/{qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
 
 🙏 Thank you!
 """
 
 
 annaprasada_service = AnnaprasadaService()
+
+

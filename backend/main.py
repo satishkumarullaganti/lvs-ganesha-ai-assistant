@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
@@ -38,17 +38,25 @@ create_tables()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ============================================
-# Home
+# Volunteer Access Settings
 # ============================================
 
-@app.get("/")
+VOLUNTEER_PIN = "2026"
+VOLUNTEER_COOKIE_NAME = "lvs_volunteer_access"
+VOLUNTEER_COOKIE_VALUE = "granted"
+
+# ============================================
+# Home (API info - moved from "/" to "/api")
+# ============================================
+
+@app.get("/api")
 def home():
 
     return {
@@ -182,11 +190,82 @@ def chat(request: ChatRequest):
     }
 
 # ============================================
+# Volunteer Login (PIN gate)
+# ============================================
+
+@app.get("/volunteer-login", response_class=HTMLResponse)
+def volunteer_login_page():
+
+    return """
+    <div style="font-family:Arial;max-width:340px;margin:60px auto;padding:30px;
+                border:1px solid #ddd;border-radius:10px;text-align:center;">
+        <h2>🙏 Volunteer Access</h2>
+        <p>Enter today's PIN to unlock coupon scanning on this phone.</p>
+        <form method="post" action="/volunteer-login">
+            <input type="password" name="pin" placeholder="Enter PIN"
+                   style="padding:10px;width:80%;font-size:16px;margin-bottom:15px;
+                          border:1px solid #ccc;border-radius:6px;" required>
+            <br>
+            <button type="submit"
+                    style="padding:10px 25px;font-size:16px;background:#4CAF50;
+                           color:white;border:none;border-radius:6px;cursor:pointer;">
+                Unlock
+            </button>
+        </form>
+    </div>
+    """
+
+@app.post("/volunteer-login", response_class=HTMLResponse)
+def volunteer_login_submit(request: Request, pin: str = Form(...)):
+
+    from fastapi.responses import RedirectResponse
+
+    if pin.strip() != VOLUNTEER_PIN:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h2 style="color:#F44336;">❌ Incorrect PIN</h2>
+        <p><a href="/volunteer-login">Try again</a></p>
+        </div>
+        """
+
+    response = HTMLResponse("""
+    <div style="font-family:Arial;text-align:center;padding:60px;">
+    <h2 style="color:#4CAF50;">✅ Access Granted</h2>
+    <p>This phone can now scan and verify Annaprasada coupons.</p>
+    <p>You can close this page and start scanning QR codes.</p>
+    </div>
+    """)
+
+    response.set_cookie(
+        key=VOLUNTEER_COOKIE_NAME,
+        value=VOLUNTEER_COOKIE_VALUE,
+        max_age=60 * 60 * 24,  # 24 hours - plenty for a one-day event
+        httponly=True,
+        samesite="lax"
+    )
+
+    return response
+
+# ============================================
 # Verify Annaprasada Coupon (Volunteer Scan)
 # ============================================
 
 @app.get("/verify/{coupon_id}", response_class=HTMLResponse)
-def verify_coupon(coupon_id: str):
+def verify_coupon(coupon_id: str, request: Request):
+
+    # -----------------------------
+    # Volunteer access check
+    # -----------------------------
+    if request.cookies.get(VOLUNTEER_COOKIE_NAME) != VOLUNTEER_COOKIE_VALUE:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h2 style="color:#F44336;">🔒 Volunteer Access Required</h2>
+        <p>This page is for volunteer use only during coupon distribution.</p>
+        <p><a href="/volunteer-login">Enter volunteer PIN</a></p>
+        </div>
+        """
 
     booking = get_booking_by_coupon(coupon_id)
 
@@ -252,3 +331,11 @@ def registrations():
         })
 
     return result
+
+# ============================================
+# Serve Frontend (must be LAST - catches all
+# remaining routes and serves frontend/index.html
+# for "/" and other static files under frontend/)
+# ============================================
+
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
