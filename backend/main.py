@@ -6,6 +6,9 @@ from fastapi.staticfiles import StaticFiles
 from backend.chat_service import get_ai_response
 from backend.registration_service import registration 
 from backend.annaprasada_service import annaprasada_service  
+from backend.donation_service import donation_service
+from fastapi.responses import HTMLResponse
+from backend.database.database import get_booking_by_coupon, mark_coupon_used
 from backend.database.database import (
     create_tables,
     get_registrations,
@@ -22,6 +25,7 @@ app = FastAPI(
     version="2.0"
 )
 app.mount("/static", StaticFiles(directory="static"), name="static") 
+
 # ============================================
 # Database Initialization
 # ============================================
@@ -107,6 +111,26 @@ def chat(request: ChatRequest):
     message = request.message.strip()
 
     # ==========================================
+    # Continue Donation Flow (if active)
+    # ==========================================
+
+    if donation_service.active:
+
+        return {
+            "response": donation_service.process_donation(message)
+        }
+
+    # ==========================================
+    # Start Donation Flow
+    # ==========================================
+
+    if "donation" in message.lower():
+
+        return {
+            "response": donation_service.start_donation()
+        }
+
+    # ==========================================
     # Continue Annaprasada Booking (if active)
     # ==========================================
 
@@ -156,6 +180,51 @@ def chat(request: ChatRequest):
     return {
         "response": reply
     }
+
+# ============================================
+# Verify Annaprasada Coupon (Volunteer Scan)
+# ============================================
+
+@app.get("/verify/{coupon_id}", response_class=HTMLResponse)
+def verify_coupon(coupon_id: str):
+
+    booking = get_booking_by_coupon(coupon_id)
+
+    if not booking:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h1 style="color:#F44336;">⚠️ Invalid Coupon</h1>
+        <p>This coupon ID was not found.</p>
+        </div>
+        """
+
+    coupon_id, name, block, flat_number, members, is_used = booking
+
+    if is_used == 1:
+
+        return f"""
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h1 style="color:#F44336;">❌ Already Used</h1>
+        <p><b>{name}</b> — Block {block}, Flat {flat_number}</p>
+        <p>This coupon has already been redeemed.</p>
+        </div>
+        """
+
+    mark_coupon_used(coupon_id)
+
+    return f"""
+    <div style="font-family:Arial;text-align:center;padding:60px;">
+    <h1 style="color:#4CAF50;">✅ Valid Coupon</h1>
+    <p style="font-size:20px;"><b>{name}</b></p>
+    <p>🏢 Block : {block}</p>
+    <p>🏠 Flat : {flat_number}</p>
+    <p>👥 Members : {members}</p>
+    <p>🎟️ Coupon ID : {coupon_id}</p>
+    <p style="color:green;margin-top:20px;">Marked as used ✅</p>
+    </div>
+    """
+
 # ============================================
 # View Registrations
 # ============================================

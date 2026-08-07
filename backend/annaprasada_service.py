@@ -148,7 +148,8 @@ Booking is now OPEN.
                 members=self.booking["members"]
             )
 
-            qr_path = generate_qr_code(coupon_id)
+            verify_url = f"http://192.168.0.110:8000/verify/{coupon_id}"
+            qr_path = generate_qr_code(verify_url, coupon_id)
 
             return f"""
 🎉 Hi {self.booking['name']}!
@@ -171,7 +172,7 @@ Your Annaprasada Coupon is confirmed.
 
 📱 Show this QR code at the counter:
 
-<img src="http://127.0.0.1:8000/{qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
+<img src="http://192.168.0.110:8000/{qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
 
 🙏 Thank you!
 """

@@ -364,3 +364,30 @@ annaprasadaCard.addEventListener("click", function () {
     sendMessage();
 
 });
+// ======================================
+// Donation Card Click
+// ======================================
+
+const donationCard = document.getElementById("donation");
+
+donationCard.addEventListener("click", function () {
+
+    chatContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    userInput.value = "donation";
+
+    sendMessage();
+
+});
+
+// ======================================
+// Donation Payment Confirmation Button
+// ======================================
+
+function confirmDonationPaid() {
+
+    userInput.value = "paid";
+
+    sendMessage();
+
+}
