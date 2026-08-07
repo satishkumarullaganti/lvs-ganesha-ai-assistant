@@ -1,15 +1,16 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
 from fastapi.staticfiles import StaticFiles
+from backend.validators import validate_flat_number
 from backend.chat_service import get_ai_response
 from backend.registration_service import registration 
 from backend.annaprasada_service import annaprasada_service  
 from backend.donation_service import donation_service
+from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse
 from backend.database.database import get_booking_by_coupon, mark_coupon_used
-from backend.schedule_service import schedule_service
 from backend.database.database import (
     create_tables,
     get_registrations,
@@ -96,6 +97,13 @@ class RegistrationRequest(BaseModel):
 @app.post("/register")
 def register(data: RegistrationRequest):
 
+    if not validate_flat_number(data.block, data.flat):
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
     save_registration(
         name=data.name,
         block=data.block,
@@ -139,7 +147,7 @@ def chat(request: ChatRequest):
             "response": donation_service.start_donation()
         }
 
-        # ==========================================
+    # ==========================================
     # Continue Annaprasada Booking (if active)
     # ==========================================
 
@@ -153,18 +161,7 @@ def chat(request: ChatRequest):
     # Start Annaprasada Coupon Booking
     # ==========================================
 
-    message_lower = message.lower()
-
-    booking_keywords = [
-        "book annaprasada",
-        "annaprasada booking",
-        "annaprasada coupon",
-        "book coupon",
-        "coupon booking",
-        "register annaprasada"
-    ]
-
-    if any(keyword in message_lower for keyword in booking_keywords):
+    if "annaprasada" in message.lower():
 
         result = annaprasada_service.check_booking_status()
 
@@ -175,10 +172,9 @@ def chat(request: ChatRequest):
     # -----------------------------
     # Start Registration
     # -----------------------------
-
     if not registration.active:
 
-        if "register" in message_lower:
+        if "register" in message.lower():
 
             return {
                 "response": registration.start()
@@ -187,34 +183,40 @@ def chat(request: ChatRequest):
     # -----------------------------
     # Continue Registration
     # -----------------------------
-
     if registration.active:
 
         return {
             "response": registration.process(message)
         }
 
-    # -----------------------------
-    # Festival Schedule
-    # -----------------------------
+    # ==========================================
+    # Festival Schedule Queries
+    # ==========================================
+    # Route anything schedule-related to schedule_service
+    # so it NEVER reaches Ollama and can't hallucinate.
+    # schedule_service.handle_query() already handles:
+    # full schedule / today / specific date / day name /
+    # event keyword search, with a safe default fallback
+    # to the full schedule instead of guessing.
+    # ==========================================
 
-    schedule_keywords = [
+    SCHEDULE_TRIGGER_WORDS = [
         "schedule",
-        "event",
-        "events",
-        "harathi",
-        "prasadam",
-        "annaprasada",
-        "visarjan",
-        "immersion",
+        "timing",
+        "timings",
+        "programme",
         "program",
-        "ganesh",
-        "festival",
-        "sep",
-        "september"
+        "events today",
+        "what time",
+        "when is",
+        "when does",
+        "agenda",
+        "itinerary"
     ]
 
-    if any(keyword in message_lower for keyword in schedule_keywords):
+    lower_message = message.lower()
+
+    if any(word in lower_message for word in SCHEDULE_TRIGGER_WORDS):
 
         return {
             "response": schedule_service.handle_query(message)
@@ -223,12 +225,12 @@ def chat(request: ChatRequest):
     # -----------------------------
     # Normal AI Chat
     # -----------------------------
-
     reply = get_ai_response(message)
 
     return {
         "response": reply
     }
+
 # ============================================
 # Volunteer Login (PIN gate)
 # ============================================
