@@ -5,6 +5,7 @@
 from backend.database.database import save_registration
 
 
+
 class RegistrationService:
 
     def __init__(self):

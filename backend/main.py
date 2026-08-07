@@ -9,6 +9,7 @@ from backend.annaprasada_service import annaprasada_service
 from backend.donation_service import donation_service
 from fastapi.responses import HTMLResponse
 from backend.database.database import get_booking_by_coupon, mark_coupon_used
+from backend.schedule_service import schedule_service
 from backend.database.database import (
     create_tables,
     get_registrations,
@@ -138,7 +139,7 @@ def chat(request: ChatRequest):
             "response": donation_service.start_donation()
         }
 
-    # ==========================================
+        # ==========================================
     # Continue Annaprasada Booking (if active)
     # ==========================================
 
@@ -152,7 +153,18 @@ def chat(request: ChatRequest):
     # Start Annaprasada Coupon Booking
     # ==========================================
 
-    if "annaprasada" in message.lower():
+    message_lower = message.lower()
+
+    booking_keywords = [
+        "book annaprasada",
+        "annaprasada booking",
+        "annaprasada coupon",
+        "book coupon",
+        "coupon booking",
+        "register annaprasada"
+    ]
+
+    if any(keyword in message_lower for keyword in booking_keywords):
 
         result = annaprasada_service.check_booking_status()
 
@@ -163,9 +175,10 @@ def chat(request: ChatRequest):
     # -----------------------------
     # Start Registration
     # -----------------------------
+
     if not registration.active:
 
-        if "register" in message.lower():
+        if "register" in message_lower:
 
             return {
                 "response": registration.start()
@@ -174,6 +187,7 @@ def chat(request: ChatRequest):
     # -----------------------------
     # Continue Registration
     # -----------------------------
+
     if registration.active:
 
         return {
@@ -181,14 +195,40 @@ def chat(request: ChatRequest):
         }
 
     # -----------------------------
+    # Festival Schedule
+    # -----------------------------
+
+    schedule_keywords = [
+        "schedule",
+        "event",
+        "events",
+        "harathi",
+        "prasadam",
+        "annaprasada",
+        "visarjan",
+        "immersion",
+        "program",
+        "ganesh",
+        "festival",
+        "sep",
+        "september"
+    ]
+
+    if any(keyword in message_lower for keyword in schedule_keywords):
+
+        return {
+            "response": schedule_service.handle_query(message)
+        }
+
+    # -----------------------------
     # Normal AI Chat
     # -----------------------------
+
     reply = get_ai_response(message)
 
     return {
         "response": reply
     }
-
 # ============================================
 # Volunteer Login (PIN gate)
 # ============================================

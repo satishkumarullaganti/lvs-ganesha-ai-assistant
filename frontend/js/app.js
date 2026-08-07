@@ -287,15 +287,15 @@ async function sendMessage() {
 
             </div>
 
-            <div class="message">
+           <div class="message">
 
-                <strong>LVS AI Assistant</strong>
+    <strong>LVS AI Assistant</strong>
 
-                <br><br>
+    <br><br>
 
-                ${data.response}
+    ${data.response.replace(/\n/g, "<br>")}
 
-            </div>
+</div>
 
         </div>
 
@@ -391,3 +391,17 @@ function confirmDonationPaid() {
     sendMessage();
 
 }
+
+// ======================================
+// Festival Schedule
+// ======================================
+
+const scheduleCard = document.getElementById("schedule");
+
+scheduleCard.addEventListener("click", function () {
+
+    userInput.value = "festival schedule";
+
+    sendMessage();
+
+});
