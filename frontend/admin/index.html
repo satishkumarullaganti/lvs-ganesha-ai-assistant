@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>LVS Admin Login</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            font-family: Arial, sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #fff7e6,
+                    #fff0cc
+                );
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+
+            border-radius: 20px;
+
+            padding: 40px 35px;
+
+            box-shadow:
+                0 15px 40px rgba(0, 0, 0, 0.12);
+
+            text-align: center;
+
+            border-top: 6px solid #ff9800;
+        }
+
+        .logo {
+            width: 85px;
+            height: 85px;
+
+            border-radius: 50%;
+
+            object-fit: contain;
+
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            margin: 5px 0;
+
+            color: #333;
+
+            font-size: 26px;
+        }
+
+        .subtitle {
+            color: #777;
+
+            margin-bottom: 30px;
+
+            font-size: 15px;
+        }
+
+        .input-group {
+            text-align: left;
+
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 7px;
+
+            font-weight: bold;
+
+            color: #444;
+        }
+
+        input {
+            width: 100%;
+
+            padding: 13px 14px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 10px;
+
+            font-size: 16px;
+
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #ff9800;
+
+            box-shadow:
+                0 0 0 3px rgba(
+                    255,
+                    152,
+                    0,
+                    0.12
+                );
+        }
+
+        .login-btn {
+            width: 100%;
+
+            padding: 14px;
+
+            border: none;
+
+            border-radius: 10px;
+
+            background: #ff9800;
+
+            color: white;
+
+            font-size: 17px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .login-btn:hover {
+            background: #f57c00;
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+
+            cursor: not-allowed;
+        }
+
+        .error {
+            display: none;
+
+            margin-bottom: 18px;
+
+            padding: 11px;
+
+            border-radius: 8px;
+
+            background: #ffebee;
+
+            color: #c62828;
+
+            font-size: 14px;
+        }
+
+        .footer {
+            margin-top: 25px;
+
+            font-size: 12px;
+
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+
+        <div class="login-card">
+
+            <img
+                src="/static/images/app_logo.png"
+                class="logo"
+                alt="LVS Logo"
+                onerror="this.style.display='none'"
+            >
+
+            <h1>🪔 LVS Admin</h1>
+
+            <div class="subtitle">
+                Ganesha Festival 2026
+            </div>
+
+            <div
+                id="error-message"
+                class="error">
+            </div>
+
+            <form id="login-form">
+
+                <div class="input-group">
+
+                    <label for="username">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        id="username"
+                        placeholder="Enter username"
+                        autocomplete="username"
+                        required
+                    >
+
+                </div>
+
+                <div class="input-group">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="login-btn"
+                    id="login-btn">
+
+                    🔐 Login
+
+                </button>
+
+            </form>
+
+            <div class="footer">
+                LVS Excellency Ganesha Festival 2026
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        const form =
+            document.getElementById(
+                "login-form"
+            );
+
+        const errorMessage =
+            document.getElementById(
+                "error-message"
+            );
+
+        const loginButton =
+            document.getElementById(
+                "login-btn"
+            );
+
+
+        form.addEventListener(
+            "submit",
+            async function(event) {
+
+                event.preventDefault();
+
+                errorMessage.style.display =
+                    "none";
+
+                loginButton.disabled = true;
+
+                loginButton.textContent =
+                    "Signing in...";
+
+
+                const username =
+                    document.getElementById(
+                        "username"
+                    ).value.trim();
+
+                const password =
+                    document.getElementById(
+                        "password"
+                    ).value;
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/admin/login",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                credentials: "include",
+
+                                body: JSON.stringify({
+                                    username:
+                                        username,
+
+                                    password:
+                                        password
+                                })
+                            }
+                        );
+
+
+                    const data =
+                        await response.json();
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            data.detail ||
+                            "Invalid username or password"
+                        );
+
+                    }
+
+
+                    window.location.href =
+                        "/admin/panel/";
+
+
+                } catch (error) {
+
+                    errorMessage.textContent =
+                        "❌ " + error.message;
+
+                    errorMessage.style.display =
+                        "block";
+
+                    loginButton.disabled =
+                        false;
+
+                    loginButton.textContent =
+                        "🔐 Login";
+                }
+
+            }
+        );
+
+    </script>
+
+</body>
+
+</html>
+

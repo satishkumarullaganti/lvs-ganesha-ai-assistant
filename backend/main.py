@@ -11,6 +11,9 @@ from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse
 from backend.database.database import get_booking_by_coupon, mark_coupon_used
+from dotenv import load_dotenv
+load_dotenv()
+from backend.admin.admin_routes import router as admin_router
 from backend.rag.rag_service import (
     ask_rag,
     is_festival_question
@@ -35,7 +38,7 @@ app = FastAPI(
     version="2.0"
 )
 app.mount("/static", StaticFiles(directory="static"), name="static") 
-
+app.include_router(admin_router)
 # ============================================
 # Database Initialization
 # ============================================

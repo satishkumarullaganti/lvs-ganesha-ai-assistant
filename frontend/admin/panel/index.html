@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>LVS Admin Dashboard</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial, sans-serif;
+
+            background: #f7f7f7;
+
+            color: #333;
+        }
+
+        .header {
+
+            background: linear-gradient(
+                135deg,
+                #ff9800,
+                #f57c00
+            );
+
+            color: white;
+
+            padding: 20px 30px;
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+        }
+
+        .header h1 {
+
+            margin: 0;
+
+            font-size: 24px;
+        }
+
+        .logout-btn {
+
+            background: white;
+
+            color: #e65100;
+
+            border: none;
+
+            padding: 10px 18px;
+
+            border-radius: 8px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+        .container {
+
+            max-width: 1200px;
+
+            margin: 30px auto;
+
+            padding: 0 20px;
+        }
+
+        .cards {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(180px, 1fr)
+                );
+
+            gap: 20px;
+        }
+
+        .card {
+
+            background: white;
+
+            border-radius: 15px;
+
+            padding: 25px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.08);
+
+            border-top: 4px solid #ff9800;
+        }
+
+        .card-title {
+
+            color: #777;
+
+            font-size: 14px;
+
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+
+            font-size: 32px;
+
+            font-weight: bold;
+
+            color: #333;
+        }
+
+        .amount {
+
+            color: #2e7d32;
+        }
+
+        .actions {
+
+            margin-top: 30px;
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 15px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.08);
+        }
+
+        .actions h2 {
+
+            margin-top: 0;
+        }
+
+        .export-btn {
+
+            background: #2e7d32;
+
+            color: white;
+
+            border: none;
+
+            padding: 13px 22px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-size: 15px;
+
+            font-weight: bold;
+        }
+
+        .export-btn:hover {
+
+            background: #1b5e20;
+        }
+
+        .error {
+
+            background: #ffebee;
+
+            color: #c62828;
+
+            padding: 15px;
+
+            border-radius: 10px;
+
+            margin-bottom: 20px;
+
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+
+            .header {
+
+                padding: 15px;
+
+            }
+
+            .header h1 {
+
+                font-size: 18px;
+
+            }
+
+            .container {
+
+                margin-top: 20px;
+
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<header class="header">
+
+    <h1>
+        🪔 LVS Festival Admin Dashboard
+    </h1>
+
+    <button
+        class="logout-btn"
+        onclick="logout()">
+
+        Logout
+
+    </button>
+
+</header>
+
+
+<main class="container">
+
+
+    <div
+        id="error"
+        class="error">
+    </div>
+
+
+    <div class="cards">
+
+
+        <div class="card">
+
+            <div class="card-title">
+                📝 Registrations
+            </div>
+
+            <div
+                id="registrations"
+                class="card-value">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                🎭 Cultural Participants
+            </div>
+
+            <div
+                id="cultural"
+                class="card-value">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                🙋 Volunteers
+            </div>
+
+            <div
+                id="volunteers"
+                class="card-value">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                💰 Donors
+            </div>
+
+            <div
+                id="donors"
+                class="card-value">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                🍚 Annaprasada Bookings
+            </div>
+
+            <div
+                id="annaprasada"
+                class="card-value">
+
+                --
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                💵 Total Donations
+            </div>
+
+            <div
+                id="donation"
+                class="card-value amount">
+
+                --
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <div class="actions">
+
+        <h2>
+            📊 Data Management
+        </h2>
+
+        <p>
+            Download all festival data in Excel format.
+        </p>
+
+        <button
+            class="export-btn"
+            onclick="exportExcel()">
+
+            📥 Export All to Excel
+
+        </button>
+
+    </div>
+
+
+</main>
+
+
+<script>
+
+
+async function loadDashboard() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/admin/dashboard",
+                {
+                    credentials: "include"
+                }
+            );
+
+
+        if (response.status === 401) {
+
+            window.location.href =
+                "/admin/";
+
+            return;
+        }
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Unable to load dashboard"
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        document.getElementById(
+            "registrations"
+        ).textContent =
+            data.registrations;
+
+
+        document.getElementById(
+            "cultural"
+        ).textContent =
+            data.cultural_participants;
+
+
+        document.getElementById(
+            "volunteers"
+        ).textContent =
+            data.volunteers;
+
+
+        document.getElementById(
+            "donors"
+        ).textContent =
+            data.donors;
+
+
+        document.getElementById(
+            "annaprasada"
+        ).textContent =
+            data.annaprasada_bookings;
+
+
+        document.getElementById(
+            "donation"
+        ).textContent =
+            "₹ " +
+            Number(
+                data.total_donation_amount
+            ).toLocaleString("en-IN");
+
+
+    } catch (error) {
+
+        const errorBox =
+            document.getElementById(
+                "error"
+            );
+
+        errorBox.textContent =
+            "❌ " + error.message;
+
+        errorBox.style.display =
+            "block";
+    }
+}
+
+
+async function exportExcel() {
+
+    const response =
+        await fetch(
+            "/admin/export/all",
+            {
+                credentials: "include"
+            }
+        );
+
+
+    if (response.status === 401) {
+
+        window.location.href =
+            "/admin/";
+
+        return;
+    }
+
+
+    const blob =
+        await response.blob();
+
+
+    const url =
+        window.URL.createObjectURL(
+            blob
+        );
+
+
+    const link =
+        document.createElement("a");
+
+    link.href = url;
+
+    link.download =
+        "LVS_Festival_Data.xlsx";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+}
+
+
+async function logout() {
+
+    await fetch(
+        "/admin/logout",
+        {
+            method: "POST",
+            credentials: "include"
+        }
+    );
+
+    window.location.href =
+        "/admin/";
+}
+
+
+loadDashboard();
+
+</script>
+
+
+</body>
+
+</html>
