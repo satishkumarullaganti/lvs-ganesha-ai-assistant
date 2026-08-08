@@ -386,6 +386,143 @@
 
     </div>
 
+    <!-- ====================================== -->
+    <!-- Volunteer Registration Modal -->
+    <!-- ====================================== -->
+
+    <div id="volunteer-registration-modal" class="modal">
+
+        <div class="modal-content">
+
+            <span id="close-volunteer-modal" class="close">&times;</span>
+
+            <h2>🙋 Volunteer Registration</h2>
+
+            <label>Select Task(s) You'd Like to Help With</label>
+
+            <div class="checkbox-group">
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Drawing Competition">
+                    Drawing Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Chess Competition">
+                    Chess Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Carrom Competition">
+                    Carrom Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Tambola Competition">
+                    Tambola Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Musical Chairs Competition">
+                    Musical Chairs Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Annaprasada Distribution">
+                    Annaprasada Distribution
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Registration Desk">
+                    Registration Desk
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Decoration & Setup">
+                    Decoration & Setup
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Pooja/Rituals Support">
+                    Pooja/Rituals Support
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Cultural Programs Coordination">
+                    Cultural Programs Coordination
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Donations Desk">
+                    Donations Desk
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Visarjan Support">
+                    Visarjan Support
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Photography/Videography">
+                    Photography/Videography
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Cleanup Crew">
+                    Cleanup Crew
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" id="volunteer-other-checkbox" class="volunteer-task" value="Other">
+                    Other
+                </label>
+
+            </div>
+
+            <input
+                type="text"
+                id="volunteer-other-details"
+                placeholder="Please specify (if 'Other' selected)"
+                style="display:none;">
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-name"
+                placeholder="Enter Name">
+
+            <label>Block</label>
+
+            <select id="volunteer-reg-block">
+                <option>North</option>
+                <option>South</option>
+            </select>
+
+            <label>Flat Number</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-flat"
+                placeholder="Flat Number">
+
+            <label>Mobile</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-mobile"
+                placeholder="Mobile Number">
+
+            <button id="volunteer-register-submit">
+
+                Register
+
+            </button>
+
+        </div>
+
+    </div>
+
     <!-- app.js loaded last so all elements above already exist in the DOM -->
     <script src="js/app.js"></script>
 

@@ -705,7 +705,8 @@ width:100%;
    Cultural Programs Checkbox Group
 ========================================== */
 
-.cultural-checkbox-group{
+.cultural-checkbox-group,
+.checkbox-group{
 
     display:grid;
 
@@ -719,7 +720,8 @@ width:100%;
 
 }
 
-.cultural-checkbox-item{
+.cultural-checkbox-item,
+.checkbox-item{
 
     display:flex;
 
@@ -741,13 +743,15 @@ width:100%;
 
 }
 
-.cultural-checkbox-item:hover{
+.cultural-checkbox-item:hover,
+.checkbox-item:hover{
 
     background:#ffe9c2;
 
 }
 
-.cultural-checkbox-item input{
+.cultural-checkbox-item input,
+.checkbox-item input{
 
     width:auto;
 

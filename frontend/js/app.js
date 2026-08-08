@@ -52,6 +52,36 @@ culturalOtherCheckbox.addEventListener("change", function () {
 });
 
 // ======================================
+// Volunteer Registration Modal
+// ======================================
+
+const volunteerCard = document.getElementById("volunteer");
+
+const volunteerModal = document.getElementById("volunteer-registration-modal");
+
+const closeVolunteerModal = document.getElementById("close-volunteer-modal");
+
+const volunteerRegisterSubmitBtn = document.getElementById("volunteer-register-submit");
+
+const volunteerNameField = document.getElementById("volunteer-reg-name");
+const volunteerBlockField = document.getElementById("volunteer-reg-block");
+const volunteerFlatField = document.getElementById("volunteer-reg-flat");
+const volunteerMobileField = document.getElementById("volunteer-reg-mobile");
+const volunteerOtherCheckbox = document.getElementById("volunteer-other-checkbox");
+const volunteerOtherDetailsField = document.getElementById("volunteer-other-details");
+
+// Show/hide the "Other" details text field based on checkbox state
+volunteerOtherCheckbox.addEventListener("change", function () {
+
+    volunteerOtherDetailsField.style.display = volunteerOtherCheckbox.checked ? "block" : "none";
+
+    if (!volunteerOtherCheckbox.checked) {
+        volunteerOtherDetailsField.value = "";
+    }
+
+});
+
+// ======================================
 // Send Button
 // ======================================
 
@@ -107,6 +137,12 @@ window.addEventListener("click", function (event) {
 
     }
 
+    if (event.target === volunteerModal) {
+
+        volunteerModal.style.display = "none";
+
+    }
+
 });
 
 // ======================================
@@ -122,6 +158,22 @@ culturalCard.addEventListener("click", function () {
 closeCulturalModal.addEventListener("click", function () {
 
     culturalModal.style.display = "none";
+
+});
+
+// ======================================
+// Volunteer Popup
+// ======================================
+
+volunteerCard.addEventListener("click", function () {
+
+    volunteerModal.style.display = "block";
+
+});
+
+closeVolunteerModal.addEventListener("click", function () {
+
+    volunteerModal.style.display = "none";
 
 });
 
@@ -347,6 +399,117 @@ culturalRegisterSubmitBtn.addEventListener("click", async function () {
 
         culturalRegisterSubmitBtn.disabled = false;
         culturalRegisterSubmitBtn.innerHTML = "Register";
+
+    }
+
+});
+
+// ======================================
+// Volunteer Registration Submit
+// ======================================
+
+volunteerRegisterSubmitBtn.addEventListener("click", async function () {
+
+    const selectedTasks = Array.from(
+        document.querySelectorAll(".volunteer-task:checked")
+    ).map(function (checkbox) {
+        return checkbox.value;
+    });
+
+    if (selectedTasks.length === 0) {
+        alert("Please select at least one task.");
+        return;
+    }
+
+    const volunteerData = {
+        tasks: selectedTasks.join(", "),
+        name: volunteerNameField.value.trim(),
+        block: volunteerBlockField.value,
+        flat: volunteerFlatField.value.trim(),
+        mobile: volunteerMobileField.value.trim(),
+        other_details: volunteerOtherDetailsField.value.trim()
+    };
+
+    // -----------------------------
+    // Basic validation
+    // -----------------------------
+    if (volunteerData.name === "") {
+        alert("Please enter your name.");
+        volunteerNameField.focus();
+        return;
+    }
+
+    if (volunteerData.flat === "") {
+        alert("Please enter your flat number.");
+        volunteerFlatField.focus();
+        return;
+    }
+
+    if (!/^[0-9]{10}$/.test(volunteerData.mobile)) {
+        alert("Please enter a valid 10-digit mobile number.");
+        volunteerMobileField.focus();
+        return;
+    }
+
+    if (volunteerOtherCheckbox.checked && volunteerData.other_details === "") {
+        alert("Please specify details for 'Other'.");
+        volunteerOtherDetailsField.focus();
+        return;
+    }
+
+    volunteerRegisterSubmitBtn.disabled = true;
+    volunteerRegisterSubmitBtn.innerHTML = "Registering...";
+
+    try {
+
+        const response = await fetch("/register-volunteer", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(volunteerData)
+
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+
+            const errorMessage = responseData.detail || "Registration failed. Please check your details.";
+            alert("⚠️ " + errorMessage);
+            return;
+
+        }
+
+        alert("✅ " + responseData.message);
+
+        // Reset form and close modal
+        document.querySelectorAll(".volunteer-task:checked").forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
+        volunteerNameField.value = "";
+        volunteerFlatField.value = "";
+        volunteerMobileField.value = "";
+        volunteerOtherDetailsField.value = "";
+        volunteerOtherDetailsField.style.display = "none";
+        volunteerBlockField.selectedIndex = 0;
+
+        volunteerModal.style.display = "none";
+
+    }
+    catch (error) {
+
+        console.error(error);
+        alert("⚠️ Unable to submit registration. Please check your connection and try again.");
+
+    }
+    finally {
+
+        volunteerRegisterSubmitBtn.disabled = false;
+        volunteerRegisterSubmitBtn.innerHTML = "Register";
 
     }
 

@@ -123,6 +123,30 @@ def create_tables():
 
     """)
 
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS volunteers(
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        name TEXT NOT NULL,
+
+        block TEXT NOT NULL,
+
+        flat_number TEXT NOT NULL,
+
+        mobile TEXT NOT NULL,
+
+        tasks TEXT NOT NULL,
+
+        other_details TEXT,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    )
+
+    """)
+
     conn.commit()
 
     conn.close()
@@ -437,6 +461,92 @@ def get_cultural_registrations():
     SELECT *
 
     FROM cultural_registrations
+
+    ORDER BY id DESC
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    return rows
+
+
+# ============================================
+# Save Volunteer Registration
+# ============================================
+
+def save_volunteer_registration(
+
+        name,
+        block,
+        flat_number,
+        mobile,
+        tasks,
+        other_details
+):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO volunteers(
+
+        name,
+
+        block,
+
+        flat_number,
+
+        mobile,
+
+        tasks,
+
+        other_details
+
+    )
+
+    VALUES(?,?,?,?,?,?)
+
+    """, (
+
+        name,
+
+        block,
+
+        flat_number,
+
+        mobile,
+
+        tasks,
+
+        other_details
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+
+# ============================================
+# Get Volunteer Registrations
+# ============================================
+
+def get_volunteer_registrations():
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT *
+
+    FROM volunteers
 
     ORDER BY id DESC
 
