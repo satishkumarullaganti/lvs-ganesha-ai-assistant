@@ -1,6 +1,21 @@
 const sendButton = document.getElementById("send-btn");
 const userInput = document.getElementById("user-input");
 const chatContainer = document.getElementById("chat-container");
+const chatWithAiBtn = document.getElementById("chat-with-ai-btn");
+
+// ======================================
+// Chat with AI Button
+// ======================================
+// Scrolls to the chat area and focuses the
+// input so the user can start typing right away.
+
+chatWithAiBtn.addEventListener("click", function () {
+
+    chatContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    userInput.focus();
+
+});
 // ======================================
 // Quick Registration Modal
 // ======================================

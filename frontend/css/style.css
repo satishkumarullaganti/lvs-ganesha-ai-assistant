@@ -174,7 +174,7 @@ main{
 
     display:grid;
 
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    grid-template-columns:repeat(3,1fr);
 
     gap:25px;
 
@@ -244,12 +244,6 @@ main{
 
 }
 
-#updates{
-
-    border-top:6px solid #F44336;
-
-}
-
 #volunteer{
 
     border-top:6px solid #4CAF50;
@@ -265,12 +259,6 @@ main{
 #donation{
 
     border-top:6px solid #FFC107;
-
-}
-
-#faq{
-
-    border-top:6px solid #9C27B0;
 
 }
 
@@ -309,6 +297,12 @@ footer p{
 ========================================== */
 
 @media(max-width:768px){
+
+.feature-grid{
+
+grid-template-columns:repeat(2,1fr);
+
+}
 
 header h1{
 
@@ -758,5 +752,51 @@ width:100%;
     margin:0;
 
     cursor:pointer;
+
+}
+
+/* ==========================================
+   SMALL PHONE SCREENS
+========================================== */
+
+@media(max-width:420px){
+
+.feature-grid{
+
+grid-template-columns:1fr;
+
+}
+
+}
+
+/* ==========================================
+   CHAT WITH AI BUTTON
+   (styled to look like the section title,
+   but clickable to scroll/focus the chat box)
+========================================== */
+
+.chat-cta-button{
+
+    background:none;
+
+    border:none;
+
+    cursor:pointer;
+
+    display:block;
+
+    width:100%;
+
+    font-family:inherit;
+
+    transition:.2s;
+
+}
+
+.chat-cta-button:hover{
+
+    color:#ff9800;
+
+    transform:translateY(-2px);
 
 }
