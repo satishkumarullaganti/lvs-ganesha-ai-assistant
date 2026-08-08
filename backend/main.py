@@ -11,15 +11,17 @@ from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse
 from backend.database.database import get_booking_by_coupon, mark_coupon_used
+from backend.rag.rag_service import (
+    ask_rag,
+    is_festival_question
+)
 from backend.database.database import (
     create_tables,
     get_registrations,
     save_registration,
     save_annaprasada_booking,
     save_cultural_registration,
-    get_cultural_registrations,
-    save_volunteer_registration,
-    get_volunteer_registrations
+    get_cultural_registrations
 )
 import os
 import uuid
@@ -239,76 +241,6 @@ def cultural_registrations():
     return result
 
 # ============================================
-# Volunteer Registration Model
-# ============================================
-
-class VolunteerRequest(BaseModel):
-    name: str
-    block: str
-    flat: str
-    mobile: str
-    tasks: str
-    other_details: str = ""
-
-# ============================================
-# Volunteer Register API
-# ============================================
-
-@app.post("/register-volunteer")
-def register_volunteer(data: VolunteerRequest):
-
-    if not validate_flat_number(data.block, data.flat):
-
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
-        )
-
-    if not data.tasks.strip():
-
-        raise HTTPException(
-            status_code=400,
-            detail="Please select at least one task to volunteer for."
-        )
-
-    save_volunteer_registration(
-        name=data.name,
-        block=data.block,
-        flat_number=data.flat,
-        mobile=data.mobile,
-        tasks=data.tasks,
-        other_details=data.other_details.strip() if data.other_details else None
-    )
-
-    return {
-        "status": "success",
-        "message": f"Thank you {data.name}! Your volunteer registration is confirmed."
-    }
-
-
-@app.get("/volunteer-registrations")
-def volunteer_registrations():
-
-    rows = get_volunteer_registrations()
-
-    result = []
-
-    for row in rows:
-
-        result.append({
-            "id": row[0],
-            "name": row[1],
-            "block": row[2],
-            "flat_number": row[3],
-            "mobile": row[4],
-            "tasks": row[5],
-            "other_details": row[6],
-            "created_at": row[7]
-        })
-
-    return result
-
-# ============================================
 # Chat API
 # ============================================
 
@@ -444,14 +376,40 @@ def chat(request: ChatRequest):
         }
 
     # -----------------------------
-    # Normal AI Chat
+    # Festival Knowledge / RAG
     # -----------------------------
+
+    if is_festival_question(message):
+
+        try:
+
+            rag_result = ask_rag(message)
+
+            return {
+                "response": rag_result.get("response", ""),
+                "sources": rag_result.get("sources", [])
+            }
+
+        except Exception as e:
+
+            print(f"RAG error: {e}")
+
+            return {
+                "response": (
+                    "Sorry, I am unable to access "
+                    "the festival information right now."
+                )
+            }
+
+    # -----------------------------
+    # General AI Chat
+    # -----------------------------
+
     reply = get_ai_response(message)
 
     return {
         "response": reply
     }
-
 # ============================================
 # Volunteer Login (PIN gate)
 # ============================================
