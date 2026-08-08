@@ -1,4 +1,4 @@
-    /* ==========================================
+/* ==========================================
    RESET
 ========================================== */
 
@@ -274,7 +274,7 @@ main{
 
 }
 
-#chat{
+#cultural-programs{
 
     border-top:6px solid #009688;
 
@@ -698,5 +698,61 @@ width:100%;
     cursor:pointer;
 
     font-size:26px;
+
+}
+
+/* ==========================================
+   Cultural Programs Checkbox Group
+========================================== */
+
+.cultural-checkbox-group{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:10px;
+
+    margin-top:10px;
+
+    margin-bottom:15px;
+
+}
+
+.cultural-checkbox-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    background:#FFF8E8;
+
+    padding:10px 12px;
+
+    border-radius:10px;
+
+    font-size:15px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+.cultural-checkbox-item:hover{
+
+    background:#ffe9c2;
+
+}
+
+.cultural-checkbox-item input{
+
+    width:auto;
+
+    margin:0;
+
+    cursor:pointer;
 
 }

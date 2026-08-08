@@ -97,6 +97,32 @@ def create_tables():
 
     """)
 
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS cultural_registrations(
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        name TEXT NOT NULL,
+
+        block TEXT NOT NULL,
+
+        flat_number TEXT NOT NULL,
+
+        mobile TEXT NOT NULL,
+
+        categories TEXT NOT NULL,
+
+        other_details TEXT,
+
+        track_path TEXT,
+
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+    )
+
+    """)
+
     conn.commit()
 
     conn.close()
@@ -320,6 +346,97 @@ def get_registrations():
     SELECT *
 
     FROM registrations
+
+    ORDER BY id DESC
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    return rows
+
+
+# ============================================
+# Save Cultural Registration
+# ============================================
+
+def save_cultural_registration(
+
+        name,
+        block,
+        flat_number,
+        mobile,
+        categories,
+        other_details,
+        track_path
+):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO cultural_registrations(
+
+        name,
+
+        block,
+
+        flat_number,
+
+        mobile,
+
+        categories,
+
+        other_details,
+
+        track_path
+
+    )
+
+    VALUES(?,?,?,?,?,?,?)
+
+    """, (
+
+        name,
+
+        block,
+
+        flat_number,
+
+        mobile,
+
+        categories,
+
+        other_details,
+
+        track_path
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+
+# ============================================
+# Get Cultural Registrations
+# ============================================
+
+def get_cultural_registrations():
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT *
+
+    FROM cultural_registrations
 
     ORDER BY id DESC
 

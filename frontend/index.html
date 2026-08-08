@@ -124,10 +124,10 @@
                     <p>Festival Information</p>
                 </div>
 
-                <div class="feature-card" id="chat">
-                    <div class="card-icon">💬</div>
-                    <h3>Chat with AI</h3>
-                    <p>Ask Anything</p>
+                <div class="feature-card" id="cultural-programs">
+                    <div class="card-icon">🎭</div>
+                    <h3>Cultural Programs</h3>
+                    <p>Dance, Music & Performances</p>
                 </div>
 
             </div>
@@ -263,6 +263,120 @@
                  max="100">
 
             <button id="register-submit">
+
+                Register
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- ====================================== -->
+    <!-- Cultural Programs Registration Modal -->
+    <!-- ====================================== -->
+
+    <div id="cultural-registration-modal" class="modal">
+
+        <div class="modal-content">
+
+            <span id="close-cultural-modal" class="close">&times;</span>
+
+            <h2>🎭 Cultural Programs Registration</h2>
+
+            <label>Select Categories (choose one or more)</label>
+
+            <div class="cultural-checkbox-group">
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Solo Singing">
+                    1️⃣ Solo Singing
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Group Singing">
+                    2️⃣ Group Singing
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Solo Dance">
+                    3️⃣ Solo Dance
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Group Dance">
+                    4️⃣ Group Dance
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Instrumental">
+                    5️⃣ Instrumental
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Skit">
+                    6️⃣ Skit
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Fancy Dress">
+                    7️⃣ Fancy Dress
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Mimicry">
+                    8️⃣ Mimicry
+                </label>
+
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" id="cultural-other-checkbox" class="cultural-category" value="Other">
+                    9️⃣ Other
+                </label>
+
+            </div>
+
+            <input
+                type="text"
+                id="cultural-other-details"
+                placeholder="Please specify (if 'Other' selected)"
+                style="display:none;">
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                id="cultural-reg-name"
+                placeholder="Enter Name">
+
+            <label>Block</label>
+
+            <select id="cultural-reg-block">
+                <option>North</option>
+                <option>South</option>
+            </select>
+
+            <label>Flat Number</label>
+
+            <input
+                type="text"
+                id="cultural-reg-flat"
+                placeholder="Flat Number">
+
+            <label>Mobile</label>
+
+            <input
+                type="text"
+                id="cultural-reg-mobile"
+                placeholder="Mobile Number">
+
+            <label>Performance Track (optional, .mp3 or .m4a only)</label>
+
+            <input
+                type="file"
+                id="cultural-reg-track"
+                accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a">
+
+            <button id="cultural-register-submit">
 
                 Register
 

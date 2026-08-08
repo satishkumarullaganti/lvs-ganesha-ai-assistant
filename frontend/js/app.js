@@ -21,6 +21,37 @@ const mobileField = document.getElementById("reg-mobile");
 const ageField = document.getElementById("reg-age");
 
 // ======================================
+// Cultural Programs Registration Modal
+// ======================================
+
+const culturalCard = document.getElementById("cultural-programs");
+
+const culturalModal = document.getElementById("cultural-registration-modal");
+
+const closeCulturalModal = document.getElementById("close-cultural-modal");
+
+const culturalRegisterSubmitBtn = document.getElementById("cultural-register-submit");
+
+const culturalNameField = document.getElementById("cultural-reg-name");
+const culturalBlockField = document.getElementById("cultural-reg-block");
+const culturalFlatField = document.getElementById("cultural-reg-flat");
+const culturalMobileField = document.getElementById("cultural-reg-mobile");
+const culturalOtherCheckbox = document.getElementById("cultural-other-checkbox");
+const culturalOtherDetailsField = document.getElementById("cultural-other-details");
+const culturalTrackField = document.getElementById("cultural-reg-track");
+
+// Show/hide the "Other" details text field based on checkbox state
+culturalOtherCheckbox.addEventListener("change", function () {
+
+    culturalOtherDetailsField.style.display = culturalOtherCheckbox.checked ? "block" : "none";
+
+    if (!culturalOtherCheckbox.checked) {
+        culturalOtherDetailsField.value = "";
+    }
+
+});
+
+// ======================================
 // Send Button
 // ======================================
 
@@ -69,6 +100,28 @@ window.addEventListener("click", function (event) {
         registrationModal.style.display = "none";
 
     }
+
+    if (event.target === culturalModal) {
+
+        culturalModal.style.display = "none";
+
+    }
+
+});
+
+// ======================================
+// Cultural Programs Popup
+// ======================================
+
+culturalCard.addEventListener("click", function () {
+
+    culturalModal.style.display = "block";
+
+});
+
+closeCulturalModal.addEventListener("click", function () {
+
+    culturalModal.style.display = "none";
 
 });
 
@@ -127,8 +180,16 @@ registerSubmitBtn.addEventListener("click", async function () {
 
         });
 
+        const responseData = await response.json();
+
         if (!response.ok) {
-            throw new Error("Registration failed");
+
+            // Show the specific validation message from the server
+            // (e.g. invalid flat number for the selected block)
+            const errorMessage = responseData.detail || "Registration failed. Please check your details.";
+            alert("⚠️ " + errorMessage);
+            return;
+
         }
 
         alert("✅ Registration successful for " + registrationData.name + "!");
@@ -154,6 +215,138 @@ registerSubmitBtn.addEventListener("click", async function () {
 
         registerSubmitBtn.disabled = false;
         registerSubmitBtn.innerHTML = "Register";
+
+    }
+
+});
+
+// ======================================
+// Cultural Programs Registration Submit
+// ======================================
+
+culturalRegisterSubmitBtn.addEventListener("click", async function () {
+
+    const selectedCategories = Array.from(
+        document.querySelectorAll(".cultural-category:checked")
+    ).map(function (checkbox) {
+        return checkbox.value;
+    });
+
+    if (selectedCategories.length === 0) {
+        alert("Please select at least one category.");
+        return;
+    }
+
+    const name = culturalNameField.value.trim();
+    const block = culturalBlockField.value;
+    const flat = culturalFlatField.value.trim();
+    const mobile = culturalMobileField.value.trim();
+    const otherDetails = culturalOtherDetailsField.value.trim();
+
+    // -----------------------------
+    // Basic validation
+    // -----------------------------
+    if (name === "") {
+        alert("Please enter your name.");
+        culturalNameField.focus();
+        return;
+    }
+
+    if (flat === "") {
+        alert("Please enter your flat number.");
+        culturalFlatField.focus();
+        return;
+    }
+
+    if (!/^[0-9]{10}$/.test(mobile)) {
+        alert("Please enter a valid 10-digit mobile number.");
+        culturalMobileField.focus();
+        return;
+    }
+
+    if (culturalOtherCheckbox.checked && otherDetails === "") {
+        alert("Please specify details for 'Other'.");
+        culturalOtherDetailsField.focus();
+        return;
+    }
+
+    const trackFile = culturalTrackField.files.length > 0 ? culturalTrackField.files[0] : null;
+
+    const trackFileName = trackFile ? trackFile.name.toLowerCase() : "";
+    const isValidTrackFormat = trackFileName.endsWith(".mp3") || trackFileName.endsWith(".m4a");
+
+    if (trackFile && !isValidTrackFormat) {
+        alert("Please upload only .mp3 or .m4a files for the performance track.");
+        return;
+    }
+
+    culturalRegisterSubmitBtn.disabled = true;
+    culturalRegisterSubmitBtn.innerHTML = "Registering...";
+
+    try {
+
+        // FormData is used instead of JSON since this request
+        // may include a binary file (the mp3 track).
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("block", block);
+        formData.append("flat", flat);
+        formData.append("mobile", mobile);
+        formData.append("categories", selectedCategories.join(", "));
+        formData.append("other_details", otherDetails);
+
+        if (trackFile) {
+            formData.append("track", trackFile);
+        }
+
+        const response = await fetch("/register-cultural", {
+
+            method: "POST",
+
+            body: formData
+
+            // No Content-Type header here - the browser sets the
+            // correct multipart boundary automatically for FormData.
+
+        });
+
+        const responseData = await response.json();
+
+        if (!response.ok) {
+
+            const errorMessage = responseData.detail || "Registration failed. Please check your details.";
+            alert("⚠️ " + errorMessage);
+            return;
+
+        }
+
+        alert("✅ Cultural Programs registration successful for " + name + "!");
+
+        // Reset form and close modal
+        document.querySelectorAll(".cultural-category:checked").forEach(function (checkbox) {
+            checkbox.checked = false;
+        });
+        culturalNameField.value = "";
+        culturalFlatField.value = "";
+        culturalMobileField.value = "";
+        culturalOtherDetailsField.value = "";
+        culturalOtherDetailsField.style.display = "none";
+        culturalTrackField.value = "";
+        culturalBlockField.selectedIndex = 0;
+
+        culturalModal.style.display = "none";
+
+    }
+    catch (error) {
+
+        console.error(error);
+        alert("⚠️ Unable to submit registration. Please check your connection and try again.");
+
+    }
+    finally {
+
+        culturalRegisterSubmitBtn.disabled = false;
+        culturalRegisterSubmitBtn.innerHTML = "Register";
 
     }
 
@@ -287,15 +480,15 @@ async function sendMessage() {
 
             </div>
 
-           <div class="message">
+            <div class="message">
 
-    <strong>LVS AI Assistant</strong>
+                <strong>LVS AI Assistant</strong>
 
-    <br><br>
+                <br><br>
 
-    ${data.response.replace(/\n/g, "<br>")}
+                ${data.response}
 
-</div>
+            </div>
 
         </div>
 
@@ -391,17 +584,3 @@ function confirmDonationPaid() {
     sendMessage();
 
 }
-
-// ======================================
-// Festival Schedule
-// ======================================
-
-const scheduleCard = document.getElementById("schedule");
-
-scheduleCard.addEventListener("click", function () {
-
-    userInput.value = "festival schedule";
-
-    sendMessage();
-
-});

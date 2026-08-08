@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from backend.festival_schedule import FESTIVAL_SCHEDULE
 
@@ -71,10 +72,27 @@ class ScheduleService:
         return None
 
     # ==========================================
+    # Get Schedule By Sequential Day Number
+    # ==========================================
+    # "Day 1" = FESTIVAL_SCHEDULE[0] (14-Sep-2026)
+    # "Day 2" = FESTIVAL_SCHEDULE[1] (15-Sep-2026)
+    # ...and so on, based on list order.
+    # ==========================================
+    def get_day_by_number(self, day_number: int):
+
+        index = day_number - 1
+
+        if index < 0 or index >= len(FESTIVAL_SCHEDULE):
+            return None
+
+        return self.format_day(FESTIVAL_SCHEDULE[index])
+
+    # ==========================================
     # Handle User Query
     # ==========================================
     def handle_query(self, message):
 
+        original_message = message
         message = message.lower()
 
         # ----------------------------
@@ -97,6 +115,28 @@ class ScheduleService:
                     return self.format_day(day)
 
             return "Today's festival schedule is not available."
+
+        # ----------------------------
+        # Search By Sequential Day Number
+        # (e.g. "day 2", "day2", "Day 5")
+        # ----------------------------
+
+        day_number_match = re.search(r"\bday\s?(\d+)\b", message)
+
+        if day_number_match:
+
+            day_number = int(day_number_match.group(1))
+
+            result = self.get_day_by_number(day_number)
+
+            if result:
+                return result
+
+            return (
+                f"I couldn't find Day {day_number} in the schedule. "
+                f"The festival runs for {len(FESTIVAL_SCHEDULE)} days "
+                f"(Day 1 to Day {len(FESTIVAL_SCHEDULE)})."
+            )
 
         # ----------------------------
         # Search By Date

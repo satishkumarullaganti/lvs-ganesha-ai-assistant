@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
@@ -15,8 +15,12 @@ from backend.database.database import (
     create_tables,
     get_registrations,
     save_registration,
-    save_annaprasada_booking 
+    save_annaprasada_booking,
+    save_cultural_registration,
+    get_cultural_registrations
 )
+import os
+import uuid
 
 # ============================================
 # FastAPI App
@@ -119,6 +123,120 @@ def register(data: RegistrationRequest):
     }
 
 # ============================================
+# Cultural Programs Register API
+# ============================================
+# Accepts multipart/form-data since an optional
+# audio track file can be uploaded alongside the
+# regular text fields.
+# ============================================
+
+CULTURAL_TRACKS_DIR = "static/cultural_tracks"
+ALLOWED_TRACK_EXTENSIONS = {".mp3", ".m4a"}
+MAX_TRACK_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB cap
+
+os.makedirs(CULTURAL_TRACKS_DIR, exist_ok=True)
+
+
+@app.post("/register-cultural")
+async def register_cultural(
+
+    name: str = Form(...),
+    block: str = Form(...),
+    flat: str = Form(...),
+    mobile: str = Form(...),
+    categories: str = Form(...),
+    other_details: str = Form(""),
+    track: UploadFile = File(None)
+
+):
+
+    if not validate_flat_number(block, flat):
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flat number '{flat}' for {block} block. Please check and re-enter."
+        )
+
+    if not categories.strip():
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please select at least one category."
+        )
+
+    track_path = None
+
+    # -----------------------------
+    # Optional Track Upload
+    # -----------------------------
+    if track is not None and track.filename:
+
+        file_ext = os.path.splitext(track.filename)[1].lower()
+
+        if file_ext not in ALLOWED_TRACK_EXTENSIONS:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Only .mp3 or .m4a files are allowed for the performance track."
+            )
+
+        file_bytes = await track.read()
+
+        if len(file_bytes) > MAX_TRACK_SIZE_BYTES:
+
+            raise HTTPException(
+                status_code=400,
+                detail="Track file is too large. Maximum allowed size is 15 MB."
+            )
+
+        unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+        full_disk_path = os.path.join(CULTURAL_TRACKS_DIR, unique_filename)
+
+        with open(full_disk_path, "wb") as f:
+            f.write(file_bytes)
+
+        track_path = f"{CULTURAL_TRACKS_DIR}/{unique_filename}"
+
+    save_cultural_registration(
+        name=name,
+        block=block,
+        flat_number=flat,
+        mobile=mobile,
+        categories=categories,
+        other_details=other_details.strip() if other_details else None,
+        track_path=track_path
+    )
+
+    return {
+        "status": "success",
+        "message": f"Cultural Programs registration successful for {name}"
+    }
+
+
+@app.get("/cultural-registrations")
+def cultural_registrations():
+
+    rows = get_cultural_registrations()
+
+    result = []
+
+    for row in rows:
+
+        result.append({
+            "id": row[0],
+            "name": row[1],
+            "block": row[2],
+            "flat_number": row[3],
+            "mobile": row[4],
+            "categories": row[5],
+            "other_details": row[6],
+            "track_path": row[7],
+            "created_at": row[8]
+        })
+
+    return result
+
+# ============================================
 # Chat API
 # ============================================
 
@@ -160,8 +278,27 @@ def chat(request: ChatRequest):
     # ==========================================
     # Start Annaprasada Coupon Booking
     # ==========================================
+    # Only treat this as a booking request if the message
+    # doesn't look like a schedule/timing question (e.g.
+    # "when is annaprasada" should go to schedule_service,
+    # not start the booking flow).
+    # ==========================================
 
-    if "annaprasada" in message.lower():
+    SCHEDULE_QUESTION_HINTS = [
+        "when",
+        "what time",
+        "schedule",
+        "timing",
+        "day"
+    ]
+
+    lower_message_check = message.lower()
+
+    looks_like_schedule_question = any(
+        hint in lower_message_check for hint in SCHEDULE_QUESTION_HINTS
+    )
+
+    if "annaprasada" in lower_message_check and not looks_like_schedule_question:
 
         result = annaprasada_service.check_booking_status()
 
@@ -200,8 +337,12 @@ def chat(request: ChatRequest):
     # to the full schedule instead of guessing.
     # ==========================================
 
+    import re
+
     SCHEDULE_TRIGGER_WORDS = [
         "schedule",
+        "schdeule",
+        "sched",
         "timing",
         "timings",
         "programme",
@@ -211,12 +352,20 @@ def chat(request: ChatRequest):
         "when is",
         "when does",
         "agenda",
-        "itinerary"
+        "itinerary",
+        "today's events",
+        "what's happening",
+        "whats happening"
     ]
 
     lower_message = message.lower()
 
-    if any(word in lower_message for word in SCHEDULE_TRIGGER_WORDS):
+    # Catches "day 1", "day1", "day 7", etc. for any day number
+    # (event now runs a full week, so this covers all days
+    # without needing to list each one individually)
+    day_number_pattern = re.search(r"\bday\s?\d+\b", lower_message)
+
+    if any(word in lower_message for word in SCHEDULE_TRIGGER_WORDS) or day_number_pattern:
 
         return {
             "response": schedule_service.handle_query(message)
