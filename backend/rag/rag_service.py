@@ -605,6 +605,23 @@ IMPORTANT RULES:
 7. Answer only the specific question asked. Do not reproduce
    the entire retrieved document unless the user explicitly
    asks for the complete information or schedule.
+
+   8. If the user asks about a specific event, program,
+   competition, dance, singing, or cultural activity,
+   answer using information specifically related
+   to that event or activity.
+
+9. If the user asks "when" about a specific event,
+   provide the specific date and time of that event
+   if it is available in the knowledge base.
+
+10. Do NOT answer a specific event question with
+    only the overall festival start and end dates.
+
+11. If the specific event or activity is not found
+    in the knowledge base, say:
+    "I don't have that information in the LVS Ganesha
+    Festival knowledge base."
    
 
 Festival Knowledge Base:
@@ -641,4 +658,4 @@ Answer:
         "sources": list(
             dict.fromkeys(sources)
         )
-    }		
+    }		    

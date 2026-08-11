@@ -10,7 +10,7 @@ from datetime import date, timedelta
 # Festival Configuration
 # ===========================================
 
-ANNAPRASADA_DATE = date(2026, 8, 8)
+ANNAPRASADA_DATE = date(2026, 8, 11)
 
 # Booking opens 2 days before the event
 BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)    
