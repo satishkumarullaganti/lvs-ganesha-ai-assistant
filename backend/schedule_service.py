@@ -72,6 +72,86 @@ class ScheduleService:
         return None
 
     # ==========================================
+    # Search Event By Word Overlap
+    # ==========================================
+    # Instead of relying on a fixed, hand-picked
+    # keyword list (which can never cover every
+    # event name), this checks the user's message
+    # against the ACTUAL event titles in the
+    # schedule, matching when most of an event's
+    # significant words appear in the message.
+    # e.g. "What time is Ganapathi Idol
+    # Installation?" matches the event named
+    # "Ganapathi Idol Installation" directly.
+    # ==========================================
+
+    STOPWORDS = {
+        "what", "time", "is", "the", "when", "does",
+        "will", "are", "a", "an", "of", "on", "at",
+        "for", "to", "and", "in"
+    }
+
+    def search_event_by_words(self, message):
+
+        # Extract only word characters, so trailing
+        # punctuation like "Harathi?" or "Harathi!"
+        # doesn't fail to match "Harathi".
+        message_lower = message.lower()
+
+        message_words = set(
+            re.findall(r"[a-z0-9]+", message_lower)
+        )
+
+        best_match = None
+        best_score = 0
+
+        for day in FESTIVAL_SCHEDULE:
+
+            for event in day["events"]:
+
+                event_words = set(
+                    re.findall(
+                        r"[a-z0-9]+",
+                        event["event"].lower()
+                    )
+                ) - self.STOPWORDS
+
+                if not event_words:
+                    continue
+
+                overlap = event_words & message_words
+
+                if not overlap:
+                    continue
+
+                score = len(overlap) / len(event_words)
+
+                # Require most of the event name's
+                # significant words to be present,
+                # to avoid weak/coincidental matches.
+                if score >= 0.6 and score > best_score:
+
+                    best_score = score
+
+                    best_match = {
+                        "day": day,
+                        "event": event
+                    }
+
+        if not best_match:
+            return None
+
+        day = best_match["day"]
+        event = best_match["event"]
+
+        response = "🔍 Event Found\n\n"
+        response += f"📆 {day['date']} ({day['day']})\n"
+        response += f"🕒 {event['time']}\n"
+        response += f"🎉 {event['event']}\n"
+        response += f"📍 {event['location']}"
+
+        return response
+    # ==========================================
     # Get Schedule By Sequential Day Number
     # ==========================================
     # "Day 1" = FESTIVAL_SCHEDULE[0] (14-Sep-2026)
@@ -172,52 +252,56 @@ class ScheduleService:
                 return self.format_day(day)
 
         # ----------------------------
-        # Search Events
+        # Search Events (dynamic match
+        # against actual event titles,
+        # not a fixed keyword list)
         # ----------------------------
 
-        event_keywords = [
+        word_match_result = self.search_event_by_words(message)
 
-            "harathi",
+        if word_match_result:
 
-            "annaprasada",
-
-            "prasadam",
-
-            "visarjan",
-
-            "homam",
-
-            "pooja",
-
-            "bhajans",
-
-            "dance",
-
-            "music",
-
-            "quiz",
-
-            "drawing",
-
-            "prize"
-
-        ]
-
-        for keyword in event_keywords:
-
-            if keyword in message:
-
-                result = self.search_event(keyword)
-
-                if result:
-
-                    return result
+            return word_match_result
 
         # ----------------------------
-        # Default
+        # Default - short summary instead
+        # of dumping the entire schedule
         # ----------------------------
 
-        return self.get_schedule()
+        return self.get_festival_summary()
+
+    # ==========================================
+    # Short Festival Summary
+    # ==========================================
+    # Used as the default answer for general
+    # questions ("when is the festival?") that
+    # don't match a specific day/date/event, so
+    # we don't dump the whole schedule for every
+    # vague question.
+    # ==========================================
+    def get_festival_summary(self):
+
+        if not FESTIVAL_SCHEDULE:
+            return "Festival schedule is not available yet."
+
+        first_day = FESTIVAL_SCHEDULE[0]
+        last_day = FESTIVAL_SCHEDULE[-1]
+
+        response = "🪔 LVS Excellency Ganesha Festival\n\n"
+
+        response += (
+            f"The festival runs from {first_day['date']} "
+            f"({first_day['title']}) to {last_day['date']} "
+            f"({last_day['title']}).\n\n"
+        )
+
+        response += (
+            "Ask me about a specific day (e.g. \"day 2\"), "
+            "today's schedule, or say \"full schedule\" to "
+            "see every event."
+        )
+
+        return response
 
 
 schedule_service = ScheduleService()
