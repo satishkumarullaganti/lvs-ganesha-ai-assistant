@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File
+from fastapi import FastAPI, Request, Form, HTTPException, UploadFile, File, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
@@ -41,6 +41,39 @@ app = FastAPI(
 )
 app.mount("/static", StaticFiles(directory="static"), name="static") 
 app.include_router(admin_router)
+
+# ============================================
+# Per-Visitor Session Handling
+# ============================================
+# Every visitor gets a private session_id stored
+# in a cookie, so their registration/annaprasada/
+# donation/chat state is independent from every
+# other visitor. Without this, all visitors share
+# one global state and can hijack each other's
+# conversation flows.
+# ============================================
+
+SESSION_COOKIE_NAME = "lvs_session_id"
+
+
+def get_or_create_session_id(request: Request, response: Response) -> str:
+
+    session_id = request.cookies.get(SESSION_COOKIE_NAME)
+
+    if not session_id:
+        session_id = str(uuid.uuid4())
+
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=session_id,
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        httponly=True,
+        samesite="lax"
+    )
+
+    return session_id
+
+
 # ============================================
 # Database Initialization
 # ============================================
@@ -319,39 +352,34 @@ def volunteer_registrations():
 # ============================================
 
 @app.post("/register-chat")
-def register_chat():
+def register_chat(request: Request, response: Response):
 
-    # Always start a fresh registration session.
-    # This resets any previous incomplete registration.
-    return {
-        "response": registration.start()
-    }
-# ============================================
-# Start Fresh Chat Registration
-# ============================================
+    # Always start a fresh registration session
+    # for THIS visitor only (session-scoped).
+    session_id = get_or_create_session_id(request, response)
 
-@app.post("/register-chat")
-def register_chat():
     return {
-        "response": registration.start()
+        "response": registration.start(session_id)
     }
 # ============================================
 # Chat API
 # ============================================
 
 @app.post("/chat")
-def chat(request: ChatRequest):
+def chat(chat_request: ChatRequest, request: Request, response: Response):
 
-    message = request.message.strip()
+    session_id = get_or_create_session_id(request, response)
+
+    message = chat_request.message.strip()
 
     # ==========================================
     # Continue Donation Flow (if active)
     # ==========================================
 
-    if donation_service.active:
+    if donation_service.is_active(session_id):
 
         return {
-            "response": donation_service.process_donation(message)
+            "response": donation_service.process_donation(session_id, message)
         }
 
     # ==========================================
@@ -361,17 +389,17 @@ def chat(request: ChatRequest):
     if "donation" in message.lower():
 
         return {
-            "response": donation_service.start_donation()
+            "response": donation_service.start_donation(session_id)
         }
 
     # ==========================================
     # Continue Annaprasada Booking (if active)
     # ==========================================
 
-    if annaprasada_service.active:
+    if annaprasada_service.is_active(session_id):
 
         return {
-            "response": annaprasada_service.process_booking(message)
+            "response": annaprasada_service.process_booking(session_id, message)
         }
 
     # ==========================================
@@ -399,7 +427,7 @@ def chat(request: ChatRequest):
 
     if "annaprasada" in lower_message_check and not looks_like_schedule_question:
 
-        result = annaprasada_service.check_booking_status()
+        result = annaprasada_service.check_booking_status(session_id)
 
         return {
             "response": result["response"]
@@ -411,19 +439,17 @@ def chat(request: ChatRequest):
     if message.lower().strip() == "register":
         # Always start a fresh registration session
 
-        
-
-            return {
-                "response": registration.start()
-            }
+        return {
+            "response": registration.start(session_id)
+        }
 
     # -----------------------------
     # Continue Registration
     # -----------------------------
-    if registration.active:
+    if registration.is_active(session_id):
 
         return {
-            "response": registration.process(message)
+            "response": registration.process(session_id, message)
         }
 
     # ==========================================
@@ -508,7 +534,7 @@ def chat(request: ChatRequest):
     # General AI Chat
     # -----------------------------
 
-    reply = get_ai_response(message)
+    reply = get_ai_response(session_id, message)
 
     return {
         "response": reply

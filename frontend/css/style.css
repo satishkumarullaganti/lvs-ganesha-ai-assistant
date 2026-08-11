@@ -1,802 +1,455 @@
-/* ==========================================
-   RESET
-========================================== */
+/* =========================================================
+   LVS Excellency Ganesha Festival 2026
+   Clean festive UI
+   ========================================================= */
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    box-sizing: border-box;
 }
 
-/* ==========================================
-   BODY
-========================================== */
+html {
+    scroll-behavior: smooth;
+}
 
-body{
-
+body {
+    margin: 0;
     font-family: Arial, Helvetica, sans-serif;
-
-    background:#FFF8E8;
-
-    color:#333;
-
+    background: #fff8e8;
+    color: #222;
 }
 
-/* ==========================================
-   HEADER
-========================================== */
-
-header{
-
-    background:linear-gradient(135deg,#ff9800,#ff6f00);
-
-    color:white;
-
-    text-align:center;
-
-    padding:20px;
-
-    box-shadow:0 4px 12px rgba(0,0,0,.15);
-
+header {
+    display: none;
 }
 
-header h1{
-
-    font-size:42px;
-
-    margin-bottom:8px;
-
+main {
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
 }
 
-header p{
+/* =========================================================
+   HERO
+   ========================================================= */
 
-    font-size:22px;
-
+#hero {
+    text-align: center;
+    padding: 8px 0 34px;
 }
 
-/* ==========================================
-   MAIN
-========================================== */
-
-main{
-
-    max-width:1200px;
-
-    margin:auto;
-
-    padding:40px 20px;
-
+.hero-tagline {
+    margin: 0 0 34px;
+    color: #ff9800;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 700;
+    line-height: 1.15;
 }
 
-/* ==========================================
-   HERO SECTION
-========================================== */
-
-#hero{
-
-    text-align:center;
-
+.hero-visual-card {
+    width: min(100%, 900px);
+    margin: 0 auto 38px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 28px;
+    box-shadow: 0 14px 34px rgba(72, 55, 25, 0.14);
 }
 
-.app-logo{
-
-    width:90px;
-
-    margin-bottom:20px;
-
+.hero-logo-panel,
+.hero-ganesha-panel {
+    min-height: 310px;
+    border-radius: 28px;
+    background: linear-gradient(145deg, #fffdf8, #fff1d8);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.65),
+        0 8px 18px rgba(75, 55, 25, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-.hero-tagline{
-
-    color:#ff9800;
-
-    font-size:26px;
-
-    font-weight:bold;
-
-    margin-bottom:35px;
-
+.society-logo,
+.ganesha-image {
+    width: 78%;
+    height: 78%;
+    object-fit: contain;
+    display: block;
 }
 
-.society-logo{
-
-    width:180px;
-
-    margin-bottom:25px;
-
+.society-logo,
+.ganesha-image {
+    max-width: 390px;
+    max-height: 270px;
 }
 
-.ganesha-image{
-
-    width:420px;
-
-    max-width:100%;
-
-    border-radius:20px;
-
-    box-shadow:0 10px 25px rgba(0,0,0,.15);
-
-    margin-bottom:30px;
-
+#hero h2 {
+    margin: 4px 0 18px;
+    color: #d85b00;
+    font-size: clamp(34px, 5vw, 50px);
+    line-height: 1.1;
+    font-weight: 800;
 }
 
-#hero h2{
-
-    color:#d35400;
-
-    font-size:42px;
-
-    margin-bottom:15px;
-
+#hero h3 {
+    margin: 0;
+    color: #20252b;
+    font-size: clamp(27px, 4vw, 38px);
+    line-height: 1.18;
+    font-weight: 800;
 }
 
-#hero h3{
-
-    font-size:34px;
-
-    margin-bottom:25px;
-
+.hero-description {
+    margin: 20px auto 0;
+    max-width: 760px;
+    color: #555;
+    font-size: 18px;
+    line-height: 1.6;
 }
 
-.hero-description{
-
-    max-width:800px;
-
-    margin:auto;
-
-    font-size:20px;
-
-    line-height:1.8;
-
-    color:#555;
-
-    margin-bottom:50px;
-
-}
-
-/* ==========================================
+/* =========================================================
    FEATURE CARDS
-========================================== */
+   ========================================================= */
 
-.section-title{
-
-    text-align:center;
-
-    font-size:36px;
-
-    color:#d35400;
-
-    margin-bottom:40px;
-
+#features {
+    padding: 28px 0 20px;
 }
 
-.feature-grid{
-
-    display:grid;
-
-    grid-template-columns:repeat(3,1fr);
-
-    gap:25px;
-
+.section-title {
+    margin: 0 0 22px;
+    text-align: center;
+    color: #d85b00;
+    font-size: 28px;
+    font-weight: 700;
 }
 
-.feature-card{
-
-    background:white;
-
-    border-radius:18px;
-
-    padding:30px;
-
-    text-align:center;
-
-    cursor:pointer;
-
-    transition:.3s;
-
-    box-shadow:0 10px 25px rgba(0,0,0,.10);
-
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
 }
 
-.feature-card:hover{
-
-    transform:translateY(-8px);
-
-    box-shadow:0 18px 35px rgba(255,152,0,.30);
-
+.feature-card {
+    min-height: 145px;
+    padding: 22px 18px;
+    border-radius: 20px;
+    background: #fffdf8;
+    border: 1px solid #f2dfbd;
+    box-shadow: 0 8px 20px rgba(72, 55, 25, 0.08);
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.card-icon{
-
-    font-size:50px;
-
-    margin-bottom:15px;
-
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 26px rgba(72, 55, 25, 0.13);
 }
 
-.feature-card h3{
-
-    margin-bottom:10px;
-
+.card-icon {
+    font-size: 34px;
+    margin-bottom: 8px;
 }
 
-.feature-card p{
-
-    color:#666;
-
-    line-height:1.5;
-
+.feature-card h3 {
+    margin: 5px 0 7px;
+    color: #d85b00;
+    font-size: 20px;
 }
 
-/* ==========================================
-   CARD COLORS
-========================================== */
-
-#quick-register-card{
-
-    border-top:6px solid #ff9800;
-
+.feature-card p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
 }
 
-#schedule{
+/* =========================================================
+   CHAT
+   ========================================================= */
 
-    border-top:6px solid #2196F3;
-
+#chat-section {
+    margin-top: 34px;
+    padding: 26px 0 10px;
 }
 
-#volunteer{
-
-    border-top:6px solid #4CAF50;
-
+.chat-cta-button {
+    width: auto;
+    margin: 0 auto 20px;
+    display: block;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
 }
 
-#annaprasada{
-
-    border-top:6px solid #795548;
-
+#chat-container {
+    min-height: 180px;
+    max-height: 620px;
+    overflow-y: auto;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(72, 55, 25, 0.08);
 }
 
-#donation{
-
-    border-top:6px solid #FFC107;
-
+.bot-message {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 18px;
 }
 
-#cultural-programs{
-
-    border-top:6px solid #009688;
-
+.avatar {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 50%;
+    background: #ff9800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
 
-/* ==========================================
-   FOOTER
-========================================== */
-
-footer{
-
-    background:#333;
-
-    color:white;
-
-    text-align:center;
-
-    margin-top:60px;
-
-    padding:30px;
-
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
-footer p{
-
-    margin:8px;
-
+.message {
+    flex: 1;
+    padding: 18px 20px;
+    background: #fff8e8;
+    border-radius: 0 18px 18px 18px;
+    line-height: 1.6;
 }
 
-/* ==========================================
-   MOBILE
-========================================== */
-
-@media(max-width:768px){
-
-.feature-grid{
-
-grid-template-columns:repeat(2,1fr);
-
+#chat-input-area {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
 }
 
-header h1{
-
-font-size:30px;
-
+#user-input {
+    flex: 1;
+    min-width: 0;
+    height: 56px;
+    padding: 0 16px;
+    border: 2px solid #ddd;
+    border-radius: 14px;
+    font-size: 16px;
+    outline: none;
 }
 
-header p{
-
-font-size:18px;
-
+#user-input:focus {
+    border-color: #ff9800;
 }
 
-.hero-tagline{
-
-font-size:20px;
-
+#send-btn {
+    min-width: 100px;
+    height: 56px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 14px;
+    background: #ff9800;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
 }
 
-#hero h2{
-
-font-size:30px;
-
+#send-btn:hover {
+    background: #ed8d00;
 }
 
-#hero h3{
+/* =========================================================
+   MODALS
+   ========================================================= */
 
-font-size:24px;
-
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.55);
+    overflow-y: auto;
 }
 
-.hero-description{
-
-font-size:17px;
-
+.modal-content {
+    position: relative;
+    width: min(100%, 520px);
+    margin: 40px auto;
+    padding: 28px;
+    background: #fffdf8;
+    border-radius: 22px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
 }
 
-.section-title{
-
-font-size:28px;
-
+.modal-content h2 {
+    margin: 0 0 22px;
+    color: #d85b00;
 }
 
-.ganesha-image{
-
-width:100%;
-
-}
-
-}
-/* ==========================================
-   CHAT SECTION
-========================================== */
-
-#chat-container{
-
-    background:white;
-
-    border-radius:20px;
-
-    padding:25px;
-
-    box-shadow:0 10px 25px rgba(0,0,0,.10);
-
-    min-height:250px;
-
-    margin-bottom:25px;
-
-}
-
-.bot-message{
-
-    display:flex;
-
-    gap:18px;
-
-    align-items:flex-start;
-
-}
-
-.avatar{
-
-    width:60px;
-
-    height:60px;
-
-    border-radius:50%;
-
-    background:#ff9800;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    flex-shrink:0;
-
-    overflow:hidden;
-
-}
-
-.avatar img{
-
-    width:42px;
-
-    height:42px;
-
-    object-fit:contain;
-
-}
-
-.message{
-
-    background:#FFF8E8;
-
-    padding:20px;
-
-    border-radius:18px;
-
-    line-height:1.8;
-
-    flex:1;
-
-}
-
-#chat-input-area{
-
-    display:flex;
-
-    gap:15px;
-
-}
-
-#user-input{
-
-    flex:1;
-
-    padding:16px;
-
-    border:2px solid #ddd;
-
-    border-radius:12px;
-
-    font-size:17px;
-
-}
-
-#user-input:focus{
-
-    outline:none;
-
-    border-color:#ff9800;
-
-}
-
-#send-btn{
-
-    background:#ff9800;
-
-    color:white;
-
-    border:none;
-
-    border-radius:12px;
-
-    padding:0 28px;
-
-    cursor:pointer;
-
-    font-size:16px;
-
-    transition:.3s;
-
-}
-
-#send-btn:hover{
-
-    background:#f57c00;
-
-}
-
-/* ==========================================
-   USER MESSAGE
-========================================== */
-
-.user-message-wrapper{
-
-     display:flex;
-
-    justify-content:flex-end;
-
-    margin:20px 0;
-
-    width:100%;
-
-}
-
-.user-message{
-
-   display:inline-block;
-
-    min-width:80px;
-
-    max-width:75%;
-
-    background:#ff9800;
-
-    color:white;
-
-    padding:15px 20px;
-
-    border-radius:20px 20px 5px 20px;
-
-    font-size:16px;
-
-    line-height:1.6;
-
-    box-shadow:0 5px 15px rgba(0,0,0,.12);
-
-    word-break:break-word;
-
-}
-
-.user-title{
-
-    text-align:right;
-
-    font-weight:bold;
-
-    margin-bottom:8px;
-
-    color:#444;
-
-}
-
-/* ==========================
-   AI TYPING INDICATOR
-========================== */
-
-.typing-box{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:12px;
-
-    margin-top:10px;
-
-}
-
-.typing-text{
-
-    color:#666;
-
-    font-size:15px;
-
-    font-style:italic;
-
-}
-
-.typing-indicator{
-
-    display:flex;
-
-    gap:8px;
-
-}
-
-.typing-dot{
-
-    width:10px;
-
-    height:10px;
-
-    background:#ff9800;
-
-    border-radius:50%;
-
-    animation:typing 1.2s infinite;
-
-}
-
-.typing-dot:nth-child(2){
-
-    animation-delay:.2s;
-
-}
-
-.typing-dot:nth-child(3){
-
-    animation-delay:.4s;
-
-}
-
-@keyframes typing{
-
-    0%{
-
-        opacity:.3;
-
-        transform:translateY(0);
-
-    }
-
-    50%{
-
-        opacity:1;
-
-        transform:translateY(-6px);
-
-    }
-
-    100%{
-
-        opacity:.3;
-
-        transform:translateY(0);
-
-    }
-
-}
-/* ==========================================
-   Registration Modal
-========================================== */
-
-.modal{
-
-    display:none;
-
-    position:fixed;
-
-    z-index:999;
-
-    left:0;
-
-    top:0;
-
-    width:100%;
-
-    height:100%;
-
-    background:rgba(0,0,0,0.5);
-
-    overflow-y:auto; 
-
-}
-
-.modal-content{
-
-    background:#fff;
-
-    width:420px;
-
-    max-width:90%; 
-
-    margin:60px auto;
-
-    padding:25px;
-
-    border-radius:12px;
-
-    max-height:80vh;
-
-    overflow-y:auto; 
-
+.modal-content label {
+    display: block;
+    margin: 13px 0 6px;
+    font-weight: 600;
 }
 
 .modal-content input,
-.modal-content select{
-
-    width:100%;
-
-    margin-top:8px;
-
-    margin-bottom:15px;
-
-    padding:10px;
-
+.modal-content select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 15px;
+    background: white;
 }
 
-.close{
-
-    float:right;
-
-    cursor:pointer;
-
-    font-size:26px;
-
+.modal-content button {
+    width: 100%;
+    margin-top: 20px;
+    min-height: 46px;
+    border: 0;
+    border-radius: 10px;
+    background: #ff9800;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
-/* ==========================================
-   Cultural Programs Checkbox Group
-========================================== */
-
-.cultural-checkbox-group,
-.checkbox-group{
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:10px;
-
-    margin-top:10px;
-
-    margin-bottom:15px;
-
+.close {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 30px;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
 }
 
-.cultural-checkbox-item,
-.checkbox-item{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:8px;
-
-    background:#FFF8E8;
-
-    padding:10px 12px;
-
-    border-radius:10px;
-
-    font-size:15px;
-
-    cursor:pointer;
-
-    transition:.2s;
-
+.checkbox-group,
+.cultural-checkbox-group {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.cultural-checkbox-item:hover,
-.checkbox-item:hover{
-
-    background:#ffe9c2;
-
+.checkbox-item,
+.cultural-checkbox-item {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    background: #fff8e8;
+    font-weight: 400 !important;
 }
 
-.cultural-checkbox-item input,
-.checkbox-item input{
-
-    width:auto;
-
-    margin:0;
-
-    cursor:pointer;
-
+.checkbox-item input,
+.cultural-checkbox-item input {
+    width: auto;
+    min-height: auto;
 }
 
-/* ==========================================
-   SMALL PHONE SCREENS
-========================================== */
+/* =========================================================
+   FOOTER
+   ========================================================= */
 
-@media(max-width:420px){
-
-.feature-grid{
-
-grid-template-columns:1fr;
-
+footer {
+    padding: 26px 20px 40px;
+    text-align: center;
+    color: #777;
+    font-size: 13px;
 }
 
+footer p {
+    margin: 5px 0;
 }
 
-/* ==========================================
-   CHAT WITH AI BUTTON
-   (styled to look like the section title,
-   but clickable to scroll/focus the chat box)
-========================================== */
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
 
-.chat-cta-button{
+@media (max-width: 800px) {
+    main {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
 
-    background:none;
+    .hero-visual-card {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        padding: 14px;
+    }
 
-    border:none;
+    .hero-logo-panel,
+    .hero-ganesha-panel {
+        min-height: 250px;
+    }
 
-    cursor:pointer;
-
-    display:block;
-
-    width:100%;
-
-    font-family:inherit;
-
-    transition:.2s;
-
+    .feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-.chat-cta-button:hover{
+@media (max-width: 520px) {
+    #hero {
+        padding-top: 4px;
+    }
 
-    color:#ff9800;
+    .hero-tagline {
+        margin-bottom: 22px;
+        font-size: 28px;
+    }
 
-    transform:translateY(-2px);
+    .hero-visual-card {
+        border-radius: 22px;
+    }
 
+    .hero-logo-panel,
+    .hero-ganesha-panel {
+        min-height: 205px;
+        border-radius: 20px;
+    }
+
+    #hero h2 {
+        font-size: 32px;
+    }
+
+    #hero h3 {
+        font-size: 25px;
+    }
+
+    .hero-description {
+        font-size: 15px;
+    }
+
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #chat-input-area {
+        flex-direction: column;
+    }
+
+    #send-btn {
+        width: 100%;
+    }
+
+    .bot-message {
+        gap: 9px;
+    }
+
+    .avatar {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
 }

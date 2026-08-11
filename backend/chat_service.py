@@ -3,10 +3,9 @@ import ollama
 from backend.config import OLLAMA_MODEL
 
 
-conversation_history = [
-    {
-        "role": "system",
-        "content": """
+SYSTEM_PROMPT = {
+    "role": "system",
+    "content": """
 You are LVS Ganesha AI Assistant.
 
 Developer:
@@ -24,13 +23,29 @@ Be friendly.
 
 Keep answers concise.
 """
-    }
-]
+}
+
+# session_id -> list of {"role":..., "content":...} messages
+# Each visitor gets their own conversation history, so one
+# person's chat doesn't leak into or get mixed up with
+# another visitor's conversation context.
+conversation_histories = {}
 
 
-def get_ai_response(message: str):
+def _get_history(session_id):
 
-    conversation_history.append(
+    if session_id not in conversation_histories:
+
+        conversation_histories[session_id] = [SYSTEM_PROMPT]
+
+    return conversation_histories[session_id]
+
+
+def get_ai_response(session_id: str, message: str):
+
+    history = _get_history(session_id)
+
+    history.append(
         {
             "role": "user",
             "content": message
@@ -39,12 +54,12 @@ def get_ai_response(message: str):
 
     response = ollama.chat(
         model=OLLAMA_MODEL,
-        messages=conversation_history
+        messages=history
     )
 
     assistant_reply = response["message"]["content"]
 
-    conversation_history.append(
+    history.append(
         {
             "role": "assistant",
             "content": assistant_reply
@@ -52,6 +67,3 @@ def get_ai_response(message: str):
     )
 
     return assistant_reply
-
-
-

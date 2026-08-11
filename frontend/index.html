@@ -28,53 +28,47 @@
     <main>
 
         <!-- Hero Section -->
-        <section id="hero">
+<section id="hero">
 
-            <img
-                src="assets/images/app_logo.png"
-                class="app-logo"
-                alt="App Logo">
+    <p class="hero-tagline">
+        Your Smart Festival Companion
+    </p>
 
-            <p class="hero-tagline">
-                Your Smart Festival Companion
-            </p>
+    <div class="hero-visual-card">
 
+        <div class="hero-logo-panel">
             <img
                 src="assets/images/lvs_logo.png"
                 class="society-logo"
                 alt="LVS Logo">
+        </div>
 
+        <div class="hero-ganesha-panel">
             <img
                 src="assets/images/ganesha.png"
                 class="ganesha-image"
-                alt="Lord Ganesesha">
+                alt="Lord Ganesha">
+        </div>
 
-            <h2>
-                🙏 Ganapathi Bappa Morya!
-            </h2>
+    </div>
 
-            <h3>
-                Welcome to
-                <br>
-                LVS Excellency Ganesha Festival 2026
-            </h3>
+    <h2>
+        🙏 Ganapathi Bappa Morya!
+    </h2>
 
-            <p class="hero-description">
+    <h3>
+        Welcome to
+        <br>
+        LVS Excellency Ganesha Festival 2026
+    </h3>
 
-                May Lord Ganesha bless you with
-                wisdom, prosperity and happiness.
+    <p class="hero-description">
+        May Lord Ganesha bless you with wisdom, prosperity and happiness.
+    </p>
 
-                <br><br>
+</section>
 
-                Your one-stop AI assistant for
-                registrations, schedules,
-                updates, volunteering and festival FAQs.
-
-            </p>
-
-        </section>
-
-        <!-- Feature Cards -->
+<!-- Feature Cards -->
         <section id="features">
 
             <h2 class="section-title">
@@ -192,33 +186,6 @@
     </footer>
 
     <!-- ====================================== -->
-
-    <!-- ====================================== -->
-    <!-- Quick Registration Choice Modal -->
-    <!-- ====================================== -->
-    <div id="registration-choice-modal" class="modal">
-        <div class="modal-content" style="max-width:420px;text-align:center;">
-            <span id="close-registration-choice" class="close">&times;</span>
-            <h2>📝 Quick Registration</h2>
-            <p>How would you like to register?</p>
-
-            <button id="register-by-form" type="button"
-                style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
-                📝 Register through Form
-            </button>
-
-            <button id="register-by-chat" type="button"
-                style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
-                🤖 Register through Chat
-            </button>
-
-            <button id="cancel-registration-choice" type="button"
-                style="margin-top:8px;padding:9px 20px;border:1px solid #ccc;border-radius:8px;background:white;cursor:pointer;">
-                Cancel
-            </button>
-        </div>
-    </div>
-
     <!-- Quick Registration Modal -->
     <!-- ====================================== -->
 
@@ -537,259 +504,6 @@
         </div>
 
     </div>
-
-
-
-    <!-- ====================================== -->
-    <!-- Schedule Popup -->
-    <!-- ====================================== -->
-
-    <div id="schedule-modal" class="schedule-modal" aria-hidden="true">
-
-        <div class="schedule-modal-content" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
-
-            <div class="schedule-modal-header">
-
-                <h2 id="schedule-modal-title">📅 LVS Ganesha Festival Schedule</h2>
-
-                <button id="schedule-close-x" class="schedule-close" type="button" aria-label="Close schedule">&times;</button>
-
-            </div>
-
-            <div id="schedule-content" class="schedule-content">
-                <div class="schedule-loading">⏳ Loading festival schedule...</div>
-            </div>
-
-            <div class="schedule-modal-footer">
-
-                <button id="schedule-ai-btn" class="schedule-ai-btn" type="button">
-                    💬 Ask AI About Schedule
-                </button>
-
-                <button id="schedule-close-btn" class="schedule-close-btn" type="button">
-                    Close
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <style>
-        .schedule-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: rgba(0, 0, 0, 0.65);
-            padding: 24px 12px;
-            box-sizing: border-box;
-            overflow-y: auto;
-        }
-
-        .schedule-modal.show {
-            display: block;
-        }
-
-        .schedule-modal-content {
-            width: min(900px, 96%);
-            max-height: 90vh;
-            margin: 20px auto;
-            background: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.30);
-        }
-
-        .schedule-modal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 18px 22px;
-            border-bottom: 1px solid #eeeeee;
-        }
-
-        .schedule-modal-header h2 {
-            margin: 0;
-            font-size: 21px;
-        }
-
-        .schedule-close {
-            border: 0;
-            background: transparent;
-            font-size: 30px;
-            line-height: 1;
-            cursor: pointer;
-            padding: 2px 8px;
-        }
-
-        .schedule-content {
-            padding: 22px;
-            max-height: 62vh;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            line-height: 1.65;
-            font-size: 15px;
-        }
-
-        .schedule-loading {
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .schedule-modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            flex-wrap: wrap;
-            padding: 15px 20px;
-            border-top: 1px solid #eeeeee;
-        }
-
-        .schedule-ai-btn,
-        .schedule-close-btn {
-            border: 0;
-            border-radius: 8px;
-            padding: 11px 18px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .schedule-ai-btn {
-            background: #333333;
-            color: #ffffff;
-        }
-
-        .schedule-close-btn {
-            background: #eeeeee;
-            color: #222222;
-        }
-
-        @media (max-width: 600px) {
-            .schedule-modal {
-                padding: 8px 4px;
-            }
-
-            .schedule-modal-content {
-                width: 98%;
-                margin: 5px auto;
-            }
-
-            .schedule-content {
-                max-height: 68vh;
-                padding: 16px;
-                font-size: 14px;
-            }
-        }
-    </style>
-
-    <script>
-        (function () {
-
-            const scheduleCard = document.getElementById("schedule");
-            const scheduleModal = document.getElementById("schedule-modal");
-            const scheduleContent = document.getElementById("schedule-content");
-            const scheduleCloseX = document.getElementById("schedule-close-x");
-            const scheduleCloseBtn = document.getElementById("schedule-close-btn");
-            const scheduleAiBtn = document.getElementById("schedule-ai-btn");
-            const chatSection = document.getElementById("chat-section");
-            const userInput = document.getElementById("user-input");
-
-            function closeScheduleModal() {
-                scheduleModal.classList.remove("show");
-                scheduleModal.setAttribute("aria-hidden", "true");
-            }
-
-            async function openScheduleModal() {
-
-                scheduleModal.classList.add("show");
-                scheduleModal.setAttribute("aria-hidden", "false");
-
-                scheduleContent.innerHTML =
-                    '<div class="schedule-loading">⏳ Loading festival schedule...</div>';
-
-                try {
-
-                    const response = await fetch("/chat", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            message: "full schedule"
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(
-                            data.detail || "Unable to load schedule."
-                        );
-                    }
-
-                    scheduleContent.textContent =
-                        data.response ||
-                        "Festival schedule is not available.";
-
-                } catch (error) {
-
-                    console.error("Schedule popup error:", error);
-
-                    scheduleContent.textContent =
-                        "Unable to load the festival schedule. Please try again.";
-                }
-            }
-
-            /*
-             * Capture the click before app.js can handle the
-             * same Schedule card and scroll to the chatbot.
-             */
-            scheduleCard.addEventListener("click", function (event) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                openScheduleModal();
-            }, true);
-
-            scheduleCloseX.addEventListener("click", closeScheduleModal);
-            scheduleCloseBtn.addEventListener("click", closeScheduleModal);
-
-            scheduleModal.addEventListener("click", function (event) {
-                if (event.target === scheduleModal) {
-                    closeScheduleModal();
-                }
-            });
-
-            document.addEventListener("keydown", function (event) {
-                if (
-                    event.key === "Escape" &&
-                    scheduleModal.classList.contains("show")
-                ) {
-                    closeScheduleModal();
-                }
-            });
-
-            scheduleAiBtn.addEventListener("click", function () {
-
-                closeScheduleModal();
-
-                if (chatSection) {
-                    chatSection.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start"
-                    });
-                }
-
-                if (userInput) {
-                    userInput.value = "Tell me about the festival schedule";
-                    userInput.focus();
-                }
-            });
-
-        })();
-    </script>
 
     <!-- app.js loaded last so all elements above already exist in the DOM -->
     <script src="js/app.js"></script>

@@ -5,25 +5,50 @@ from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_donation
 from backend.receipt_service import generate_receipt_pdf
-from backend.validators import validate_flat_number_any_block
 
 
 def generate_receipt_id():
     return "DN" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
 
 
+# ==========================================
+# Donation Service
+# ==========================================
+# IMPORTANT: This service is now SESSION-AWARE.
+# Every method takes a session_id, and donation
+# state is stored per-session, not shared across
+# every visitor.
+# ==========================================
+
 class DonationService:
 
     def __init__(self):
-        self.active = False
-        self.step = 0
-        self.donation = {}
+        # session_id -> {"active": bool, "step": int, "donation": dict}
+        self.sessions = {}
 
-    def start_donation(self):
+    def _get_session(self, session_id):
 
-        self.active = True
-        self.step = 1
-        self.donation = {}
+        if session_id not in self.sessions:
+
+            self.sessions[session_id] = {
+                "active": False,
+                "step": 0,
+                "donation": {}
+            }
+
+        return self.sessions[session_id]
+
+    def is_active(self, session_id):
+
+        return self._get_session(session_id)["active"]
+
+    def start_donation(self, session_id):
+
+        self.sessions[session_id] = {
+            "active": True,
+            "step": 1,
+            "donation": {}
+        }
 
         return """
 🙏 Thank you for your generous heart!
@@ -33,47 +58,37 @@ Every contribution helps make this Ganesh festival memorable for our community.
 👤 Please enter your Name.
 """
 
-    def process_donation(self, message):
+    def process_donation(self, session_id, message):
+
+        session = self._get_session(session_id)
 
         # Step 1 - Name
-        if self.step == 1:
+        if session["step"] == 1:
 
-            self.donation["name"] = message.strip()
-            self.step = 2
+            session["donation"]["name"] = message.strip()
+            session["step"] = 2
 
-            return "🏠 Please enter your Flat Number (e.g. 004)."
+            return "🏠 Please enter your Flat Number."
 
         # Step 2 - Flat Number
-        elif self.step == 2:
+        elif session["step"] == 2:
 
-            flat_number = message.strip()
-
-            if not validate_flat_number_any_block(flat_number):
-
-                return (
-                    f"❌ Invalid flat number '{flat_number}'. "
-                    "Please enter a valid 3-digit flat number."
-                )
-
-            self.donation["flat_number"] = flat_number
-            self.step = 3
+            session["donation"]["flat_number"] = message.strip()
+            session["step"] = 3
 
             return "💰 Please enter the amount you wish to donate (₹)."
 
         # Step 3 - Amount → show UPI details
-        elif self.step == 3:
+        elif session["step"] == 3:
 
-            self.donation["amount"] = message.strip()
-            self.step = 4
+            session["donation"]["amount"] = message.strip()
+            session["step"] = 4
 
-            upi_ref = (
-                f"upi_{self.donation['flat_number']}_"
-                f"{random.randint(1000,9999)}"
-            )
+            upi_ref = f"upi_{session['donation']['flat_number']}_{random.randint(1000,9999)}"
             upi_qr_path = generate_qr_code(upi_ref, upi_ref)
 
             return f"""
-💳 Please pay ₹{self.donation['amount']} using any UPI app:
+💳 Please pay ₹{session['donation']['amount']} using any UPI app:
 
 📱 GPay UPI ID : {UPI_ID_GPAY}
 📱 PhonePe UPI ID : {UPI_ID_PHONEPE}
@@ -88,37 +103,35 @@ Every contribution helps make this Ganesh festival memorable for our community.
 """
 
         # Step 4 - Confirm Payment
-        elif self.step == 4:
-
-            self.active = False
-            self.step = 0
+        elif session["step"] == 4:
 
             receipt_id = generate_receipt_id()
+            donation = session["donation"]
 
             save_donation(
                 receipt_id=receipt_id,
-                name=self.donation["name"],
-                flat_number=self.donation["flat_number"],
-                amount=self.donation["amount"]
+                name=donation["name"],
+                flat_number=donation["flat_number"],
+                amount=donation["amount"]
             )
 
             receipt_path = generate_receipt_pdf(
                 receipt_id=receipt_id,
-                name=self.donation["name"],
-                flat_number=self.donation["flat_number"],
-                amount=self.donation["amount"]
+                name=donation["name"],
+                flat_number=donation["flat_number"],
+                amount=donation["amount"]
             )
 
-            return f"""
-🙏 Thank you, {self.donation['name']}, for your generous contribution!
+            response = f"""
+🙏 Thank you, {donation['name']}, for your generous contribution!
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🧾 DONATION RECEIPT
 ━━━━━━━━━━━━━━━━━━━━━━
 
-👤 Name : {self.donation['name']}
-🏠 Flat : {self.donation['flat_number']}
-💰 Amount : ₹{self.donation['amount']}
+👤 Name : {donation['name']}
+🏠 Flat : {donation['flat_number']}
+💰 Amount : ₹{donation['amount']}
 🧾 Receipt ID : {receipt_id}
 
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -129,6 +142,14 @@ May Lord Ganesha bless you and your family. 🙏
 
 <a href="/{receipt_path}" target="_blank" style="display:inline-block;background:#ff9800;color:white;padding:10px 20px;border-radius:10px;text-decoration:none;font-size:14px;">📥 Download Receipt (PDF)</a>
 """
+
+            self.sessions[session_id] = {
+                "active": False,
+                "step": 0,
+                "donation": {}
+            }
+
+            return response
 
 
 donation_service = DonationService()

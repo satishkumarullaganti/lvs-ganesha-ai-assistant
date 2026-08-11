@@ -276,173 +276,58 @@ def is_festival_question(query):
 # Search knowledge base
 # --------------------------------------------------
 
-def search_knowledge(
-    query,
-    number_of_results=5
-):
+def _build_retrieval_queries(query):
+    original = query.strip()
+    normalized = re.sub(r"\s+", " ", original.lower()).strip()
+    cleaned = re.sub(r"\b(what|when|where|who|why|how|is|are|the|a|an|of|on|at|for|to|and|in|does|will|can|do|i|we|you|it|this|that|please|tell|me)\b", " ", normalized)
+    cleaned = re.sub(r"[^a-z0-9\s]", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    variants = [original]
+    if cleaned and cleaned != normalized:
+        variants.append(cleaned)
+    rules_match = re.search(r"\b(?:rules?|guidelines?)\s+(?:for\s+)?(.+)", cleaned)
+    if rules_match and rules_match.group(1).strip():
+        variants.append(f"{rules_match.group(1).strip()} rules")
+    important_terms = ["tambola", "chess", "carrom", "drawing", "musical chairs", "committee president", "committee", "organizer", "organiser", "volunteer", "donation", "sponsor", "dance", "singing", "skit"]
+    for term in important_terms:
+        if term in normalized:
+            variants.append(term)
+    result=[]; seen=set()
+    for item in variants:
+        key=item.strip().lower()
+        if key and key not in seen:
+            seen.add(key); result.append(item.strip())
+    return result[:4]
 
-    query_embedding = create_embedding(
-        query
-    )
+def _query_chroma(query, n_results=10):
+    query_embedding = create_embedding(query)
+    return collection.query(query_embeddings=[query_embedding], n_results=n_results)
 
-    category = detect_category(
-        query
-    )
-
-    # --------------------------------------------------
-    # Get more results initially, with distances so we
-    # can filter out weakly-related chunks below.
-    # --------------------------------------------------
-
-    results = collection.query(
-        query_embeddings=[
-            query_embedding
-        ],
-        n_results=10
-    )
-
-    documents = results.get(
-        "documents",
-        [[]]
-    )[0]
-
-    metadatas = results.get(
-        "metadatas",
-        [[]]
-    )[0]
-
-    distances = results.get(
-        "distances",
-        [[]]
-    )[0]
-
-    # --------------------------------------------------
-    # Relevance filtering
-    # --------------------------------------------------
-    # Drop any chunk that's too dissimilar to the query.
-    # Without this, weakly-related chunks get stuffed into
-    # the prompt as if they were solid context, which can
-    # make the LLM's answer vague even when RAG did run.
-    # --------------------------------------------------
-
-    filtered_documents = []
-    filtered_metadatas = []
-
-    for document, metadata, distance in zip(
-        documents,
-        metadatas,
-        distances
-    ):
-
-        if distance <= MAX_RELEVANT_DISTANCE:
-
-            filtered_documents.append(document)
-            filtered_metadatas.append(metadata)
-
-    documents = filtered_documents
-    metadatas = filtered_metadatas
-
-    # --------------------------------------------------
-    # Category-based source priority
-    # --------------------------------------------------
-
-    priority_sources = {
-
-        "schedule": [
-            "festival_schedule.md"
-        ],
-
-        "location": [
-            "festival_schedule.md"
-        ],
-
-        "competition": [
-            "competition_rules.md"
-        ],
-
-        "cultural": [
-            "cultural_programs.md"
-        ],
-
-        "volunteer": [
-            "volunteer_rules.md"
-        ],
-
-        "donation": [
-            "donation_information.md"
-        ],
-
-        "general": []
-    }
-
-    preferred_sources = priority_sources.get(
-        category,
-        []
-    )
-
-    # --------------------------------------------------
-    # Reorder results
-    # --------------------------------------------------
-
-    prioritized = []
-    normal = []
-
-    for document, metadata in zip(
-        documents,
-        metadatas
-    ):
-
-        source = ""
-
-        if metadata:
-
-            source = metadata.get(
-                "source",
-                ""
-            )
-
-        if source in preferred_sources:
-
-            prioritized.append(
-                {
-                    "document": document,
-                    "source": source
-                }
-            )
-
-        else:
-
-            normal.append(
-                {
-                    "document": document,
-                    "source": source
-                }
-            )
-
-    ordered_results = (
-        prioritized +
-        normal
-    )
-
-    ordered_results = ordered_results[
-        :number_of_results
-    ]
-
-    final_documents = [
-        item["document"]
-        for item in ordered_results
-    ]
-
-    final_sources = [
-        item["source"]
-        for item in ordered_results
-        if item["source"]
-    ]
-
-    return {
-        "documents": final_documents,
-        "sources": final_sources
-    }
+def search_knowledge(query, number_of_results=5):
+    category = detect_category(query)
+    candidates=[]
+    for retrieval_query in _build_retrieval_queries(query):
+        try:
+            results=_query_chroma(retrieval_query, n_results=10)
+            documents=results.get("documents", [[]])[0]
+            metadatas=results.get("metadatas", [[]])[0]
+            distances=results.get("distances", [[]])[0]
+            for document, metadata, distance in zip(documents, metadatas, distances):
+                candidates.append({"document":document, "metadata":metadata or {}, "distance":distance})
+        except Exception as error:
+            print(f"RAG retrieval failed for query '{retrieval_query}': {error}")
+    unique=[]; seen=set()
+    for candidate in candidates:
+        key=candidate["document"].strip()
+        if not key or key in seen:
+            continue
+        seen.add(key); unique.append(candidate)
+    filtered=[c for c in unique if c["distance"] <= MAX_RELEVANT_DISTANCE]
+    priority_sources={"schedule":["festival_schedule.md"],"location":["festival_schedule.md"],"competition":["competition_rules.md"],"cultural":["cultural_programs.md"],"volunteer":["volunteer_rules.md"],"donation":["donation_information.md"],"general":[]}
+    preferred_sources=priority_sources.get(category, [])
+    filtered.sort(key=lambda item:(0 if item["metadata"].get("source", "") in preferred_sources else 1, item["distance"]))
+    ordered=filtered[:number_of_results]
+    return {"documents":[x["document"] for x in ordered], "sources":list(dict.fromkeys(x["metadata"].get("source", "") for x in ordered if x["metadata"].get("source", "")))}
 
 
 # --------------------------------------------------
