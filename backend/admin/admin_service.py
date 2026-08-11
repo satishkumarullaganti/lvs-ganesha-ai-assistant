@@ -135,12 +135,262 @@ def get_table_data(table_name):
 
     return columns, rows
 
+# ============================================
+# Get Single Admin Record
+# ============================================
 
+def get_record_by_id(table_name, record_id):
+
+    allowed_tables = {
+
+        "registrations":
+            "registrations",
+
+        "cultural":
+            "cultural_registrations",
+
+        "volunteers":
+            "volunteers",
+
+        "donations":
+            "donations",
+
+        "annaprasada":
+            "annaprasada_bookings"
+    }
+
+
+    if table_name not in allowed_tables:
+
+        raise ValueError(
+            "Invalid table name"
+        )
+
+
+    actual_table = allowed_tables[
+        table_name
+    ]
+
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+
+    cursor.execute(
+        f"""
+        SELECT *
+        FROM {actual_table}
+        WHERE id = ?
+        """,
+        (record_id,)
+    )
+
+
+    row = cursor.fetchone()
+
+
+    columns = [
+        description[0]
+        for description in cursor.description
+    ]
+
+
+    conn.close()
+
+
+    if row is None:
+
+        return None
+
+
+    return dict(
+        zip(
+            columns,
+            row
+        )
+    )
+
+# ============================================
+# Update Admin Record
+# ============================================
+
+def update_record(
+    table_name,
+    record_id,
+    updates
+):
+
+    allowed_tables = {
+
+        "registrations":
+            "registrations",
+
+        "cultural":
+            "cultural_registrations",
+
+        "volunteers":
+            "volunteers",
+
+        "donations":
+            "donations",
+
+        "annaprasada":
+            "annaprasada_bookings"
+    }
+
+
+    if table_name not in allowed_tables:
+
+        raise ValueError(
+            "Invalid table name"
+        )
+
+
+    actual_table = allowed_tables[
+        table_name
+    ]
+
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+
+    # Get actual database columns
+    cursor.execute(
+        f"PRAGMA table_info({actual_table})"
+    )
+
+    table_columns = {
+        row[1]
+        for row in cursor.fetchall()
+    }
+
+
+    # Never allow ID to be modified
+    updates.pop("id", None)
+
+
+    # Only allow real columns
+    safe_updates = {
+        key: value
+        for key, value in updates.items()
+        if key in table_columns
+    }
+
+
+    if not safe_updates:
+
+        conn.close()
+
+        raise ValueError(
+            "No valid fields to update"
+        )
+
+
+    set_clause = ", ".join(
+        f"{column} = ?"
+        for column in safe_updates
+    )
+
+
+    values = list(
+        safe_updates.values()
+    )
+
+    values.append(record_id)
+
+
+    cursor.execute(
+        f"""
+        UPDATE {actual_table}
+        SET {set_clause}
+        WHERE id = ?
+        """,
+        values
+    )
+
+
+    if cursor.rowcount == 0:
+
+        conn.close()
+
+        return False
+
+
+    conn.commit()
+
+    conn.close()
+
+
+    return True
+
+# ============================================
+# Delete Admin Record
+# ============================================
+
+def delete_record(
+    table_name,
+    record_id
+):
+
+    allowed_tables = {
+
+        "registrations":
+            "registrations",
+
+        "cultural":
+            "cultural_registrations",
+
+        "volunteers":
+            "volunteers",
+
+        "donations":
+            "donations",
+
+        "annaprasada":
+            "annaprasada_bookings"
+    }
+
+    if table_name not in allowed_tables:
+
+        raise ValueError(
+            "Invalid table name"
+        )
+
+    actual_table = allowed_tables[
+        table_name
+    ]
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        f"""
+        DELETE FROM {actual_table}
+        WHERE id = ?
+        """,
+        (record_id,)
+    )
+
+    deleted = cursor.rowcount
+
+    if deleted == 0:
+
+        conn.close()
+
+        return False
+
+    conn.commit()
+    conn.close()
+
+    return True
 # ============================================
 # Excel Export
 # ============================================
 
-def create_excel_file():
+def create_excel_file(only_table=None):
 
     workbook = Workbook()
 
@@ -166,7 +416,29 @@ def create_excel_file():
             "annaprasada"
     }
 
-    for sheet_name, table_name in tables.items():
+    # ============================================
+    # Select tables
+    # ============================================
+
+    if only_table:
+
+        selected_tables = {
+            sheet_name: table_name
+            for sheet_name, table_name
+            in tables.items()
+            if table_name == only_table
+        }
+
+    else:
+
+        selected_tables = tables
+
+
+    # ============================================
+    # Create Excel sheets
+    # ============================================
+
+    for sheet_name, table_name in selected_tables.items():
 
         columns, rows = get_table_data(
             table_name
@@ -188,9 +460,11 @@ def create_excel_file():
             )
 
             cell.value = column
+
             cell.font = cell.font.copy(
                 bold=True
             )
+
 
         # Data
         for row_index, row in enumerate(
@@ -208,29 +482,5 @@ def create_excel_file():
                     column=column_index
                 ).value = value
 
-        # Auto width
-        for column_cells in worksheet.columns:
-
-            max_length = 0
-
-            column_letter = (
-                column_cells[0].column_letter
-            )
-
-            for cell in column_cells:
-
-                if cell.value is not None:
-
-                    max_length = max(
-                        max_length,
-                        len(str(cell.value))
-                    )
-
-            worksheet.column_dimensions[
-                column_letter
-            ].width = min(
-                max_length + 2,
-                40
-            )
 
     return workbook

@@ -719,6 +719,23 @@ async function sendMessage() {
 
 }
 // ======================================
+// Schedule Card Click
+// ======================================
+
+const scheduleCard = document.getElementById("schedule");
+
+scheduleCard.addEventListener("click", function () {
+
+    // Scroll to chat section smoothly
+    chatContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Auto-fill and send the message
+    userInput.value = "today's schedule";
+
+    sendMessage();
+
+});
+// ======================================
 // Annaprasada Card Click
 // ======================================
 

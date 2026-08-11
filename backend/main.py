@@ -24,7 +24,9 @@ from backend.database.database import (
     save_registration,
     save_annaprasada_booking,
     save_cultural_registration,
-    get_cultural_registrations
+    get_cultural_registrations,
+    save_volunteer_registration,
+    get_volunteer_registrations
 )
 import os
 import uuid
@@ -244,6 +246,76 @@ def cultural_registrations():
     return result
 
 # ============================================
+# Volunteer Registration Model
+# ============================================
+
+class VolunteerRequest(BaseModel):
+    name: str
+    block: str
+    flat: str
+    mobile: str
+    tasks: str
+    other_details: str = ""
+
+# ============================================
+# Volunteer Register API
+# ============================================
+
+@app.post("/register-volunteer")
+def register_volunteer(data: VolunteerRequest):
+
+    if not validate_flat_number(data.block, data.flat):
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
+    if not data.tasks.strip():
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please select at least one task to volunteer for."
+        )
+
+    save_volunteer_registration(
+        name=data.name,
+        block=data.block,
+        flat_number=data.flat,
+        mobile=data.mobile,
+        tasks=data.tasks,
+        other_details=data.other_details.strip() if data.other_details else None
+    )
+
+    return {
+        "status": "success",
+        "message": f"Thank you {data.name}! Your volunteer registration is confirmed."
+    }
+
+
+@app.get("/volunteer-registrations")
+def volunteer_registrations():
+
+    rows = get_volunteer_registrations()
+
+    result = []
+
+    for row in rows:
+
+        result.append({
+            "id": row[0],
+            "name": row[1],
+            "block": row[2],
+            "flat_number": row[3],
+            "mobile": row[4],
+            "tasks": row[5],
+            "other_details": row[6],
+            "created_at": row[7]
+        })
+
+    return result
+
+# ============================================
 # Chat API
 # ============================================
 
@@ -362,7 +434,14 @@ def chat(request: ChatRequest):
         "itinerary",
         "today's events",
         "what's happening",
-        "whats happening"
+        "whats happening",
+        "location",
+        "venue",
+        "where is",
+        "where does",
+        "where will",
+        "address",
+        "party hall"
     ]
 
     lower_message = message.lower()

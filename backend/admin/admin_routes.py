@@ -19,9 +19,11 @@ from io import BytesIO
 from backend.admin.admin_service import (
     get_dashboard_summary,
     get_table_data,
+    get_record_by_id,
+    update_record,
+    delete_record,
     create_excel_file
 )
-
 
 # ============================================
 # Admin Router
@@ -362,3 +364,313 @@ def export_all(
                 "filename=LVS_Festival_Data.xlsx"
         }
     )
+
+# ============================================
+# Export Registrations
+# ============================================
+
+@router.get("/export/registrations")
+def export_registrations(
+    request: Request
+):
+
+    require_admin(request)
+
+    workbook = create_excel_file(
+        only_table="registrations"
+    )
+
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; "
+                "filename=registrations.xlsx"
+        }
+    )
+
+
+# ============================================
+# Export Cultural Programs
+# ============================================
+
+@router.get("/export/cultural")
+def export_cultural(
+    request: Request
+):
+
+    require_admin(request)
+
+    workbook = create_excel_file(
+        only_table="cultural"
+    )
+
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; "
+                "filename=cultural_programs.xlsx"
+        }
+    )
+
+
+# ============================================
+# Export Volunteers
+# ============================================
+
+@router.get("/export/volunteers")
+def export_volunteers(
+    request: Request
+):
+
+    require_admin(request)
+
+    workbook = create_excel_file(
+        only_table="volunteers"
+    )
+
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; "
+                "filename=volunteers.xlsx"
+        }
+    )
+
+
+# ============================================
+# Export Donations
+# ============================================
+
+@router.get("/export/donations")
+def export_donations(
+    request: Request
+):
+
+    require_admin(request)
+
+    workbook = create_excel_file(
+        only_table="donations"
+    )
+
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; "
+                "filename=donations.xlsx"
+        }
+    )
+
+
+# ============================================
+# Export Annaprasada
+# ============================================
+
+@router.get("/export/annaprasada")
+def export_annaprasada(
+    request: Request
+):
+
+    require_admin(request)
+
+    workbook = create_excel_file(
+        only_table="annaprasada"
+    )
+
+    output = BytesIO()
+
+    workbook.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                "attachment; "
+                "filename=annaprasada.xlsx"
+        }
+    )
+# ============================================
+# View Single Record
+# ============================================
+
+@router.get("/record/{table_name}/{record_id}")
+def get_single_record(
+    table_name: str,
+    record_id: int,
+    request: Request
+):
+
+    require_admin(request)
+
+
+    try:
+
+        record = get_record_by_id(
+            table_name,
+            record_id
+        )
+
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+
+    if record is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Record not found"
+        )
+
+
+    return {
+        "table": table_name,
+        "record": record
+    }
+
+# ============================================
+# Update Single Record
+# ============================================
+
+@router.put("/record/{table_name}/{record_id}")
+async def update_single_record(
+    table_name: str,
+    record_id: int,
+    request: Request
+):
+
+    require_admin(request)
+
+    try:
+
+        updates = await request.json()
+
+        if not isinstance(updates, dict):
+
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid update data"
+            )
+
+
+        updated = update_record(
+            table_name,
+            record_id,
+            updates
+        )
+
+
+        if not updated:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Record not found"
+            )
+
+
+        return {
+            "success": True,
+            "message":
+                "Record updated successfully"
+        }
+
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+    # ============================================
+# Delete Single Record
+# ============================================
+
+@router.delete("/record/{table_name}/{record_id}")
+def delete_single_record(
+    table_name: str,
+    record_id: int,
+    request: Request
+):
+
+    require_admin(request)
+
+    try:
+
+        deleted = delete_record(
+            table_name,
+            record_id
+        )
+
+        if not deleted:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Record not found"
+            )
+
+        return {
+            "success": True,
+            "message":
+                "Record deleted successfully"
+        }
+
+    except ValueError as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
