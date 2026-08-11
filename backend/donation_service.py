@@ -5,6 +5,7 @@ from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_donation
 from backend.receipt_service import generate_receipt_pdf
+from backend.validators import validate_flat_number_any_block
 
 
 def generate_receipt_id():
@@ -40,12 +41,21 @@ Every contribution helps make this Ganesh festival memorable for our community.
             self.donation["name"] = message.strip()
             self.step = 2
 
-            return "🏠 Please enter your Flat Number."
+            return "🏠 Please enter your Flat Number (e.g. 004)."
 
         # Step 2 - Flat Number
         elif self.step == 2:
 
-            self.donation["flat_number"] = message.strip()
+            flat_number = message.strip()
+
+            if not validate_flat_number_any_block(flat_number):
+
+                return (
+                    f"❌ Invalid flat number '{flat_number}'. "
+                    "Please enter a valid 3-digit flat number."
+                )
+
+            self.donation["flat_number"] = flat_number
             self.step = 3
 
             return "💰 Please enter the amount you wish to donate (₹)."
@@ -56,7 +66,10 @@ Every contribution helps make this Ganesh festival memorable for our community.
             self.donation["amount"] = message.strip()
             self.step = 4
 
-            upi_ref = f"upi_{self.donation['flat_number']}_{random.randint(1000,9999)}"
+            upi_ref = (
+                f"upi_{self.donation['flat_number']}_"
+                f"{random.randint(1000,9999)}"
+            )
             upi_qr_path = generate_qr_code(upi_ref, upi_ref)
 
             return f"""

@@ -3,17 +3,14 @@
 # ============================================
 
 from backend.database.database import save_registration
-
+from backend.validators import validate_flat_number
 
 
 class RegistrationService:
 
     def __init__(self):
-
         self.active = False
-
         self.step = None
-
         self.data = {}
 
     # ========================================
@@ -21,11 +18,8 @@ class RegistrationService:
     # ========================================
 
     def start(self):
-
         self.active = True
-
         self.step = "competition"
-
         self.data = {}
 
         return (
@@ -48,7 +42,6 @@ class RegistrationService:
         if self.step == "competition":
 
             self.data["competition"] = message.title()
-
             self.step = "name"
 
             return "👤 Please enter your Full Name."
@@ -57,7 +50,6 @@ class RegistrationService:
         if self.step == "name":
 
             self.data["name"] = message
-
             self.step = "block"
 
             return (
@@ -69,7 +61,7 @@ class RegistrationService:
         # Block
         if self.step == "block":
 
-            block = message.lower()
+            block = message.strip().lower()
 
             if block in ["1", "south", "south block"]:
                 self.data["block"] = "South"
@@ -82,13 +74,15 @@ class RegistrationService:
 
             self.step = "flat"
 
-            return "🏠 Enter Flat Number (Example: 020 or S020)."
+            return "🏠 Enter Flat Number (Example: 004 or S004)."
 
         # Flat
         if self.step == "flat":
 
+            original_flat = message.strip()
             flat = message.upper()
 
+            # Allow optional prefixes such as S004/N008.
             flat = (
                 flat.replace("SOUTH", "")
                     .replace("NORTH", "")
@@ -99,8 +93,21 @@ class RegistrationService:
                     .strip()
             )
 
-            self.data["flat_number"] = flat
+            block = self.data["block"]
 
+            # Central validator:
+            # - exactly 3 digits
+            # - valid range for the selected block
+            if not validate_flat_number(block, flat):
+
+                return (
+                    f"❌ Invalid flat number '{original_flat}' "
+                    f"for {block} block.\n\n"
+                    "Please enter a valid 3-digit flat number.\n"
+                    "Example: 004, 020, 101."
+                )
+
+            self.data["flat_number"] = flat
             self.step = "mobile"
 
             return "📱 Enter Mobile Number."
@@ -108,12 +115,12 @@ class RegistrationService:
         # Mobile
         if self.step == "mobile":
 
-            if not message.isdigit() or len(message) != 10:
+            message = message.strip()
 
+            if not message.isdigit() or len(message) != 10:
                 return "❌ Please enter a valid 10-digit mobile number."
 
             self.data["mobile"] = message
-
             self.step = "age"
 
             return "🎂 Enter Age."
@@ -122,24 +129,20 @@ class RegistrationService:
         if self.step == "age":
 
             try:
-
                 age = int(message)
 
             except ValueError:
-
                 return "❌ Please enter a valid age."
 
             self.data["age"] = age
 
             save_registration(
-
                 self.data["name"],
                 self.data["block"],
                 self.data["flat_number"],
                 self.data["mobile"],
                 self.data["age"],
                 self.data["competition"]
-
             )
 
             summary = f"""
@@ -161,13 +164,10 @@ Thank you for registering.
 """
 
             self.active = False
-
             self.step = None
-
             self.data = {}
 
             return summary
 
 
 registration = RegistrationService()
-

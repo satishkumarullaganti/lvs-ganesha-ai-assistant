@@ -26,6 +26,21 @@ const registrationModal = document.getElementById("registration-modal");
 
 const closeModal = document.getElementById("close-modal");
 
+const registrationChoiceModal =
+    document.getElementById("registration-choice-modal");
+
+const closeRegistrationChoice =
+    document.getElementById("close-registration-choice");
+
+const registerByForm =
+    document.getElementById("register-by-form");
+
+const registerByChat =
+    document.getElementById("register-by-chat");
+
+const cancelRegistrationChoice =
+    document.getElementById("cancel-registration-choice");
+
 const registerSubmitBtn = document.getElementById("register-submit");
 
 const competitionField = document.getElementById("competition");
@@ -128,9 +143,55 @@ userInput.addEventListener("keydown", function (event) {
 
 quickRegisterCard.addEventListener("click", function () {
 
+    registrationChoiceModal.style.display = "block";
+
+}); 
+
+registerByForm.addEventListener("click", function () {
+
+    registrationChoiceModal.style.display = "none";
+
+    // Open your existing Quick Registration form
     registrationModal.style.display = "block";
 
 });
+
+
+registerByChat.addEventListener("click", function () {
+
+    registrationChoiceModal.style.display = "none";
+
+    // Move to the existing chatbot
+    chatContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+    // Make sure the chatbot is ready to send
+     sendButton.disabled = false;
+    // Trigger exactly the same action
+    // as the user manually typing "register"
+    // Put "register" into the chatbot
+    // Use the existing chatbot flow
+    userInput.value = "register";
+    sendMessage();
+    
+});
+
+
+closeRegistrationChoice.addEventListener("click", function () {
+
+    registrationChoiceModal.style.display = "none";
+
+});
+
+
+cancelRegistrationChoice.addEventListener("click", function () {
+
+    registrationChoiceModal.style.display = "none";
+
+});
+
 
 closeModal.addEventListener("click", function () {
 

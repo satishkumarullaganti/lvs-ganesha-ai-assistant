@@ -9,10 +9,8 @@ from backend.config import (
 )
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_annaprasada_booking
+from backend.validators import validate_flat_number
 
-# ==========================================
-# Booking Status
-# ==========================================
 
 class BookingStatus(Enum):
     NOT_OPEN = "NOT_OPEN"
@@ -20,17 +18,9 @@ class BookingStatus(Enum):
     CLOSED = "CLOSED"
 
 
-# ==========================================
-# Coupon ID Generator
-# ==========================================
-
 def generate_coupon_id():
     return "AP" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
 
-
-# ==========================================
-# Annaprasada Service
-# ==========================================
 
 class AnnaprasadaService:
 
@@ -127,15 +117,33 @@ Booking is now OPEN.
         # Step 3 - Block
         elif self.step == 3:
 
-            self.booking["block"] = message.strip()
+            block = message.strip()
+
+            if block.upper() not in {"NORTH", "SOUTH"}:
+
+                return "❌ Invalid block. Please enter North or South."
+
+            self.booking["block"] = block
             self.step = 4
 
-            return "🏠 Please enter your Flat Number."
+            return "🏠 Please enter your Flat Number (e.g. 004)."
 
         # Step 4 - Flat Number
         elif self.step == 4:
 
-            self.booking["flat_number"] = message.strip()
+            flat_number = message.strip()
+            block = self.booking["block"]
+
+            if not validate_flat_number(block, flat_number):
+
+                return (
+                    f"❌ Invalid flat number '{flat_number}' "
+                    f"for {block} block. "
+                    "Please enter a valid 3-digit flat number."
+                )
+
+            self.booking["flat_number"] = flat_number
+
             self.active = False
             self.step = 0
 
@@ -149,12 +157,6 @@ Booking is now OPEN.
                 members=self.booking["members"]
             )
 
-            # -----------------------------------------------
-            # IMPORTANT: this URL gets encoded INTO the QR
-            # code itself, so it must be the PUBLIC ngrok URL,
-            # not a local IP or 127.0.0.1 - otherwise volunteer
-            # phones on different networks can't reach it.
-            # -----------------------------------------------
             verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
             qr_path = generate_qr_code(verify_url, coupon_id)
 
@@ -186,5 +188,3 @@ Your Annaprasada Coupon is confirmed.
 
 
 annaprasada_service = AnnaprasadaService()
-
-

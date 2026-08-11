@@ -314,7 +314,27 @@ def volunteer_registrations():
         })
 
     return result
+# ============================================
+# Start Fresh Chat Registration
+# ============================================
 
+@app.post("/register-chat")
+def register_chat():
+
+    # Always start a fresh registration session.
+    # This resets any previous incomplete registration.
+    return {
+        "response": registration.start()
+    }
+# ============================================
+# Start Fresh Chat Registration
+# ============================================
+
+@app.post("/register-chat")
+def register_chat():
+    return {
+        "response": registration.start()
+    }
 # ============================================
 # Chat API
 # ============================================
@@ -386,11 +406,12 @@ def chat(request: ChatRequest):
         }
 
     # -----------------------------
-    # Start Registration
+    # Start / Restart Registration
     # -----------------------------
-    if not registration.active:
+    if message.lower().strip() == "register":
+        # Always start a fresh registration session
 
-        if "register" in message.lower():
+        
 
             return {
                 "response": registration.start()
