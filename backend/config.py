@@ -10,7 +10,7 @@ from datetime import date, timedelta
 # Festival Configuration
 # ===========================================
 
-ANNAPRASADA_DATE = date(2026, 8, 11)
+ANNAPRASADA_DATE = date(2026, 8, 12)
 
 # Booking opens 2 days before the event
 BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)    
@@ -19,8 +19,8 @@ BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)
 # Donation UPI Details (TESTING - dummy IDs)
 # ==========================================
 
-UPI_ID_GPAY = "lvsganesha@okaxis"
-UPI_ID_PHONEPE = "lvsganesha@ybl"
+UPI_ID_GPAY = "satishkumarullaganti@okhdfcbank"
+UPI_ID_PHONEPE = "9866406054-2@ybl"
 
 # ==========================================
 # Public Base URL

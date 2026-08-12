@@ -885,13 +885,212 @@ donationCard.addEventListener("click", function () {
 });
 
 // ======================================
-// Donation Payment Confirmation Button
+// Donation Payment Proof — Enable/Submit
 // ======================================
 
-function confirmDonationPaid() {
+function enableDonationSubmit(inputElement) {
 
-    userInput.value = "paid";
+    const submitBtn = document.getElementById("donation-submit-btn");
 
-    sendMessage();
+    if (!submitBtn) return;
+
+    if (inputElement.files && inputElement.files.length > 0) {
+
+        submitBtn.disabled = false;
+        submitBtn.style.background = "#4CAF50";
+        submitBtn.style.cursor = "pointer";
+
+    } else {
+
+        submitBtn.disabled = true;
+        submitBtn.style.background = "#ccc";
+        submitBtn.style.cursor = "not-allowed";
+
+    }
+
+}
+
+function submitDonationProof() {
+
+    const inputElement = document.getElementById("donation-proof-input");
+
+    if (!inputElement || !inputElement.files || inputElement.files.length === 0) {
+        return;
+    }
+
+    uploadDonationProof(inputElement);
+
+}
+
+// ======================================
+// Donation Payment Proof Screenshot Upload
+// ======================================
+
+async function uploadDonationProof(inputElement) {
+
+    if (!inputElement.files || inputElement.files.length === 0) {
+        return;
+    }
+
+    const file = inputElement.files[0];
+
+    // -----------------------------
+    // User Message (screenshot preview)
+    // -----------------------------
+    const previewUrl = URL.createObjectURL(file);
+
+    chatContainer.innerHTML += `
+
+    <div class="user-message-wrapper">
+
+        <div>
+
+            <div class="user-title">
+                You
+            </div>
+
+            <div class="user-message">
+                📷 Uploaded payment screenshot
+                <br>
+                <img src="${previewUrl}" style="width:140px;border-radius:10px;margin-top:8px;">
+            </div>
+
+        </div>
+
+    </div>
+
+    `;
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    // -----------------------------
+    // Typing Animation
+    // -----------------------------
+    const typingId = "typing-" + Date.now();
+
+    chatContainer.innerHTML += `
+
+    <div class="bot-message" id="${typingId}" style="margin-top:20px;">
+
+        <div class="avatar">
+            <img src="assets/images/app_logo.png" alt="AI">
+        </div>
+
+        <div class="message">
+
+            <strong>LVS AI Assistant</strong>
+
+            <div class="typing-box">
+
+                <div class="typing-text">
+                    Verifying your screenshot...
+                </div>
+
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    `;
+
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    try {
+
+        const formData = new FormData();
+        formData.append("proof", file);
+
+        const response = await fetch("/donation/upload-proof", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        const typingElement = document.getElementById(typingId);
+        if (typingElement) {
+            typingElement.remove();
+        }
+
+        if (!response.ok) {
+
+            chatContainer.innerHTML += `
+
+            <div class="bot-message" style="margin-top:20px;">
+
+                <div class="avatar">⚠️</div>
+
+                <div class="message">
+                    ${data.detail || "Unable to process this screenshot. Please try again."}
+                </div>
+
+            </div>
+
+            `;
+
+        } else {
+
+            chatContainer.innerHTML += `
+
+            <div class="bot-message" style="margin-top:20px;">
+
+                <div class="avatar">
+                    <img src="assets/images/app_logo.png" alt="AI">
+                </div>
+
+                <div class="message">
+
+                    <strong>LVS AI Assistant</strong>
+
+                    <br><br>
+
+                    ${data.response}
+
+                </div>
+
+            </div>
+
+            `;
+
+        }
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    } catch (error) {
+
+        console.error("Donation proof upload error:", error);
+
+        const typingElement = document.getElementById(typingId);
+        if (typingElement) {
+            typingElement.remove();
+        }
+
+        chatContainer.innerHTML += `
+
+        <div class="bot-message" style="margin-top:20px;">
+
+            <div class="avatar">⚠️</div>
+
+            <div class="message">
+                Unable to upload the screenshot right now. Please check your connection and try again.
+            </div>
+
+        </div>
+
+        `;
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    }
+
+    // Reset the file input so the same file can be re-selected if needed
+    inputElement.value = "";
 
 }

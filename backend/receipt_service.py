@@ -17,7 +17,7 @@ BANNER_TEXT = "Ganesh Utsav 2026 Celebrations"
 os.makedirs(RECEIPT_FOLDER, exist_ok=True)
 
 
-def generate_receipt_pdf(receipt_id, name, flat_number, amount):
+def generate_receipt_pdf(receipt_id, name, flat_number, amount, utr_number=None, proof_uploaded=False, status="pending"):
 
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
@@ -114,15 +114,41 @@ def generate_receipt_pdf(receipt_id, name, flat_number, amount):
     )
 
     # ==========================================
+    # Pending Verification Badge
+    # (shown until a volunteer confirms the UTR
+    # against the bank statement)
+    # ==========================================
+
+    if status != "verified":
+
+        badge_y = divider_y + 3
+        badge_text = "PROVISIONAL RECEIPT - PAYMENT PENDING VERIFICATION"
+
+        pdf.set_text_color(120, 120, 120)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_xy(content_x, badge_y)
+        pdf.cell(content_width, 6, badge_text, align="C")
+
+    # ==========================================
     # Receipt Details
     # ==========================================
 
-    details_y = divider_y + 8
+    details_y = divider_y + (14 if status != "verified" else 8)
 
     pdf.set_text_color(40, 40, 40)
     pdf.set_font("Helvetica", "", 13)
 
     today_str = date.today().strftime("%d-%b-%Y")
+
+    if utr_number:
+        payment_ref_label = "UPI Ref / UTR No."
+        payment_ref_value = utr_number
+    elif proof_uploaded:
+        payment_ref_label = "Payment Proof"
+        payment_ref_value = "Screenshot Uploaded"
+    else:
+        payment_ref_label = "Payment Proof"
+        payment_ref_value = "Not provided"
 
     details = [
         ("Receipt ID", receipt_id),
@@ -130,6 +156,7 @@ def generate_receipt_pdf(receipt_id, name, flat_number, amount):
         ("Name", name),
         ("Flat Number", flat_number),
         ("Amount", f"Rs. {amount}"),
+        (payment_ref_label, payment_ref_value),
     ]
 
     label_x = content_x + content_width * 0.28
@@ -187,6 +214,45 @@ def generate_receipt_pdf(receipt_id, name, flat_number, amount):
             w=footer_width,
             h=footer_height
         )
+
+    else:
+
+        # -----------------------------------------
+        # Text fallback signature block, used when
+        # receipt_footer.png is missing so the
+        # signatures never silently disappear.
+        # -----------------------------------------
+
+        signatories = [
+            ("K.V. Umashankar", "President"),
+            ("Binu Prasad", "Secretary"),
+        ]
+
+        sig_width = content_width * 0.32
+        sig_y = page_height - 9 - 26
+
+        left_x = content_x + content_width * 0.12
+        right_x = content_x + content_width - content_width * 0.12 - sig_width
+
+        sig_positions = [left_x, right_x]
+
+        for (name, title), sig_x in zip(signatories, sig_positions):
+
+            line_y = sig_y
+
+            pdf.set_draw_color(120, 120, 120)
+            pdf.set_line_width(0.3)
+            pdf.line(sig_x, line_y, sig_x + sig_width, line_y)
+
+            pdf.set_text_color(30, 30, 30)
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.set_xy(sig_x, line_y + 2)
+            pdf.cell(sig_width, 6, name, align="C")
+
+            pdf.set_text_color(90, 90, 90)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.set_xy(sig_x, line_y + 8)
+            pdf.cell(sig_width, 6, title, align="C")
 
     file_path = f"{RECEIPT_FOLDER}/{receipt_id}.pdf"
 

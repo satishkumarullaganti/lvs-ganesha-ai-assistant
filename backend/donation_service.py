@@ -1,5 +1,7 @@
 from datetime import date
 import random
+import re
+import urllib.parse
 
 from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
@@ -78,14 +80,41 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
             return "💰 Please enter the amount you wish to donate (₹)."
 
-        # Step 3 - Amount → show UPI details
+        # Step 3 - Amount → show UPI details + payment proof widget
         elif session["step"] == 3:
 
             session["donation"]["amount"] = message.strip()
-            session["step"] = 4
+            session["step"] = 5
 
-            upi_ref = f"upi_{session['donation']['flat_number']}_{random.randint(1000,9999)}"
-            upi_qr_path = generate_qr_code(upi_ref, upi_ref)
+            # -----------------------------------------
+            # Build a real UPI payment deep link so the
+            # QR actually opens a pre-filled payment
+            # screen in GPay/PhonePe/any UPI app, instead
+            # of encoding a meaningless tracking string.
+            # -----------------------------------------
+
+            payee_name = "LVS Excellency Ganesha Festival"
+            flat_number = session["donation"]["flat_number"]
+
+            # Keep only digits/decimal point from the typed
+            # amount so a malformed UPI link can't be built
+            # from stray text (e.g. "500 rs" -> "500").
+            amount_clean = re.sub(r"[^0-9.]", "", session["donation"]["amount"])
+
+            upi_params = {
+                "pa": UPI_ID_PHONEPE,
+                "pn": payee_name,
+                "cu": "INR",
+                "tn": f"Ganesh Utsav Donation - Flat {flat_number}",
+            }
+
+            if amount_clean:
+                upi_params["am"] = amount_clean
+
+            upi_link = "upi://pay?" + urllib.parse.urlencode(upi_params)
+
+            qr_file_name = f"donation_{flat_number}_{random.randint(1000,9999)}"
+            upi_qr_path = generate_qr_code(upi_link, qr_file_name)
 
             return f"""
 💳 Please pay ₹{session['donation']['amount']} using any UPI app:
@@ -99,40 +128,128 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 <br><br>
 
-<button onclick="confirmDonationPaid()" style="background:#4CAF50;color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;cursor:pointer;">✅ I've Paid</button>
+🔎 To verify your payment, attach a screenshot of the
+payment success screen. The button below will unlock
+once a screenshot is attached.
+
+<br><br>
+
+<input type="file" id="donation-proof-input" accept="image/*" onchange="enableDonationSubmit(this)" style="margin-bottom:10px;">
+
+<br>
+
+<button id="donation-submit-btn" onclick="submitDonationProof()" disabled style="background:#ccc;color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;cursor:not-allowed;">✅ I've Paid</button>
+
+<p style="font-size:13px;color:#888;margin-top:12px;">Prefer not to upload? Type your UPI Transaction Reference Number (UTR) below instead.</p>
 """
 
-        # Step 4 - Confirm Payment
-        elif session["step"] == 4:
+        # Step 5 - Validate typed UTR, save as pending, issue provisional receipt
+        elif session["step"] == 5:
 
-            receipt_id = generate_receipt_id()
-            donation = session["donation"]
+            utr_number = message.strip().replace(" ", "")
 
-            save_donation(
-                receipt_id=receipt_id,
-                name=donation["name"],
-                flat_number=donation["flat_number"],
-                amount=donation["amount"]
+            digit_count = sum(ch.isdigit() for ch in utr_number)
+
+            # Real UPI UTR/RRN numbers are almost entirely digits
+            # (typically 12 digits, sometimes with a couple of
+            # letters for certain bank formats). Require the
+            # string to be mostly numeric so plain words like
+            # "donation" or "paid" can't slip through as a fake
+            # reference number.
+            is_valid_utr = (
+                utr_number.isalnum()
+                and 9 <= len(utr_number) <= 25
+                and digit_count >= 9
             )
 
-            receipt_path = generate_receipt_pdf(
-                receipt_id=receipt_id,
-                name=donation["name"],
-                flat_number=donation["flat_number"],
-                amount=donation["amount"]
+            if not is_valid_utr:
+
+                return (
+                    "❌ That doesn't look like a valid transaction "
+                    "reference number. A UTR is usually a 9-12 digit "
+                    "number shown on your payment success screen. "
+                    "Please check your UPI app and enter it again, "
+                    "or use the 📷 Upload Screenshot button above."
+                )
+
+            return self._finalize_donation(
+                session_id,
+                utr_number=utr_number,
+                proof_image_path=None
             )
 
-            response = f"""
+    # ========================================
+    # Finalize with an uploaded screenshot
+    # (called from the /donation/upload-proof
+    # route instead of the normal chat flow)
+    # ========================================
+
+    def finalize_with_screenshot(self, session_id, proof_image_path):
+
+        session = self._get_session(session_id)
+
+        if not session["active"] or session["step"] != 5:
+            return None
+
+        return self._finalize_donation(
+            session_id,
+            utr_number=None,
+            proof_image_path=proof_image_path
+        )
+
+    # ========================================
+    # Shared finalize logic (UTR or screenshot)
+    # ========================================
+
+    def _finalize_donation(self, session_id, utr_number=None, proof_image_path=None):
+
+        session = self._get_session(session_id)
+        donation = session["donation"]
+
+        receipt_id = generate_receipt_id()
+
+        save_donation(
+            receipt_id=receipt_id,
+            name=donation["name"],
+            flat_number=donation["flat_number"],
+            amount=donation["amount"],
+            utr_number=utr_number,
+            proof_image_path=proof_image_path,
+            status="pending"
+        )
+
+        receipt_path = generate_receipt_pdf(
+            receipt_id=receipt_id,
+            name=donation["name"],
+            flat_number=donation["flat_number"],
+            amount=donation["amount"],
+            utr_number=utr_number,
+            proof_uploaded=bool(proof_image_path),
+            status="pending"
+        )
+
+        if utr_number:
+            proof_line = f"🔎 UTR / Ref No. : {utr_number}"
+        else:
+            proof_line = "📷 Payment Proof : Screenshot Uploaded"
+
+        response = f"""
 🙏 Thank you, {donation['name']}, for your generous contribution!
 
+Your payment proof has been recorded and will be
+verified by our volunteers against the bank statement
+shortly.
+
 ━━━━━━━━━━━━━━━━━━━━━━
-🧾 DONATION RECEIPT
+🧾 PROVISIONAL DONATION RECEIPT
 ━━━━━━━━━━━━━━━━━━━━━━
 
 👤 Name : {donation['name']}
 🏠 Flat : {donation['flat_number']}
 💰 Amount : ₹{donation['amount']}
+{proof_line}
 🧾 Receipt ID : {receipt_id}
+⏳ Status : Pending Verification
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
@@ -143,13 +260,13 @@ May Lord Ganesha bless you and your family. 🙏
 <a href="/{receipt_path}" target="_blank" style="display:inline-block;background:#ff9800;color:white;padding:10px 20px;border-radius:10px;text-decoration:none;font-size:14px;">📥 Download Receipt (PDF)</a>
 """
 
-            self.sessions[session_id] = {
-                "active": False,
-                "step": 0,
-                "donation": {}
-            }
+        self.sessions[session_id] = {
+            "active": False,
+            "step": 0,
+            "donation": {}
+        }
 
-            return response
+        return response
 
 
 donation_service = DonationService()

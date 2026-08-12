@@ -539,6 +539,77 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
     return {
         "response": reply
     }
+
+# ============================================
+# Donation Payment Proof Upload (Screenshot)
+# ============================================
+# Accepts multipart/form-data since a screenshot
+# image is uploaded, mirroring the Cultural
+# Programs track-upload pattern above.
+# ============================================
+
+DONATION_PROOFS_DIR = "static/donation_proofs"
+ALLOWED_PROOF_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+MAX_PROOF_SIZE_BYTES = 8 * 1024 * 1024  # 8 MB cap
+
+os.makedirs(DONATION_PROOFS_DIR, exist_ok=True)
+
+
+@app.post("/donation/upload-proof")
+async def donation_upload_proof(
+    request: Request,
+    response: Response,
+    proof: UploadFile = File(...)
+):
+
+    session_id = get_or_create_session_id(request, response)
+
+    if not donation_service.is_active(session_id):
+
+        raise HTTPException(
+            status_code=400,
+            detail="No donation in progress for this session."
+        )
+
+    file_ext = os.path.splitext(proof.filename)[1].lower()
+
+    if file_ext not in ALLOWED_PROOF_EXTENSIONS:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Only JPG or PNG screenshots are allowed."
+        )
+
+    file_bytes = await proof.read()
+
+    if len(file_bytes) > MAX_PROOF_SIZE_BYTES:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Screenshot is too large. Maximum allowed size is 8 MB."
+        )
+
+    unique_filename = f"{uuid.uuid4().hex}{file_ext}"
+    full_disk_path = os.path.join(DONATION_PROOFS_DIR, unique_filename)
+
+    with open(full_disk_path, "wb") as f:
+        f.write(file_bytes)
+
+    proof_path = f"{DONATION_PROOFS_DIR}/{unique_filename}"
+
+    result = donation_service.finalize_with_screenshot(session_id, proof_path)
+
+    if result is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Unable to process this donation right now. Please try again."
+        )
+
+    return {
+        "response": result
+    }
+
 # ============================================
 # Volunteer Login (PIN gate)
 # ============================================

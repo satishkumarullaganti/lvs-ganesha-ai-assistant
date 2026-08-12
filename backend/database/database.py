@@ -91,11 +91,38 @@ def create_tables():
 
         amount TEXT NOT NULL,
 
+        utr_number TEXT,
+
+        proof_image_path TEXT,
+
+        status TEXT DEFAULT 'pending',
+
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
     )
 
     """)
+
+    # --------------------------------------------
+    # Migration: add columns if this table already
+    # existed before utr_number/status were added
+    # --------------------------------------------
+
+    cursor.execute("PRAGMA table_info(donations)")
+    existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "utr_number" not in existing_columns:
+        cursor.execute("ALTER TABLE donations ADD COLUMN utr_number TEXT")
+
+    if "status" not in existing_columns:
+        cursor.execute(
+            "ALTER TABLE donations ADD COLUMN status TEXT DEFAULT 'pending'"
+        )
+
+    if "proof_image_path" not in existing_columns:
+        cursor.execute(
+            "ALTER TABLE donations ADD COLUMN proof_image_path TEXT"
+        )
 
     cursor.execute("""
 
@@ -316,7 +343,7 @@ def mark_coupon_used(coupon_id):
 # Save Donation
 # ============================================
 
-def save_donation(receipt_id, name, flat_number, amount):
+def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_image_path=None, status="pending"):
 
     conn = get_connection()
 
@@ -332,11 +359,17 @@ def save_donation(receipt_id, name, flat_number, amount):
 
         flat_number,
 
-        amount
+        amount,
+
+        utr_number,
+
+        proof_image_path,
+
+        status
 
     )
 
-    VALUES(?,?,?,?)
+    VALUES(?,?,?,?,?,?,?)
 
     """, (
 
@@ -346,9 +379,69 @@ def save_donation(receipt_id, name, flat_number, amount):
 
         flat_number,
 
-        amount
+        amount,
+
+        utr_number,
+
+        proof_image_path,
+
+        status
 
     ))
+
+    conn.commit()
+
+    conn.close()
+
+
+# ============================================
+# Get Donations
+# ============================================
+
+def get_donations():
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT *
+
+    FROM donations
+
+    ORDER BY id DESC
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    return rows
+
+
+# ============================================
+# Mark Donation Verified
+# (for admin dashboard use, once a volunteer
+# has checked the UTR against the bank statement)
+# ============================================
+
+def mark_donation_verified(receipt_id):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    UPDATE donations
+
+    SET status = 'verified'
+
+    WHERE receipt_id = ?
+
+    """, (receipt_id,))
 
     conn.commit()
 
