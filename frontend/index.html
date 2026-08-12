@@ -34,6 +34,12 @@
         Your Smart Festival Companion
     </p>
 
+    <div class="hero-badge">
+        <img
+            src="assets/images/app_logo.png"
+            alt="LVS Excellency Badge">
+    </div>
+
     <div class="hero-visual-card">
 
         <div class="hero-logo-panel">
@@ -65,6 +71,40 @@
     <p class="hero-description">
         May Lord Ganesha bless you with wisdom, prosperity and happiness.
     </p>
+
+    <div id="festival-countdown" class="countdown-card">
+
+        <p id="countdown-label" class="countdown-label">
+            🎉 Festival Begins In
+        </p>
+
+        <div id="countdown-grid" class="countdown-grid">
+
+            <div class="countdown-unit">
+                <span id="cd-days">--</span>
+                <small>Days</small>
+            </div>
+
+            <div class="countdown-unit">
+                <span id="cd-hours">--</span>
+                <small>Hours</small>
+            </div>
+
+            <div class="countdown-unit">
+                <span id="cd-mins">--</span>
+                <small>Mins</small>
+            </div>
+
+            <div class="countdown-unit">
+                <span id="cd-secs">--</span>
+                <small>Secs</small>
+            </div>
+
+        </div>
+
+        <p id="countdown-message" class="countdown-message"></p>
+
+    </div>
 
 </section>
 
@@ -504,6 +544,73 @@
         </div>
 
     </div>
+<!-- ====================================== -->
+<!-- Quick Registration Choice Modal -->
+<!-- ====================================== -->
+
+<div id="registration-choice-modal" class="modal">
+
+    <div class="modal-content" style="max-width:420px;text-align:center;">
+
+        <span id="close-registration-choice" class="close">&times;</span>
+
+        <h2>📝 Quick Registration</h2>
+
+        <p style="margin:10px 0 24px;">
+            How would you like to register?
+        </p>
+
+        <button
+            id="register-by-form"
+            type="button"
+            style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
+            📝 Register through Form
+        </button>
+
+        <button
+            id="register-by-chat"
+            type="button"
+            style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
+            🤖 Register through Chat
+        </button>
+
+        <button
+            id="cancel-registration-choice"
+            type="button"
+            style="margin-top:8px;padding:9px 20px;border:1px solid #ccc;border-radius:8px;background:white;color:#555;cursor:pointer;">
+            Cancel
+        </button>
+
+    </div>
+
+</div>
+
+<!-- ====================================== -->
+<!-- Schedule Modal -->
+<!-- ====================================== -->
+
+<div id="schedule-modal" class="modal">
+
+    <div class="modal-content" style="max-width:560px;">
+
+        <span id="close-schedule-modal" class="close">&times;</span>
+
+        <h2>📆 Festival Schedule</h2>
+
+        <div id="schedule-modal-body" class="schedule-modal-body">
+            Loading schedule...
+        </div>
+
+        <button id="ask-ai-schedule-btn" type="button">
+            🤖 Ask AI Assistant
+        </button>
+
+    </div>
+
+</div>
+
+    <!-- Festival countdown timer -->
+    <script src="js/countdown.js"></script>
 
     <!-- app.js loaded last so all elements above already exist in the DOM -->
     <script src="js/app.js"></script>

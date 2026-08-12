@@ -9,18 +9,39 @@ from backend.validators import validate_flat_number
 class RegistrationService:
 
     def __init__(self):
-        self.active = False
-        self.step = None
-        self.data = {}
+        # Per-session state, keyed by session_id.
+        # Each entry: {"active": bool, "step": str|None, "data": dict}
+        self.sessions = {}
+
+    # ========================================
+    # Internal helper
+    # ========================================
+
+    def _get_session(self, session_id):
+        if session_id not in self.sessions:
+            self.sessions[session_id] = {
+                "active": False,
+                "step": None,
+                "data": {}
+            }
+        return self.sessions[session_id]
+
+    # ========================================
+    # Status Check
+    # ========================================
+
+    def is_active(self, session_id):
+        return self._get_session(session_id)["active"]
 
     # ========================================
     # Start Registration
     # ========================================
 
-    def start(self):
-        self.active = True
-        self.step = "competition"
-        self.data = {}
+    def start(self, session_id):
+        session = self._get_session(session_id)
+        session["active"] = True
+        session["step"] = "competition"
+        session["data"] = {}
 
         return (
             "🙏 Competition Registration\n\n"
@@ -36,21 +57,25 @@ class RegistrationService:
     # Handle Registration Steps
     # ========================================
 
-    def process(self, message):
+    def process(self, session_id, message):
+
+        session = self._get_session(session_id)
+        step = session["step"]
+        data = session["data"]
 
         # Competition
-        if self.step == "competition":
+        if step == "competition":
 
-            self.data["competition"] = message.title()
-            self.step = "name"
+            data["competition"] = message.title()
+            session["step"] = "name"
 
             return "👤 Please enter your Full Name."
 
         # Name
-        if self.step == "name":
+        if step == "name":
 
-            self.data["name"] = message
-            self.step = "block"
+            data["name"] = message
+            session["step"] = "block"
 
             return (
                 "🏢 Please choose your Block.\n\n"
@@ -59,25 +84,25 @@ class RegistrationService:
             )
 
         # Block
-        if self.step == "block":
+        if step == "block":
 
             block = message.strip().lower()
 
             if block in ["1", "south", "south block"]:
-                self.data["block"] = "South"
+                data["block"] = "South"
 
             elif block in ["2", "north", "north block"]:
-                self.data["block"] = "North"
+                data["block"] = "North"
 
             else:
                 return "❌ Please enter South or North."
 
-            self.step = "flat"
+            session["step"] = "flat"
 
             return "🏠 Enter Flat Number (Example: 004 or S004)."
 
         # Flat
-        if self.step == "flat":
+        if step == "flat":
 
             original_flat = message.strip()
             flat = message.upper()
@@ -93,7 +118,7 @@ class RegistrationService:
                     .strip()
             )
 
-            block = self.data["block"]
+            block = data["block"]
 
             # Central validator:
             # - exactly 3 digits
@@ -107,26 +132,26 @@ class RegistrationService:
                     "Example: 004, 020, 101."
                 )
 
-            self.data["flat_number"] = flat
-            self.step = "mobile"
+            data["flat_number"] = flat
+            session["step"] = "mobile"
 
             return "📱 Enter Mobile Number."
 
         # Mobile
-        if self.step == "mobile":
+        if step == "mobile":
 
             message = message.strip()
 
             if not message.isdigit() or len(message) != 10:
                 return "❌ Please enter a valid 10-digit mobile number."
 
-            self.data["mobile"] = message
-            self.step = "age"
+            data["mobile"] = message
+            session["step"] = "age"
 
             return "🎂 Enter Age."
 
         # Age
-        if self.step == "age":
+        if step == "age":
 
             try:
                 age = int(message)
@@ -134,38 +159,38 @@ class RegistrationService:
             except ValueError:
                 return "❌ Please enter a valid age."
 
-            self.data["age"] = age
+            data["age"] = age
 
             save_registration(
-                self.data["name"],
-                self.data["block"],
-                self.data["flat_number"],
-                self.data["mobile"],
-                self.data["age"],
-                self.data["competition"]
+                data["name"],
+                data["block"],
+                data["flat_number"],
+                data["mobile"],
+                data["age"],
+                data["competition"]
             )
 
             summary = f"""
 🎉 Registration Successful!
 
-🏆 Competition : {self.data['competition']}
+🏆 Competition : {data['competition']}
 
-👤 Name : {self.data['name']}
+👤 Name : {data['name']}
 
-🏢 Block : {self.data['block']}
+🏢 Block : {data['block']}
 
-🏠 Flat : {self.data['flat_number']}
+🏠 Flat : {data['flat_number']}
 
-📱 Mobile : {self.data['mobile']}
+📱 Mobile : {data['mobile']}
 
-🎂 Age : {self.data['age']}
+🎂 Age : {data['age']}
 
 Thank you for registering.
 """
 
-            self.active = False
-            self.step = None
-            self.data = {}
+            session["active"] = False
+            session["step"] = None
+            session["data"] = {}
 
             return summary
 

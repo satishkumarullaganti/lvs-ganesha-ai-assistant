@@ -780,22 +780,77 @@ async function sendMessage() {
 
 }
 // ======================================
-// Schedule Card Click
+// Schedule Card Click -> Opens Schedule Modal
 // ======================================
 
 const scheduleCard = document.getElementById("schedule");
+const scheduleModal = document.getElementById("schedule-modal");
+const scheduleModalBody = document.getElementById("schedule-modal-body");
+const closeScheduleModal = document.getElementById("close-schedule-modal");
+const askAiScheduleBtn = document.getElementById("ask-ai-schedule-btn");
 
-scheduleCard.addEventListener("click", function () {
+scheduleCard.addEventListener("click", async function () {
 
-    // Scroll to chat section smoothly
-    chatContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+    scheduleModal.style.display = "block";
+    scheduleModalBody.textContent = "Loading schedule...";
 
-    // Auto-fill and send the message
-    userInput.value = "today's schedule";
+    try {
 
-    sendMessage();
+        const response = await fetch("/chat", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                message: "full schedule"
+            })
+
+        });
+
+        const data = await response.json();
+
+        scheduleModalBody.textContent =
+            data.response || "Schedule is not available right now.";
+
+    } catch (error) {
+
+        console.error("Schedule fetch error:", error);
+
+        scheduleModalBody.textContent =
+            "Unable to load the schedule right now. Please try again.";
+
+    }
 
 });
+
+closeScheduleModal.addEventListener("click", function () {
+    scheduleModal.style.display = "none";
+});
+
+// Close when clicking outside the modal content
+scheduleModal.addEventListener("click", function (event) {
+    if (event.target === scheduleModal) {
+        scheduleModal.style.display = "none";
+    }
+});
+
+// "Ask AI Assistant" -> hand off to chat, let user type freely
+// (e.g. "day 2", "when is dance") using existing schedule search logic
+askAiScheduleBtn.addEventListener("click", function () {
+
+    scheduleModal.style.display = "none";
+
+    chatContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    userInput.value = "";
+    userInput.placeholder = "e.g. \"day 2\", \"when is dance\", \"full schedule\"...";
+    userInput.focus();
+
+});
+
 // ======================================
 // Annaprasada Card Click
 // ======================================

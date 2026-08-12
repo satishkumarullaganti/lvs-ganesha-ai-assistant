@@ -19,7 +19,24 @@ body {
 }
 
 header {
-    display: none;
+    display: block;
+    background: linear-gradient(135deg, #ff6a00, #ff9800);
+    color: #fff;
+    text-align: center;
+    padding: 22px 20px 26px;
+}
+
+header h1 {
+    margin: 0 0 4px;
+    font-size: clamp(26px, 4vw, 40px);
+    font-weight: 800;
+}
+
+header p {
+    margin: 0;
+    font-size: clamp(15px, 2vw, 20px);
+    font-weight: 500;
+    opacity: 0.95;
 }
 
 main {
@@ -44,6 +61,18 @@ main {
     font-size: clamp(28px, 4vw, 42px);
     font-weight: 700;
     line-height: 1.15;
+}
+
+.hero-badge {
+    width: min(220px, 42vw);
+    margin: 0 auto 26px;
+}
+
+.hero-badge img {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(72, 55, 25, 0.18));
 }
 
 .hero-visual-card {
@@ -81,7 +110,11 @@ main {
     display: block;
 }
 
-.society-logo,
+.society-logo {
+    max-width: 390px;
+    max-height: 250px;
+}
+
 .ganesha-image {
     max-width: 390px;
     max-height: 270px;
@@ -109,6 +142,81 @@ main {
     color: #555;
     font-size: 18px;
     line-height: 1.6;
+}
+
+/* =========================================================
+   COUNTDOWN
+   ========================================================= */
+
+.countdown-card {
+    width: min(100%, 620px);
+    margin: 30px auto 0;
+    padding: 22px 20px 26px;
+    background: linear-gradient(135deg, #ff6a00, #ff9800);
+    border-radius: 24px;
+    box-shadow: 0 14px 30px rgba(216, 91, 0, 0.28);
+}
+
+.countdown-label {
+    margin: 0 0 16px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.countdown-grid {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.countdown-unit {
+    min-width: 74px;
+    padding: 12px 10px 10px;
+    background: #fffdf8;
+    border-radius: 14px;
+    box-shadow: 0 6px 14px rgba(72, 55, 25, 0.16);
+}
+
+.countdown-unit span {
+    display: block;
+    color: #d85b00;
+    font-size: clamp(26px, 5vw, 34px);
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.countdown-unit small {
+    display: block;
+    margin-top: 2px;
+    color: #888;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.countdown-message {
+    margin: 16px 0 0;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+@media (max-width: 520px) {
+
+    .countdown-card {
+        border-radius: 20px;
+        padding: 18px 14px 22px;
+    }
+
+    .countdown-unit {
+        min-width: 62px;
+        padding: 10px 6px 8px;
+    }
 }
 
 /* =========================================================
@@ -334,6 +442,20 @@ main {
     color: #666;
 }
 
+.schedule-modal-body {
+    max-height: 420px;
+    overflow-y: auto;
+    margin: 6px 0 6px;
+    padding: 14px 16px;
+    background: #fff8e8;
+    border-radius: 14px;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: #333;
+}
+
 .checkbox-group,
 .cultural-checkbox-group {
     display: grid;
@@ -407,6 +529,11 @@ footer p {
     .hero-tagline {
         margin-bottom: 22px;
         font-size: 28px;
+    }
+
+    .hero-badge {
+        width: 150px;
+        margin-bottom: 18px;
     }
 
     .hero-visual-card {

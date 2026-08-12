@@ -197,20 +197,7 @@ class ScheduleService:
         # Today's Schedule
         # ----------------------------
         if "today" in message:
-
-            today = datetime.now().strftime(
-                "%d-%b-%Y"
-            ).lower()
-
-            for day in FESTIVAL_SCHEDULE:
-
-                if day["date"].lower() == today:
-                    return self.format_day(day)
-
-            return (
-                "Today's festival schedule "
-                "is not available."
-            )
+            return self.get_todays_schedule()
 
         # ----------------------------
         # Search By Sequential Day Number
@@ -285,6 +272,53 @@ class ScheduleService:
         # Default - Short Festival Summary
         # ----------------------------
         return self.get_festival_summary()
+
+    # ==========================================
+    # Today's Schedule (with pre/post-festival handling)
+    # ==========================================
+    def get_todays_schedule(self):
+
+        if not FESTIVAL_SCHEDULE:
+            return "Festival schedule is not available yet."
+
+        now = datetime.now()
+        today = now.strftime("%d-%b-%Y").lower()
+
+        # Exact match - today is a festival day
+        for day in FESTIVAL_SCHEDULE:
+
+            if day["date"].lower() == today:
+                return self.format_day(day)
+
+        first_day = FESTIVAL_SCHEDULE[0]
+        last_day = FESTIVAL_SCHEDULE[-1]
+
+        first_date = datetime.strptime(
+            first_day["date"], "%d-%b-%Y"
+        )
+        last_date = datetime.strptime(
+            last_day["date"], "%d-%b-%Y"
+        )
+
+        # Before the festival starts
+        if now < first_date:
+
+            days_left = (first_date - now).days
+
+            return (
+                f"🪔 The festival hasn't started yet — "
+                f"it begins on {first_day['date']} "
+                f"({first_day['title']}), "
+                f"{days_left} day(s) from today.\n\n"
+                "Say \"full schedule\" to see all the events!"
+            )
+
+        # After the festival has ended
+        if now > last_date:
+            return "🙏 The festival has concluded. Ganapathi Bappa Morya!"
+
+        # Fallback (shouldn't normally hit this)
+        return "Today's festival schedule is not available."
 
     # ==========================================
     # Short Festival Summary
