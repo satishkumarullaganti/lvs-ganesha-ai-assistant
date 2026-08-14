@@ -1,4 +1,5 @@
 import os
+import re
 import chromadb
 import ollama
 
@@ -32,7 +33,8 @@ client = chromadb.PersistentClient(
 # --------------------------------------------------
 
 collection = client.get_or_create_collection(
-    name=COLLECTION_NAME
+    name=COLLECTION_NAME,
+    metadata={"hnsw:space": "cosine"}
 )
 
 
@@ -72,26 +74,132 @@ def load_documents():
 
 
 # --------------------------------------------------
-# Split document into chunks
+# Strip embedded AI meta-instructions
+# --------------------------------------------------
+#
+# The source documents contain sentences written as
+# guidance for the AI assistant itself (e.g. "The AI
+# assistant should not invent a minimum donation
+# amount."). These are already duplicated as explicit
+# rules in rag_service.py's system prompt, so leaving
+# them in the retrievable knowledge base only adds risk:
+# a small local LLM can end up quoting or paraphrasing
+# these meta-instructions back to the resident as if they
+# were an answer (e.g. "the minimum donation amount is
+# available... the AI assistant should not invent one").
+#
+# This strips any paragraph that reads as an instruction
+# to the AI, so only real factual content gets embedded
+# and retrieved.
 # --------------------------------------------------
 
-def split_text(text, chunk_size=1000):
+def strip_ai_instructions(text):
+
+    paragraphs = text.split("\n\n")
+
+    kept = []
+
+    for paragraph in paragraphs:
+
+        stripped = paragraph.strip()
+
+        # Always keep section separators and headers untouched
+        if not stripped or re.fullmatch(r"-{3,}", stripped):
+            kept.append(paragraph)
+            continue
+
+        if "ai assistant" in stripped.lower():
+            continue
+
+        kept.append(paragraph)
+
+    return "\n\n".join(kept)
+
+
+# --------------------------------------------------
+# Split document into chunks
+# --------------------------------------------------
+#
+# Markdown-section-aware chunking instead of blind
+# character slicing. Every doc in backend/rag/documents
+# already uses "---" as a section separator, so we split
+# on that first - this keeps FAQ entries, schedule
+# day-blocks, and rule sections intact as single chunks
+# instead of getting sliced mid-table or mid-sentence.
+#
+# Small adjacent sections get merged together (so we don't
+# end up with tiny near-empty chunks), and any section that
+# is still too large gets a secondary split on paragraph
+# boundaries (double newline) as a fallback.
+# --------------------------------------------------
+
+MIN_CHUNK_SIZE = 200
+MAX_CHUNK_SIZE = 1500
+
+
+def _split_large_section(section, max_size):
+
+    paragraphs = section.split("\n\n")
 
     chunks = []
+    buffer = ""
 
-    start = 0
+    for paragraph in paragraphs:
 
-    while start < len(text):
+        candidate = f"{buffer}\n\n{paragraph}" if buffer else paragraph
 
-        end = start + chunk_size
+        if len(candidate) <= max_size:
+            buffer = candidate
+        else:
+            if buffer:
+                chunks.append(buffer)
+            buffer = paragraph
 
-        chunk = text[start:end]
-
-        chunks.append(chunk)
-
-        start = end
+    if buffer:
+        chunks.append(buffer)
 
     return chunks
+
+
+def split_text(text, min_chunk_size=MIN_CHUNK_SIZE, max_chunk_size=MAX_CHUNK_SIZE):
+
+    # Split on markdown horizontal-rule separators ("---" on its own line)
+    raw_sections = re.split(r"\n-{3,}\n", text)
+    sections = [s.strip() for s in raw_sections if s.strip()]
+
+    # Merge small/adjacent sections so we don't produce
+    # tiny fragments that carry little standalone meaning
+    merged = []
+    buffer = ""
+
+    for section in sections:
+
+        candidate = f"{buffer}\n\n---\n\n{section}" if buffer else section
+
+        if len(candidate) <= max_chunk_size:
+            buffer = candidate
+        else:
+            if buffer:
+                merged.append(buffer)
+            buffer = section
+
+    if buffer:
+        merged.append(buffer)
+
+    # Any merged chunk still over max_chunk_size gets a
+    # secondary split on paragraph boundaries
+    final_chunks = []
+
+    for chunk in merged:
+
+        if len(chunk) <= max_chunk_size:
+            final_chunks.append(chunk)
+        else:
+            final_chunks.extend(
+                _split_large_section(chunk, max_chunk_size)
+            )
+
+    return final_chunks
 
 
 # --------------------------------------------------
@@ -131,6 +239,8 @@ def ingest_documents():
         print(
             f"\nProcessing: {filename}"
         )
+
+        content = strip_ai_instructions(content)
 
         chunks = split_text(content)
 

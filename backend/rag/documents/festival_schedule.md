@@ -116,28 +116,6 @@ Location: Party Hall
 
 ---
 
-# Quick Schedule Reference
-
-## 14 September
-Ganesh Chaturthi and inauguration.
-
-## 15 September
-Morning pooja, Kids Drawing Competition, children's cultural programs, and devotional music.
-
-## 16 September
-Dance Competition, family fun games, and musical night.
-
-## 17 September
-Singing Competition, quiz competition, and community meet.
-
-## 18 September
-Prize distribution, Grand Cultural Night, and DJ & Community Celebration.
-
-## 19 September
-Final pooja, Annaprasada, Ganesh procession, Ganesh Visarjan, and festival conclusion.
-
----
-
 # Important
 
 This document contains the official festival schedule currently provided for the LVS Excellency Ganesha Festival.

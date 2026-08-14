@@ -131,6 +131,33 @@ def detect_category(query):
         "ganesh idol sponsor"
     ]
 
+    committee_keywords = [
+        "committee",
+        "president",
+        "vice president",
+        "secretary",
+        "treasurer",
+        "coordinator",
+        "coordinators",
+        "organizer",
+        "organiser",
+        "chairperson",
+        "convenor",
+        "member"
+    ]
+
+    # Committee is checked before cultural/competition/volunteer
+    # since role questions like "who is the Cultural Coordinator"
+    # or "who is the Volunteer Coordinator" contain a category
+    # keyword (cultural, volunteer) AND a committee keyword
+    # (coordinator) - the person is asking "who", which is a
+    # committee_details.md lookup, not a cultural/volunteer one.
+    if any(
+        keyword in query_lower
+        for keyword in committee_keywords
+    ):
+        return "committee"
+
     # Location is checked before schedule since a question
     # like "where is the annaprasada distribution" contains
     # both a schedule-ish word (annaprasada) and a location
@@ -288,7 +315,7 @@ def _build_retrieval_queries(query):
     rules_match = re.search(r"\b(?:rules?|guidelines?)\s+(?:for\s+)?(.+)", cleaned)
     if rules_match and rules_match.group(1).strip():
         variants.append(f"{rules_match.group(1).strip()} rules")
-    important_terms = ["tambola", "chess", "carrom", "drawing", "musical chairs", "committee president", "committee", "organizer", "organiser", "volunteer", "donation", "sponsor", "dance", "singing", "skit"]
+    important_terms = ["tambola", "chess", "carrom", "drawing", "musical chairs", "committee president", "committee", "organizer", "organiser", "coordinator", "president", "secretary", "treasurer", "volunteer", "donation", "sponsor", "dance", "singing", "skit"]
     for term in important_terms:
         if term in normalized:
             variants.append(term)
@@ -305,6 +332,15 @@ def _query_chroma(query, n_results=10):
 
 def search_knowledge(query, number_of_results=5):
     category = detect_category(query)
+    # Schedule and donation questions can have their answer
+    # split across multiple related sections (donation info is
+    # spread across About/Amount/Sponsor/FAQ sections in the
+    # same doc), so give them a bit more retrieval headroom to
+    # reduce the odds of the right chunk being crowded out.
+    if category == "schedule":
+        number_of_results = 8
+    elif category == "donation":
+        number_of_results = 7
     candidates=[]
     for retrieval_query in _build_retrieval_queries(query):
         try:
@@ -323,7 +359,7 @@ def search_knowledge(query, number_of_results=5):
             continue
         seen.add(key); unique.append(candidate)
     filtered=[c for c in unique if c["distance"] <= MAX_RELEVANT_DISTANCE]
-    priority_sources={"schedule":["festival_schedule.md"],"location":["festival_schedule.md"],"competition":["competition_rules.md"],"cultural":["cultural_programs.md"],"volunteer":["volunteer_rules.md"],"donation":["donation_information.md"],"general":[]}
+    priority_sources={"schedule":["festival_schedule.md"],"location":["festival_schedule.md"],"competition":["competition_rules.md"],"cultural":["cultural_programs.md"],"volunteer":["volunteer_rules.md"],"donation":["donation_information.md"],"committee":["committee_details.md"],"general":[]}
     preferred_sources=priority_sources.get(category, [])
     filtered.sort(key=lambda item:(0 if item["metadata"].get("source", "") in preferred_sources else 1, item["distance"]))
     ordered=filtered[:number_of_results]
@@ -349,10 +385,10 @@ def build_context(
     ):
 
         context_parts.append(
-            f"Source {index}:\n{document}"
+            document
         )
 
-    return "\n\n".join(
+    return "\n\n---\n\n".join(
         context_parts
     )
 
@@ -465,6 +501,13 @@ address, answer with the specific place name only
 (e.g. "Party Hall") rather than describing the
 whole event.
 
+If the question asks what events or activities are
+happening on a specific date (rather than asking
+about one named event), list EVERY event scheduled
+for that date with its time, using the full day's
+schedule information. Do not answer with only one
+event when the question is asking for the whole day.
+
 IMPORTANT RULES:
 
 1. Answer ONLY what is directly supported by the
@@ -507,6 +550,37 @@ IMPORTANT RULES:
     in the knowledge base, say:
     "I don't have that information in the LVS Ganesha
     Festival knowledge base."
+
+12. Never reference "Source 1", "Source 2", document
+    names, or any internal labels in your answer - the
+    resident should never see how the knowledge base is
+    structured internally.
+
+13. Do not quote the knowledge base text verbatim or
+    wrap phrases in quotation marks. Always paraphrase
+    in your own plain words.
+
+14. Give exactly one clear, direct answer. Do not say
+    "yes" and then contradict it with "however" or "but"
+    in the same answer - decide the correct answer first,
+    then state only that.
+
+15. If a specific number, amount, name, or detail asked
+    about is not directly stated in the Festival
+    Knowledge Base above, respond with exactly:
+    "I don't have that information in the LVS Ganesha
+    Festival knowledge base." Do not explain what
+    conditions would need to be met for that detail to
+    exist, and do not describe your own answering rules
+    or policy - just give the one-sentence response above.
+
+16. For yes/no questions, work out the correct answer
+    FIRST, then make sure your opening word matches it.
+    Do not begin with "Yes." if the fact you go on to
+    state actually means no (or the reverse). For example,
+    if a resident asks whether something can be reused and
+    the knowledge base says it cannot be reused, the answer
+    must begin with "No," not "Yes."
    
 
 Festival Knowledge Base:
@@ -538,9 +612,178 @@ Answer:
         "content"
     ]
 
+    # --------------------------------------------------
+    # Numeric-amount guardrail (hard code-level check)
+    # --------------------------------------------------
+    # Some source documents describe amount-type policies
+    # in many different phrasings ("should be provided only
+    # when officially confirmed", "should not invent a
+    # minimum...", etc.) - trying to strip every paraphrase
+    # at ingest time is unreliable, since new wording can
+    # always slip through.
+    #
+    # Instead, validate the LLM's actual answer: if the
+    # resident asked about a minimum/maximum/cost/fee/price
+    # and the generated answer contains no digits at all,
+    # the model is very likely hedging around missing data
+    # instead of giving a real number - force the standard
+    # "not available" response instead of letting a vague,
+    # policy-sounding non-answer through.
+    # --------------------------------------------------
+
+    AMOUNT_QUESTION_WORDS = {
+        "minimum", "maximum", "amount", "cost", "fee",
+        "fees", "price", "how much"
+    }
+
+    question_lower_for_amount = question.lower()
+
+    asks_about_amount = any(
+        term in question_lower_for_amount
+        for term in AMOUNT_QUESTION_WORDS
+    )
+
+    has_digit_in_answer = any(
+        character.isdigit()
+        for character in answer
+    )
+
+    # A correct answer can legitimately have no digits at all -
+    # e.g. "donations are purely voluntary, there is no minimum."
+    # Only treat a no-digit answer as a hedge/non-answer if it
+    # also doesn't contain a clear explicit statement either way.
+    answer_lower_for_amount = answer.lower()
+
+    has_clear_negation = any(
+        phrase in answer_lower_for_amount
+        for phrase in [
+            "no minimum", "no maximum", "not required",
+            "voluntary", "any amount", "not fixed",
+            "no fixed amount", "no specific amount"
+        ]
+    )
+
+    if asks_about_amount and not has_digit_in_answer and not has_clear_negation:
+
+        answer = (
+            "I don't have that information in the LVS Ganesha "
+            "Festival knowledge base."
+        )
+
+        sources = []
+
+    # --------------------------------------------------
+    # Committee role-responsibility guardrail
+    # --------------------------------------------------
+    # committee_details.md lists every role's NAME once, and
+    # separately lists RESPONSIBILITIES only for roles that
+    # actually have documented duties. Roles like Vice
+    # President and Joint Secretary appear only once (the name
+    # entry) with no matching entry in the Responsibilities
+    # section.
+    #
+    # A small local LLM can still generate a plausible-sounding
+    # answer by blending a nearby role's real responsibilities
+    # onto the one actually asked about (e.g. attributing the
+    # Secretary's duties to the Vice President because both
+    # appear close together in the same retrieved chunk).
+    #
+    # Hard check: if the question asks what a specific role
+    # does, and that role's name appears in context only once
+    # (no separate Responsibilities entry), refuse instead of
+    # letting the LLM guess.
+    # --------------------------------------------------
+
+    COMMITTEE_ROLES = [
+        "vice president", "president", "joint secretary",
+        "secretary", "treasurer", "cultural coordinator",
+        "volunteer coordinator", "food coordinator",
+        "annaprasada coordinator", "decoration coordinator",
+        "event coordinator"
+    ]
+
+    DUTY_QUESTION_WORDS = {
+        "do", "does", "role", "responsibility",
+        "responsibilities", "duty", "duties", "job"
+    }
+
+    question_lower_for_role = question.lower()
+
+    asks_about_role_duty = any(
+        word in question_lower_for_role.split()
+        or word in question_lower_for_role
+        for word in DUTY_QUESTION_WORDS
+    )
+
+    # Match the longest role name first so "vice president"
+    # isn't mistakenly matched as just "president"
+    matched_role = None
+
+    for role in sorted(COMMITTEE_ROLES, key=len, reverse=True):
+        if role in question_lower_for_role:
+            matched_role = role
+            break
+
+    if asks_about_role_duty and matched_role:
+
+        role_occurrences = context_lower.count(matched_role)
+
+        if role_occurrences < 2:
+
+            answer = (
+                "I don't have that information in the LVS Ganesha "
+                "Festival knowledge base."
+            )
+
+            sources = []
+
+    # --------------------------------------------------
+    # "Yes, but actually no" contradiction guardrail
+    # --------------------------------------------------
+    # A small local LLM can answer a yes/no question by
+    # leading with "Yes." and then immediately stating a
+    # fact that actually means "no" (e.g. "Yes. A redeemed
+    # coupon cannot be redeemed again." in answer to "Can I
+    # use it twice?"). The information itself isn't wrong,
+    # but the leading word directly contradicts it and would
+    # mislead a resident skimming the answer.
+    #
+    # If the answer opens with "Yes" but contains a clear
+    # negation shortly after, strip the misleading opener
+    # so the answer isn't self-contradictory.
+    # --------------------------------------------------
+
+    answer_stripped = answer.strip()
+
+    starts_with_yes = re.match(
+        r"^yes[\.,!]?\s",
+        answer_stripped,
+        re.IGNORECASE
+    )
+
+    NEGATION_PHRASES = [
+        "cannot", "can not", "can't", "won't", "will not",
+        "should not", "shouldn't", "must not", "mustn't",
+        "is not", "isn't", "are not", "aren't", "not be"
+    ]
+
+    contains_negation = any(
+        phrase in answer_stripped.lower()
+        for phrase in NEGATION_PHRASES
+    )
+
+    if starts_with_yes and contains_negation:
+
+        answer = re.sub(
+            r"^yes[\.,!]?\s*",
+            "",
+            answer_stripped,
+            flags=re.IGNORECASE
+        )
+
     return {
         "response": answer,
         "sources": list(
             dict.fromkeys(sources)
         )
-    }		    
+    }

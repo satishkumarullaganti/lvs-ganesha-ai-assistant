@@ -87,11 +87,9 @@ The exact steps may depend on the payment method and application implementation.
 
 # Donation Amount
 
-Residents may choose the donation amount according to the options provided by the application.
+Donations are purely voluntary. There is no minimum or maximum donation amount required.
 
-If a resident asks about a minimum or maximum donation amount, the AI assistant should provide the information only if it has been officially specified by the festival committee.
-
-The AI assistant should not invent a minimum or maximum donation amount.
+Residents may choose the donation amount according to their own wish, using the options provided by the application.
 
 ---
 
