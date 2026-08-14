@@ -10,7 +10,7 @@ from backend.annaprasada_service import annaprasada_service
 from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse
-from backend.database.database import get_booking_by_coupon, mark_coupon_used
+from backend.database.database import get_booking_by_coupon, serve_annaprasada_members
 from dotenv import load_dotenv
 load_dotenv()
 from backend.admin.admin_routes import router as admin_router
@@ -25,6 +25,7 @@ from backend.database.database import (
     save_annaprasada_booking,
     save_cultural_registration,
     get_cultural_registrations,
+    check_recent_duplicate_cultural_registration,
     save_volunteer_registration,
     get_volunteer_registrations
 )
@@ -206,6 +207,35 @@ async def register_cultural(
             detail="Please select at least one category."
         )
 
+    cleaned_other_details = other_details.strip() if other_details else None
+
+    # --------------------------------------------
+    # Accidental double-submit guard
+    # --------------------------------------------
+    # A participant CAN register for the same category
+    # more than once (different performances). This only
+    # blocks the exact same name + category set + details
+    # being submitted again within a few minutes - almost
+    # certainly a double-click or resubmission, not a
+    # genuine second performance.
+    # --------------------------------------------
+
+    if check_recent_duplicate_cultural_registration(
+        name=name,
+        categories=categories,
+        other_details=cleaned_other_details
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This looks like it was already submitted a moment ago "
+                "(same name, category, and details). If this is actually "
+                "a different performance, please add a distinguishing "
+                "note, or wait a few minutes and try again."
+            )
+        )
+
     track_path = None
 
     # -----------------------------
@@ -245,7 +275,7 @@ async def register_cultural(
         flat_number=flat,
         mobile=mobile,
         categories=categories,
-        other_details=other_details.strip() if other_details else None,
+        other_details=cleaned_other_details,
         track_path=track_path
     )
 
@@ -373,20 +403,114 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
     message = chat_request.message.strip()
 
     # ==========================================
+    # Helper: append the cancel hint to a flow's
+    # response, but only while that flow is still
+    # active (a flow's final "thank you"/receipt
+    # message means it just finished, so there's
+    # nothing left to cancel).
+    # ==========================================
+
+    def _with_cancel_hint(reply_text, still_active):
+
+        if not still_active:
+            return reply_text
+
+        if "cancel" in reply_text.lower():
+            return reply_text
+
+        return reply_text + "\n\n(Type 'cancel' anytime to stop.)"
+
+    # ==========================================
+    # Universal Cancel / Exit
+    # ==========================================
+    # Checked BEFORE any flow's is_active() check, so a
+    # resident can always back out of a stuck or abandoned
+    # donation/registration/Annaprasada flow, regardless of
+    # which one they're currently in. Without this, a
+    # half-finished flow silently swallows every later
+    # message (e.g. a schedule question gets treated as a
+    # "Full Name" answer) until the session naturally resets.
+    # ==========================================
+
+    CANCEL_WORDS = {
+        "cancel", "exit", "stop", "quit",
+        "start over", "cancel registration",
+        "reset", "never mind", "nevermind"
+    }
+
+    if message.strip().lower() in CANCEL_WORDS:
+
+        was_active = (
+            donation_service.is_active(session_id)
+            or registration.is_active(session_id)
+            or annaprasada_service.is_active(session_id)
+        )
+
+        donation_service.cancel(session_id)
+        registration.cancel(session_id)
+        annaprasada_service.cancel(session_id)
+
+        if was_active:
+
+            return {
+                "response": (
+                    "❌ Okay, I've cancelled that for you.\n\n"
+                    "How else can I help - schedule, donation, "
+                    "registration, or something else?"
+                )
+            }
+
+        return {
+            "response": "There's nothing active to cancel right now. How can I help?"
+        }
+
+    # ==========================================
     # Continue Donation Flow (if active)
     # ==========================================
 
     if donation_service.is_active(session_id):
 
+        reply = donation_service.process_donation(session_id, message)
+
         return {
-            "response": donation_service.process_donation(session_id, message)
+            "response": _with_cancel_hint(
+                reply,
+                donation_service.is_active(session_id)
+            )
         }
 
     # ==========================================
     # Start Donation Flow
     # ==========================================
+    # Only treat this as a request to START donating if the
+    # message doesn't look like an informational question
+    # (e.g. "is there a minimum donation amount" or "who
+    # sponsored the idol" should be answered by RAG, not
+    # dropped into the donation transaction flow).
+    # ==========================================
 
-    if "donation" in message.lower():
+    DONATION_QUESTION_HINTS = [
+        "is there",
+        "what is",
+        "what are",
+        "how much",
+        "minimum",
+        "maximum",
+        "who",
+        "why",
+        "when",
+        "amount",
+        "?"
+    ]
+
+    lower_message_donation_check = message.lower()
+
+    looks_like_donation_question = any(
+        hint in lower_message_donation_check
+        for hint in DONATION_QUESTION_HINTS
+    )
+
+    if "donation" in lower_message_donation_check and not looks_like_donation_question:
 
         return {
             "response": donation_service.start_donation(session_id)
@@ -398,8 +522,13 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
 
     if annaprasada_service.is_active(session_id):
 
+        reply = annaprasada_service.process_booking(session_id, message)
+
         return {
-            "response": annaprasada_service.process_booking(session_id, message)
+            "response": _with_cancel_hint(
+                reply,
+                annaprasada_service.is_active(session_id)
+            )
         }
 
     # ==========================================
@@ -411,18 +540,26 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
     # not start the booking flow).
     # ==========================================
 
-    SCHEDULE_QUESTION_HINTS = [
-        "when",
-        "what time",
-        "schedule",
-        "timing",
-        "day"
+    # ==========================================
+    # Start Annaprasada Coupon Booking
+    # ==========================================
+    # Only treat this as a booking-status check if the
+    # message doesn't look like an informational question
+    # (e.g. "when is annaprasada" -> schedule_service,
+    # "how do I redeem my Annaprasada QR coupon" -> RAG,
+    # not a booking-status lookup).
+    # ==========================================
+
+    INFORMATIONAL_QUESTION_HINTS = [
+        "when", "what time", "schedule", "timing", "day",
+        "how", "what is", "what are", "is there", "does",
+        "why", "who", "?"
     ]
 
     lower_message_check = message.lower()
 
     looks_like_schedule_question = any(
-        hint in lower_message_check for hint in SCHEDULE_QUESTION_HINTS
+        hint in lower_message_check for hint in INFORMATIONAL_QUESTION_HINTS
     )
 
     if "annaprasada" in lower_message_check and not looks_like_schedule_question:
@@ -448,8 +585,13 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
     # -----------------------------
     if registration.is_active(session_id):
 
+        reply = registration.process(session_id, message)
+
         return {
-            "response": registration.process(session_id, message)
+            "response": _with_cancel_hint(
+                reply,
+                registration.is_active(session_id)
+            )
         }
 
     # ==========================================
@@ -699,19 +841,26 @@ def verify_coupon(coupon_id: str, request: Request):
         </div>
         """
 
-    coupon_id, name, block, flat_number, members, is_used = booking
+    coupon_id, name, block, flat_number, members, is_used, served_count = booking
 
-    if is_used == 1:
+    total_members = int(members)
+    served_count = served_count or 0
+    remaining = total_members - served_count
+
+    if remaining <= 0:
 
         return f"""
         <div style="font-family:Arial;text-align:center;padding:60px;">
-        <h1 style="color:#F44336;">❌ Already Used</h1>
+        <h1 style="color:#F44336;">❌ Fully Redeemed</h1>
         <p><b>{name}</b> — Block {block}, Flat {flat_number}</p>
-        <p>This coupon has already been redeemed.</p>
+        <p>All {total_members} member(s) on this coupon have already been served.</p>
         </div>
         """
 
-    mark_coupon_used(coupon_id)
+    already_served_note = (
+        f"<p style='color:#888;'>Already served: {served_count} of {total_members}</p>"
+        if served_count > 0 else ""
+    )
 
     return f"""
     <div style="font-family:Arial;text-align:center;padding:60px;">
@@ -719,9 +868,87 @@ def verify_coupon(coupon_id: str, request: Request):
     <p style="font-size:20px;"><b>{name}</b></p>
     <p>🏢 Block : {block}</p>
     <p>🏠 Flat : {flat_number}</p>
-    <p>👥 Members : {members}</p>
+    <p>👥 Total Members : {total_members}</p>
+    {already_served_note}
+    <p style="font-size:18px;color:#ff9800;"><b>Remaining : {remaining}</b></p>
     <p>🎟️ Coupon ID : {coupon_id}</p>
-    <p style="color:green;margin-top:20px;">Marked as used ✅</p>
+
+    <form method="post" action="/verify/{coupon_id}/serve" style="margin-top:24px;">
+        <label for="serve_count">How many are being served now?</label><br><br>
+        <input
+            type="number"
+            id="serve_count"
+            name="serve_count"
+            min="1"
+            max="{remaining}"
+            value="{remaining}"
+            style="font-size:18px;padding:8px;width:80px;text-align:center;border-radius:8px;border:1px solid #ccc;">
+        <br><br>
+        <button
+            type="submit"
+            style="background:#4CAF50;color:white;border:none;border-radius:10px;padding:12px 28px;font-size:16px;cursor:pointer;">
+            ✅ Confirm & Serve
+        </button>
+    </form>
+
+    </div>
+    """
+
+
+@app.post("/verify/{coupon_id}/serve", response_class=HTMLResponse)
+def serve_coupon(coupon_id: str, request: Request, serve_count: int = Form(...)):
+
+    # -----------------------------
+    # Volunteer access check
+    # -----------------------------
+    if request.cookies.get(VOLUNTEER_COOKIE_NAME) != VOLUNTEER_COOKIE_VALUE:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h2 style="color:#F44336;">🔒 Volunteer Access Required</h2>
+        <p>This page is for volunteer use only during coupon distribution.</p>
+        <p><a href="/volunteer-login">Enter volunteer PIN</a></p>
+        </div>
+        """
+
+    if serve_count < 1:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h1 style="color:#F44336;">⚠️ Invalid Count</h1>
+        <p>Please enter at least 1.</p>
+        </div>
+        """
+
+    result = serve_annaprasada_members(coupon_id, serve_count)
+
+    if result is None:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h1 style="color:#F44336;">⚠️ Invalid Coupon</h1>
+        <p>This coupon ID was not found.</p>
+        </div>
+        """
+
+    if result["remaining"] <= 0:
+
+        status_line = "<p style='color:green;font-size:18px;'>✅ Fully redeemed - nothing left on this coupon.</p>"
+
+    else:
+
+        status_line = (
+            f"<p style='color:#ff9800;font-size:18px;'>"
+            f"{result['remaining']} member(s) still remaining on this coupon. "
+            f"Scan again when they arrive.</p>"
+        )
+
+    return f"""
+    <div style="font-family:Arial;text-align:center;padding:60px;">
+    <h1 style="color:#4CAF50;">✅ Served {result['served_now']}</h1>
+    <p>🎟️ Coupon ID : {coupon_id}</p>
+    <p>Total served so far : {result['new_served_count']} of {result['total_members']}</p>
+    {status_line}
     </div>
     """
 

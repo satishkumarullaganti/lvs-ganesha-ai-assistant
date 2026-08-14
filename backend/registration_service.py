@@ -34,6 +34,17 @@ class RegistrationService:
         return self._get_session(session_id)["active"]
 
     # ========================================
+    # Cancel / Reset
+    # ========================================
+
+    def cancel(self, session_id):
+        self.sessions[session_id] = {
+            "active": False,
+            "step": None,
+            "data": {}
+        }
+
+    # ========================================
     # Start Registration
     # ========================================
 
@@ -50,7 +61,8 @@ class RegistrationService:
             "♟ Chess\n"
             "🎲 Carrom\n"
             "🎵 Tambola\n"
-            "🪑 Musical Chairs"
+            "🪑 Musical Chairs\n\n"
+            "(Type 'cancel' anytime to stop.)"
         )
 
     # ========================================
@@ -80,7 +92,8 @@ class RegistrationService:
             return (
                 "🏢 Please choose your Block.\n\n"
                 "1. South\n"
-                "2. North"
+                "2. North\n"
+                "3. Terrace"
             )
 
         # Block
@@ -94,12 +107,15 @@ class RegistrationService:
             elif block in ["2", "north", "north block"]:
                 data["block"] = "North"
 
+            elif block in ["3", "terrace", "terrace block"]:
+                data["block"] = "Terrace"
+
             else:
-                return "❌ Please enter South or North."
+                return "❌ Please enter South, North, or Terrace."
 
             session["step"] = "flat"
 
-            return "🏠 Enter Flat Number (Example: 004 or S004)."
+            return "🏠 Enter Flat Number (Example: 004, S004, or T1)."
 
         # Flat
         if step == "flat":
@@ -124,6 +140,15 @@ class RegistrationService:
             # - exactly 3 digits
             # - valid range for the selected block
             if not validate_flat_number(block, flat):
+
+                if block == "Terrace":
+
+                    return (
+                        f"❌ Invalid flat number '{original_flat}' "
+                        f"for {block} block.\n\n"
+                        "Please enter a valid Terrace flat number.\n"
+                        "Example: T1, T2, T3."
+                    )
 
                 return (
                     f"❌ Invalid flat number '{original_flat}' "

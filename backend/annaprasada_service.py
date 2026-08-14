@@ -9,6 +9,7 @@ from backend.config import (
 )
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_annaprasada_booking
+from backend.coupon_image_service import generate_annaprasada_coupon
 
 # ==========================================
 # Booking Status
@@ -24,8 +25,17 @@ class BookingStatus(Enum):
 # Coupon ID Generator
 # ==========================================
 
-def generate_coupon_id():
-    return "AP" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
+def generate_coupon_id(suffix_index=None):
+    base = "AP" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
+
+    # When generating several coupons in the same booking
+    # (one per family member), append the loop index so two
+    # coupons created back-to-back in the same request can
+    # never collide, even if the random part happens to match.
+    if suffix_index is not None:
+        base += f"-{suffix_index}"
+
+    return base
 
 
 # ==========================================
@@ -58,6 +68,14 @@ class AnnaprasadaService:
     def is_active(self, session_id):
 
         return self._get_session(session_id)["active"]
+
+    def cancel(self, session_id):
+
+        self.sessions[session_id] = {
+            "active": False,
+            "step": 0,
+            "booking": {}
+        }
 
     def check_booking_status(self, session_id):
 
@@ -122,6 +140,8 @@ Coupon booking is now closed.
 Booking is now OPEN.
 
 👥 How many members are you booking for?
+
+(Type 'cancel' anytime to stop.)
 """
 
     def process_booking(self, session_id, message):
@@ -131,7 +151,21 @@ Booking is now OPEN.
         # Step 1 - Members
         if session["step"] == 1:
 
-            session["booking"]["members"] = message.strip()
+            members_input = message.strip()
+
+            if not members_input.isdigit() or int(members_input) < 1:
+
+                return "❌ Please enter a valid number of members (e.g. 1, 2, 4)."
+
+            if int(members_input) > 15:
+
+                return (
+                    "❌ That's a lot for one booking - please enter a "
+                    "number between 1 and 15, or contact a volunteer "
+                    "for larger group bookings."
+                )
+
+            session["booking"]["members"] = members_input
             session["step"] = 2
 
             return "👤 Please enter your Full Name."
@@ -157,14 +191,16 @@ Booking is now OPEN.
 
             session["booking"]["flat_number"] = message.strip()
 
+            booking = session["booking"]
+
             coupon_id = generate_coupon_id()
 
-            save_annaprasada_booking(
+            serial_number = save_annaprasada_booking(
                 coupon_id=coupon_id,
-                name=session["booking"]["name"],
-                block=session["booking"]["block"],
-                flat_number=session["booking"]["flat_number"],
-                members=session["booking"]["members"]
+                name=booking["name"],
+                block=booking["block"],
+                flat_number=booking["flat_number"],
+                members=booking["members"]
             )
 
             # -----------------------------------------------
@@ -175,9 +211,14 @@ Booking is now OPEN.
             # reach it.
             # -----------------------------------------------
             verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
-            qr_path = generate_qr_code(verify_url, coupon_id)
 
-            booking = session["booking"]
+            coupon_path = generate_annaprasada_coupon(
+                coupon_id=coupon_id,
+                serial_number=serial_number,
+                name=booking["name"],
+                members=booking["members"],
+                verify_url=verify_url
+            )
 
             response = f"""
 🎉 Hi {booking['name']}!
@@ -198,9 +239,11 @@ Your Annaprasada Coupon is confirmed.
 
 ━━━━━━━━━━━━━━━━━━━━━━
 
-📱 Show this QR code at the counter:
+📱 Show this QR code at the counter (covers all {booking['members']} member(s) -
+if your family arrives in separate groups, the same QR can be
+scanned again for whoever arrives later, until everyone's counted):
 
-<img src="/{qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
+<img src="/{coupon_path}" style="width:280px;margin-top:10px;border-radius:12px;">
 
 🙏 Thank you!
 """

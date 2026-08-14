@@ -16,6 +16,14 @@ NORTH_RANGES = [
     (301, 308),
 ]
 
+# Terrace flats don't follow the numeric North/South pattern -
+# they're an exact, small set of named units (T1, T2, T3).
+TERRACE_FLATS = {
+    "T1",
+    "T2",
+    "T3",
+}
+
 BLOCK_RANGES = {
     "SOUTH": SOUTH_RANGES,
     "NORTH": NORTH_RANGES,
@@ -46,12 +54,36 @@ def _is_in_ranges(flat_int: int, ranges):
     return False
 
 
+def _normalize_terrace_flat(flat_number: str):
+    if flat_number is None:
+        return None
+
+    cleaned = (
+        str(flat_number)
+        .strip()
+        .upper()
+        .replace("-", "")
+        .replace(" ", "")
+        .replace("TERRACE", "")
+        .replace("BLOCK", "")
+        .strip()
+    )
+
+    return cleaned
+
+
 def validate_flat_number(block: str, flat_number: str) -> bool:
 
     if not block:
         return False
 
     block_key = str(block).strip().upper()
+
+    if block_key == "TERRACE":
+
+        cleaned = _normalize_terrace_flat(flat_number)
+
+        return cleaned in TERRACE_FLATS
 
     if block_key not in BLOCK_RANGES:
         return False
@@ -68,6 +100,10 @@ def validate_flat_number(block: str, flat_number: str) -> bool:
 
 
 def validate_flat_number_any_block(flat_number: str) -> bool:
+
+    # Check Terrace's exact-match set first
+    if _normalize_terrace_flat(flat_number) in TERRACE_FLATS:
+        return True
 
     flat_int = _normalize_flat_number(flat_number)
 

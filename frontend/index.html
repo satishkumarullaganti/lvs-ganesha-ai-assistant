@@ -9,6 +9,20 @@
 
     <title>LVS Excellency Ganesha AI Assistant</title>
 
+    <!-- PWA: manifest + icons + theme color -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff9800">
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
+    <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+
+    <!-- iOS "Add to Home Screen" support (iOS ignores the -->
+    <!-- web manifest for some of this, so these are needed too) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LVS Ganesha">
+
     <link rel="stylesheet" href="css/style.css">
 
 </head>
@@ -259,6 +273,7 @@
             <select id="reg-block">
                 <option>North</option>
                 <option>South</option>
+                <option>Terrace</option>
             </select>
 
             <label>Flat Number</label>
@@ -357,11 +372,12 @@
 
             </div>
 
+            <label>Performance Details / Song Title (optional)</label>
+
             <input
                 type="text"
                 id="cultural-other-details"
-                placeholder="Please specify (if 'Other' selected)"
-                style="display:none;">
+                placeholder="e.g. song name, or details if 'Other' selected">
 
             <label>Name</label>
 
@@ -375,6 +391,7 @@
             <select id="cultural-reg-block">
                 <option>North</option>
                 <option>South</option>
+                <option>Terrace</option>
             </select>
 
             <label>Flat Number</label>
@@ -519,6 +536,7 @@
             <select id="volunteer-reg-block">
                 <option>North</option>
                 <option>South</option>
+                <option>Terrace</option>
             </select>
 
             <label>Flat Number</label>

@@ -70,16 +70,11 @@ const culturalOtherCheckbox = document.getElementById("cultural-other-checkbox")
 const culturalOtherDetailsField = document.getElementById("cultural-other-details");
 const culturalTrackField = document.getElementById("cultural-reg-track");
 
-// Show/hide the "Other" details text field based on checkbox state
-culturalOtherCheckbox.addEventListener("change", function () {
+// "Other" category still requires details to be filled in,
+// but the field itself is always visible now (not just for
+// "Other") so residents can add a distinguishing note (e.g.
+// song title) for any category if they want to.
 
-    culturalOtherDetailsField.style.display = culturalOtherCheckbox.checked ? "block" : "none";
-
-    if (!culturalOtherCheckbox.checked) {
-        culturalOtherDetailsField.value = "";
-    }
-
-});
 
 // ======================================
 // Volunteer Registration Modal
@@ -458,7 +453,6 @@ culturalRegisterSubmitBtn.addEventListener("click", async function () {
         culturalFlatField.value = "";
         culturalMobileField.value = "";
         culturalOtherDetailsField.value = "";
-        culturalOtherDetailsField.style.display = "none";
         culturalTrackField.value = "";
         culturalBlockField.selectedIndex = 0;
 
@@ -1092,5 +1086,27 @@ async function uploadDonationProof(inputElement) {
 
     // Reset the file input so the same file can be re-selected if needed
     inputElement.value = "";
+
+}
+
+// ======================================
+// PWA: Register Service Worker
+// ======================================
+// Enables "Add to Home Screen" on Android/Chrome/iOS.
+// Safe to fail silently on older browsers or if the
+// site isn't served over HTTPS yet (e.g. plain ngrok
+// http during local dev).
+
+if ("serviceWorker" in navigator) {
+
+    window.addEventListener("load", function () {
+
+        navigator.serviceWorker
+            .register("/sw.js")
+            .catch(function (error) {
+                console.log("Service worker registration failed:", error);
+            });
+
+    });
 
 }

@@ -77,6 +77,40 @@ def create_tables():
 
     """)
 
+    # --------------------------------------------
+    # Migration: add served_count for partial
+    # redemption support (a family's coupon covers
+    # N members, but they don't always arrive
+    # together - this tracks how many have actually
+    # been served so far, so the same coupon can be
+    # scanned again for the remaining members instead
+    # of the whole booking being consumed by whoever
+    # arrives first).
+    # --------------------------------------------
+
+    cursor.execute("PRAGMA table_info(annaprasada_bookings)")
+    annaprasada_existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "served_count" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN served_count INTEGER DEFAULT 0"
+        )
+
+    # --------------------------------------------
+    # Migration: booking_group_id links sibling
+    # coupons generated from the same original
+    # booking request (e.g. a family booking for 4
+    # members now gets 4 separate admit-1 coupon
+    # rows, matching the physical "ADMIT ONLY - 1"
+    # coupons used previously - this column lets
+    # admin reporting still group them together).
+    # --------------------------------------------
+
+    if "booking_group_id" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN booking_group_id TEXT"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS donations(
@@ -122,6 +156,11 @@ def create_tables():
     if "proof_image_path" not in existing_columns:
         cursor.execute(
             "ALTER TABLE donations ADD COLUMN proof_image_path TEXT"
+        )
+
+    if "block" not in existing_columns:
+        cursor.execute(
+            "ALTER TABLE donations ADD COLUMN block TEXT"
         )
 
     cursor.execute("""
@@ -244,7 +283,7 @@ def save_registration(
 # Save Annaprasada Booking
 # ============================================
 
-def save_annaprasada_booking(coupon_id, name, block, flat_number, members):
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None):
 
     conn = get_connection()
 
@@ -262,11 +301,13 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members):
 
         flat_number,
 
-        members
+        members,
+
+        booking_group_id
 
     )
 
-    VALUES(?,?,?,?,?)
+    VALUES(?,?,?,?,?,?)
 
     """, (
 
@@ -278,13 +319,19 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members):
 
         flat_number,
 
-        members
+        members,
+
+        booking_group_id
 
     ))
 
     conn.commit()
 
+    new_id = cursor.lastrowid
+
     conn.close()
+
+    return new_id
 
 
 # ============================================
@@ -299,7 +346,7 @@ def get_booking_by_coupon(coupon_id):
 
     cursor.execute("""
 
-    SELECT coupon_id, name, block, flat_number, members, is_used
+    SELECT coupon_id, name, block, flat_number, members, is_used, served_count
 
     FROM annaprasada_bookings
 
@@ -315,10 +362,17 @@ def get_booking_by_coupon(coupon_id):
 
 
 # ============================================
-# Mark Annaprasada Coupon as Used
+# Serve N Members From an Annaprasada Coupon
+# (partial redemption)
 # ============================================
+# A booking can cover multiple members who don't always
+# arrive together. Each call here records how many are
+# being served RIGHT NOW, on top of however many have
+# already been served earlier for this same coupon.
+# Returns (new_served_count, total_members) so the caller
+# can tell the volunteer how many remain.
 
-def mark_coupon_used(coupon_id):
+def serve_annaprasada_members(coupon_id, count_to_serve):
 
     conn = get_connection()
 
@@ -326,13 +380,52 @@ def mark_coupon_used(coupon_id):
 
     cursor.execute("""
 
-    UPDATE annaprasada_bookings
+    SELECT members, served_count
 
-    SET is_used = 1
+    FROM annaprasada_bookings
 
     WHERE coupon_id = ?
 
     """, (coupon_id,))
+
+    row = cursor.fetchone()
+
+    if row is None:
+        conn.close()
+        return None
+
+    total_members = int(row[0])
+    already_served = row[1] or 0
+
+    remaining = total_members - already_served
+
+    # Never allow serving more than what's actually left,
+    # regardless of what the volunteer typed in.
+    actual_serve_count = min(count_to_serve, remaining)
+
+    new_served_count = already_served + actual_serve_count
+
+    is_now_fully_used = 1 if new_served_count >= total_members else 0
+
+    cursor.execute("""
+
+    UPDATE annaprasada_bookings
+
+    SET served_count = ?, is_used = ?
+
+    WHERE coupon_id = ?
+
+    """, (new_served_count, is_now_fully_used, coupon_id))
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "served_now": actual_serve_count,
+        "new_served_count": new_served_count,
+        "total_members": total_members,
+        "remaining": total_members - new_served_count
+    }
 
     conn.commit()
 
@@ -343,7 +436,7 @@ def mark_coupon_used(coupon_id):
 # Save Donation
 # ============================================
 
-def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_image_path=None, status="pending"):
+def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_image_path=None, status="pending", block=None):
 
     conn = get_connection()
 
@@ -365,11 +458,13 @@ def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_
 
         proof_image_path,
 
-        status
+        status,
+
+        block
 
     )
 
-    VALUES(?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -385,7 +480,9 @@ def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_
 
         proof_image_path,
 
-        status
+        status,
+
+        block
 
     ))
 
@@ -564,6 +661,67 @@ def get_cultural_registrations():
     conn.close()
 
     return rows
+
+
+# ============================================
+# Duplicate Cultural Registration Check
+# (accidental double-submit guard)
+# ============================================
+# A participant CAN legitimately register for the same
+# category more than once (e.g. two different Solo Dance
+# performances - different people, or the same person
+# with two separate entries). What this catches is an
+# accidental duplicate: the exact same name, category
+# set, and other_details text submitted again within a
+# few minutes - almost certainly a double-click or form
+# resubmission, not a genuine second performance.
+#
+# Note: track_path isn't used for comparison here - it
+# stores a randomly generated server-side filename, not
+# the original upload name, so it can't reliably indicate
+# whether two submissions are "the same" performance.
+
+DUPLICATE_WINDOW_MINUTES = 5
+
+
+def check_recent_duplicate_cultural_registration(
+    name,
+    categories,
+    other_details
+):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT id
+
+    FROM cultural_registrations
+
+    WHERE LOWER(name) = LOWER(?)
+
+    AND categories = ?
+
+    AND COALESCE(other_details, '') = COALESCE(?, '')
+
+    AND created_at >= datetime('now', ?)
+
+    LIMIT 1
+
+    """, (
+        name,
+        categories,
+        other_details,
+        f"-{DUPLICATE_WINDOW_MINUTES} minutes"
+    ))
+
+    row = cursor.fetchone()
+
+    conn.close()
+
+    return row is not None
 
 
 # ============================================

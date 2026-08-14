@@ -7,6 +7,7 @@ from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_donation
 from backend.receipt_service import generate_receipt_pdf
+from backend.validators import validate_flat_number
 
 
 def generate_receipt_id():
@@ -44,6 +45,14 @@ class DonationService:
 
         return self._get_session(session_id)["active"]
 
+    def cancel(self, session_id):
+
+        self.sessions[session_id] = {
+            "active": False,
+            "step": 0,
+            "donation": {}
+        }
+
     def start_donation(self, session_id):
 
         self.sessions[session_id] = {
@@ -58,6 +67,8 @@ class DonationService:
 Every contribution helps make this Ganesh festival memorable for our community.
 
 👤 Please enter your Name.
+
+(Type 'cancel' anytime to stop.)
 """
 
     def process_donation(self, session_id, message):
@@ -70,18 +81,78 @@ Every contribution helps make this Ganesh festival memorable for our community.
             session["donation"]["name"] = message.strip()
             session["step"] = 2
 
-            return "🏠 Please enter your Flat Number."
+            return (
+                "🏢 Please choose your Block.\n\n"
+                "1. South\n"
+                "2. North\n"
+                "3. Terrace"
+            )
 
-        # Step 2 - Flat Number
+        # Step 2 - Block
         elif session["step"] == 2:
 
-            session["donation"]["flat_number"] = message.strip()
+            block_input = message.strip().lower()
+
+            if block_input in ["1", "south", "south block"]:
+                session["donation"]["block"] = "South"
+
+            elif block_input in ["2", "north", "north block"]:
+                session["donation"]["block"] = "North"
+
+            elif block_input in ["3", "terrace", "terrace block"]:
+                session["donation"]["block"] = "Terrace"
+
+            else:
+                return "❌ Please enter South, North, or Terrace."
+
             session["step"] = 3
+
+            return "🏠 Please enter your Flat Number (Example: 004, S004, or T1)."
+
+        # Step 3 - Flat Number
+        elif session["step"] == 3:
+
+            original_flat = message.strip()
+            block = session["donation"]["block"]
+
+            # Allow optional prefixes such as S004/N008, mirroring
+            # the same cleanup used in the main registration flow.
+            flat = (
+                original_flat.upper()
+                    .replace("SOUTH", "")
+                    .replace("NORTH", "")
+                    .replace("BLOCK", "")
+                    .replace("S", "")
+                    .replace("N", "")
+                    .replace("-", "")
+                    .strip()
+            )
+
+            if not validate_flat_number(block, flat):
+
+                if block == "Terrace":
+
+                    return (
+                        f"❌ Invalid flat number '{original_flat}' "
+                        f"for {block} block.\n\n"
+                        "Please enter a valid Terrace flat number.\n"
+                        "Example: T1, T2, T3."
+                    )
+
+                return (
+                    f"❌ Invalid flat number '{original_flat}' "
+                    f"for {block} block.\n\n"
+                    "Please enter a valid 3-digit flat number.\n"
+                    "Example: 004, 020, 101."
+                )
+
+            session["donation"]["flat_number"] = flat
+            session["step"] = 4
 
             return "💰 Please enter the amount you wish to donate (₹)."
 
-        # Step 3 - Amount → show UPI details + payment proof widget
-        elif session["step"] == 3:
+        # Step 4 - Amount → show UPI details + payment proof widget
+        elif session["step"] == 4:
 
             session["donation"]["amount"] = message.strip()
             session["step"] = 5
@@ -215,7 +286,8 @@ once a screenshot is attached.
             amount=donation["amount"],
             utr_number=utr_number,
             proof_image_path=proof_image_path,
-            status="pending"
+            status="pending",
+            block=donation.get("block")
         )
 
         receipt_path = generate_receipt_pdf(
@@ -225,7 +297,8 @@ once a screenshot is attached.
             amount=donation["amount"],
             utr_number=utr_number,
             proof_uploaded=bool(proof_image_path),
-            status="pending"
+            status="pending",
+            block=donation.get("block")
         )
 
         if utr_number:
@@ -245,6 +318,7 @@ shortly.
 ━━━━━━━━━━━━━━━━━━━━━━
 
 👤 Name : {donation['name']}
+🏢 Block : {donation.get('block', '-')}
 🏠 Flat : {donation['flat_number']}
 💰 Amount : ₹{donation['amount']}
 {proof_line}

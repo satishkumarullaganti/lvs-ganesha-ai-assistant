@@ -1,0 +1,31 @@
+{
+    "name": "LVS Excellency Ganesha AI Assistant",
+    "short_name": "LVS Ganesha",
+    "description": "Festival companion app for the LVS Excellency Ganesha Festival - schedule, registration, donations, Annaprasada, and more.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#fff8e8",
+    "theme_color": "#ff9800",
+    "icons": [
+        {
+            "src": "/assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/assets/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

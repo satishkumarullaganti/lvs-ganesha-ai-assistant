@@ -17,7 +17,7 @@ BANNER_TEXT = "Ganesh Utsav 2026 Celebrations"
 os.makedirs(RECEIPT_FOLDER, exist_ok=True)
 
 
-def generate_receipt_pdf(receipt_id, name, flat_number, amount, utr_number=None, proof_uploaded=False, status="pending"):
+def generate_receipt_pdf(receipt_id, name, flat_number, amount, utr_number=None, proof_uploaded=False, status="pending", block=None):
 
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
@@ -154,10 +154,15 @@ def generate_receipt_pdf(receipt_id, name, flat_number, amount, utr_number=None,
         ("Receipt ID", receipt_id),
         ("Date", today_str),
         ("Name", name),
+        ("Block", block) if block else None,
         ("Flat Number", flat_number),
         ("Amount", f"Rs. {amount}"),
         (payment_ref_label, payment_ref_value),
     ]
+
+    # Drop the Block row entirely for older receipts/callers
+    # that don't pass a block (keeps this backward-compatible).
+    details = [row for row in details if row is not None]
 
     label_x = content_x + content_width * 0.28
     value_x = content_x + content_width * 0.45
