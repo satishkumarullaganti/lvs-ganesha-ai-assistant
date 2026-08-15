@@ -866,6 +866,15 @@
 
             </button>
 
+
+            <button
+                class="tab"
+                data-type="announcements">
+
+                📢 Announcements
+
+            </button>
+
         </div>
 
 
@@ -908,9 +917,56 @@
             id="table-container"
             class="table-container">
 
+
             <div class="loading">
 
                 Loading records...
+
+            </div>
+
+        </div>
+
+        <!-- ANNOUNCEMENTS PANEL -->
+
+        <div id="announcements-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">📢 Post a New Announcement</h3>
+
+                <textarea
+                    id="announcement-message-input"
+                    placeholder="e.g. Dance competition delayed by 30 minutes"
+                    style="width:100%;min-height:80px;padding:10px;font-size:15px;border-radius:8px;border:1px solid #ccc;box-sizing:border-box;"
+                ></textarea>
+
+                <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+
+                    <select
+                        id="announcement-type-input"
+                        style="padding:8px;border-radius:8px;border:1px solid #ccc;">
+                        <option value="info">ℹ️ Info</option>
+                        <option value="reminder">🔔 Reminder</option>
+                        <option value="urgent">🚨 Urgent</option>
+                    </select>
+
+                    <button
+                        onclick="postNewAnnouncement()"
+                        style="background:#ff9800;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                        Send to All Devices
+                    </button>
+
+                    <span id="announcement-post-status" style="font-size:14px;"></span>
+
+                </div>
+
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">Active Announcements</h3>
+
+                <div id="announcements-list">Loading...</div>
 
             </div>
 
@@ -1783,16 +1839,168 @@ document
                         "active"
                     );
 
+                    const tableContainer = document.getElementById("table-container");
+                    const toolbar = document.querySelector(".toolbar");
+                    const announcementsPanel = document.getElementById("announcements-panel");
 
-                    loadTable(
-                        this.dataset.type
-                    );
+                    if (this.dataset.type === "announcements") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "block";
+
+                        loadAnnouncementsAdminList();
+
+                    } else {
+
+                        tableContainer.style.display = "block";
+                        if (toolbar) toolbar.style.display = "flex";
+                        announcementsPanel.style.display = "none";
+
+                        loadTable(
+                            this.dataset.type
+                        );
+
+                    }
 
                 }
             );
 
         }
     );
+
+/* ==========================================
+   ANNOUNCEMENTS MANAGEMENT
+========================================== */
+
+async function loadAnnouncementsAdminList() {
+
+    const listEl = document.getElementById("announcements-list");
+    listEl.innerHTML = "Loading...";
+
+    try {
+
+        const response = await fetch("/admin/announcements", {
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            listEl.innerHTML = "Could not load announcements.";
+            return;
+        }
+
+        const data = await response.json();
+        const announcements = data.announcements || [];
+
+        if (announcements.length === 0) {
+            listEl.innerHTML = "<p style='color:#888;'>No announcements yet.</p>";
+            return;
+        }
+
+        listEl.innerHTML = announcements.map(function (a) {
+
+            let badgeColor = "#ff9800";
+            if (a.type === "urgent") badgeColor = "#d32f2f";
+            else if (a.type === "reminder") badgeColor = "#1976d2";
+            const statusText = a.active ? "Active" : "Inactive";
+            const statusColor = a.active ? "#4CAF50" : "#999";
+
+            const deactivateButton = a.active
+                ? '<button onclick="deactivateAnnouncementAdmin(\'' + a.id + '\')" ' +
+                  'style="background:#999;color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;">Deactivate</button>'
+                : "";
+
+            return (
+                '<div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+                    '<div>' +
+                        '<span style="background:' + badgeColor + ';color:white;font-size:11px;padding:2px 8px;border-radius:10px;margin-right:8px;">' + a.type + '</span>' +
+                        '<span style="color:' + statusColor + ';font-size:12px;">' + statusText + '</span>' +
+                        '<p style="margin:6px 0 0;">' + escapeHtml(a.message) + '</p>' +
+                        '<p style="margin:2px 0 0;font-size:12px;color:#aaa;">' + a.created_at + '</p>' +
+                    '</div>' +
+                    deactivateButton +
+                '</div>'
+            );
+
+        }).join("");
+
+    } catch (error) {
+        listEl.innerHTML = "Network error loading announcements.";
+    }
+
+}
+
+async function postNewAnnouncement() {
+
+    const messageInput = document.getElementById("announcement-message-input");
+    const typeInput = document.getElementById("announcement-type-input");
+    const statusEl = document.getElementById("announcement-post-status");
+
+    const message = messageInput.value.trim();
+
+    if (!message) {
+        statusEl.textContent = "Please enter a message.";
+        statusEl.style.color = "#d32f2f";
+        return;
+    }
+
+    statusEl.textContent = "Sending...";
+    statusEl.style.color = "#888";
+
+    try {
+
+        const response = await fetch("/admin/announcements", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+                message: message,
+                type: typeInput.value
+            })
+        });
+
+        if (!response.ok) {
+            statusEl.textContent = "Failed to send.";
+            statusEl.style.color = "#d32f2f";
+            return;
+        }
+
+        const data = await response.json();
+
+        statusEl.textContent = "✅ Sent to " + data.push.sent + " device(s).";
+        statusEl.style.color = "#4CAF50";
+
+        messageInput.value = "";
+
+        loadAnnouncementsAdminList();
+
+    } catch (error) {
+        statusEl.textContent = "Network error - please try again.";
+        statusEl.style.color = "#d32f2f";
+    }
+
+}
+
+async function deactivateAnnouncementAdmin(id) {
+
+    if (!confirm("Remove this announcement from the app?")) {
+        return;
+    }
+
+    try {
+
+        await fetch("/admin/announcements/" + id, {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        loadAnnouncementsAdminList();
+
+    } catch (error) {
+        alert("Could not remove this announcement. Please try again.");
+    }
+
+}
 
 /* ==========================================
    SEARCH / FILTER

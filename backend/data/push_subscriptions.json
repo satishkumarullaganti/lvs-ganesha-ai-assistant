@@ -1,0 +1,16 @@
+[
+    {
+        "endpoint": "https://fcm.googleapis.com/fcm/send/cNLT6sKV5GU:APA91bGGl4sP68nEFKlrwVaa0hKAE-rN_O7HX3Boe08FUEDSR_0z2whP-XldiDxuQcZsvZcLn_cew3aSDMFJ3egh3hvGVJZ4Oycd4RZeS6NAdNcJymvaYd53sW5GZjoimLariykMhfU-",
+        "keys": {
+            "p256dh": "BO48-GleyBo8D-WjqfvUS9Drvheg50nxafuhnnUGEX7mxx4UIWlNfWeIb5ujwnMbRMAhl5u-spZ1MTPW66W99jc",
+            "auth": "7xTjEd0738J1H-Gxh8l1Dg"
+        }
+    },
+    {
+        "endpoint": "https://fcm.googleapis.com/fcm/send/cy3WRcaDYuo:APA91bEeGr3uDDG6EBlwCCXBB8YCm-BwPr6hW5RlwrnL-ya3aQ_KdF6F2BQDa6UKA9ky13qvTPv4vzyJVPjV3E5Dn_wguSSufxBpQnmDnZFr7mayx1KJUIEZcUZ_uzSIK_FSTw0zY173",
+        "keys": {
+            "p256dh": "BLposDSaCeK2FleIyValDUPzrZUIcN8_1dAit65PjPCvf_qh4Vw-jeQgBZcbr_GE7VKbDMSRtzyjsBnhncNs1Gk",
+            "auth": "febJqw6Qg9i79tpdCJjvmA"
+        }
+    }
+]

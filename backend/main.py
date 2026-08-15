@@ -9,11 +9,23 @@ from backend.registration_service import registration
 from backend.annaprasada_service import annaprasada_service  
 from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from backend.database.database import get_booking_by_coupon, serve_annaprasada_members
 from dotenv import load_dotenv
 load_dotenv()
-from backend.admin.admin_routes import router as admin_router
+from backend.admin.admin_routes import router as admin_router, require_admin
+from backend.announcement_service import (
+    get_active_announcements,
+    get_all_announcements,
+    add_announcement,
+    deactivate_announcement
+)
+from backend.push_service import (
+    save_subscription,
+    remove_subscription,
+    send_push_to_all
+)
+from backend.config import VAPID_PUBLIC_KEY
 from backend.rag.rag_service import (
     ask_rag,
     is_festival_question
@@ -22,11 +34,13 @@ from backend.database.database import (
     create_tables,
     get_registrations,
     save_registration,
+    check_duplicate_competition_registration,
     save_annaprasada_booking,
     save_cultural_registration,
     get_cultural_registrations,
     check_recent_duplicate_cultural_registration,
     save_volunteer_registration,
+    get_registered_tasks_for_person,
     get_volunteer_registrations
 )
 import os
@@ -149,6 +163,29 @@ def register(data: RegistrationRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
+    # --------------------------------------------
+    # Duplicate competition-entry check
+    # --------------------------------------------
+    # Unlike cultural programs, a competition only has one
+    # entry per person - registering for the same
+    # competition twice is always a genuine duplicate.
+    # --------------------------------------------
+
+    if check_duplicate_competition_registration(
+        name=data.name,
+        block=data.block,
+        flat_number=data.flat,
+        competition=data.competition
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"You've already registered for {data.competition}. "
+                "If this is a mistake, please contact a volunteer."
+            )
         )
 
     save_registration(
@@ -339,6 +376,44 @@ def register_volunteer(data: VolunteerRequest):
         raise HTTPException(
             status_code=400,
             detail="Please select at least one task to volunteer for."
+        )
+
+    # --------------------------------------------
+    # Duplicate volunteer-task check
+    # --------------------------------------------
+    # A volunteer task (e.g. "Registration Desk") has no
+    # equivalent of "two different performances" - there's
+    # no legitimate reason to sign up for the exact same
+    # task twice. Different, not-yet-registered tasks are
+    # still allowed through.
+    # --------------------------------------------
+
+    requested_tasks = [
+        t.strip() for t in data.tasks.split(",") if t.strip()
+    ]
+
+    already_registered_tasks = get_registered_tasks_for_person(
+        name=data.name,
+        block=data.block,
+        flat_number=data.flat
+    )
+
+    duplicate_tasks = [
+        t for t in requested_tasks
+        if t.lower() in already_registered_tasks
+    ]
+
+    if duplicate_tasks:
+
+        duplicate_list = ", ".join(duplicate_tasks)
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"You're already signed up for: {duplicate_list}. "
+                "Please remove already-registered tasks, or choose "
+                "different ones."
+            )
         )
 
     save_volunteer_registration(
@@ -952,6 +1027,372 @@ def serve_coupon(coupon_id: str, request: Request, serve_count: int = Form(...))
     </div>
     """
 
+
+# ============================================
+# Continuous Volunteer Scanner (JSON API + page)
+# ============================================
+# The /verify/{coupon_id} page above works fine for a
+# single scan, but it fully navigates the browser away
+# from the camera each time - meaning a volunteer has to
+# close and reopen their camera app for every single
+# person. These two JSON endpoints let a JS-based
+# in-browser scanner (below) check and redeem coupons
+# via background fetch() calls instead, so the camera
+# view never has to close between scans.
+# ============================================
+
+@app.get("/api/coupon-status/{coupon_id}")
+def api_coupon_status(coupon_id: str, request: Request):
+
+    if request.cookies.get(VOLUNTEER_COOKIE_NAME) != VOLUNTEER_COOKIE_VALUE:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    booking = get_booking_by_coupon(coupon_id)
+
+    if not booking:
+        return JSONResponse({"error": "invalid_coupon"}, status_code=404)
+
+    coupon_id, name, block, flat_number, members, is_used, served_count = booking
+
+    total_members = int(members)
+    served_count = served_count or 0
+    remaining = total_members - served_count
+
+    return {
+        "coupon_id": coupon_id,
+        "name": name,
+        "block": block,
+        "flat_number": flat_number,
+        "total_members": total_members,
+        "served_count": served_count,
+        "remaining": remaining
+    }
+
+
+@app.post("/api/coupon-serve/{coupon_id}")
+async def api_coupon_serve(coupon_id: str, request: Request):
+
+    if request.cookies.get(VOLUNTEER_COOKIE_NAME) != VOLUNTEER_COOKIE_VALUE:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+        serve_count = int(body.get("serve_count", 0))
+    except (ValueError, TypeError):
+        return JSONResponse({"error": "invalid_count"}, status_code=400)
+
+    if serve_count < 1:
+        return JSONResponse({"error": "invalid_count"}, status_code=400)
+
+    result = serve_annaprasada_members(coupon_id, serve_count)
+
+    if result is None:
+        return JSONResponse({"error": "invalid_coupon"}, status_code=404)
+
+    return result
+
+
+@app.get("/volunteer-scan", response_class=HTMLResponse)
+def volunteer_scan(request: Request):
+
+    if request.cookies.get(VOLUNTEER_COOKIE_NAME) != VOLUNTEER_COOKIE_VALUE:
+
+        return """
+        <div style="font-family:Arial;text-align:center;padding:60px;">
+        <h2 style="color:#F44336;">🔒 Volunteer Access Required</h2>
+        <p>This page is for volunteer use only during coupon distribution.</p>
+        <p><a href="/volunteer-login">Enter volunteer PIN</a></p>
+        </div>
+        """
+
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volunteer Scanner - LVS Ganesha Festival</title>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: #fff;
+        overflow: hidden;
+    }
+    #header {
+        background: #ff9800;
+        text-align: center;
+        padding: 12px;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    #qr-reader {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    #status-message {
+        text-align: center;
+        padding: 16px;
+        font-size: 15px;
+        color: #ccc;
+    }
+    #overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 999;
+        align-items: center;
+        justify-content: center;
+    }
+    #overlay-card {
+        background: #fff;
+        color: #222;
+        border-radius: 16px;
+        padding: 28px 24px;
+        width: 90%;
+        max-width: 380px;
+        text-align: center;
+    }
+    #overlay-card h2 {
+        margin-top: 0;
+    }
+    #overlay-card input[type="number"] {
+        font-size: 22px;
+        padding: 10px;
+        width: 90px;
+        text-align: center;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        margin: 14px 0;
+    }
+    .btn {
+        display: inline-block;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 26px;
+        font-size: 16px;
+        cursor: pointer;
+        margin: 6px;
+    }
+    .btn-confirm {
+        background: #4CAF50;
+        color: white;
+    }
+    .btn-dismiss {
+        background: #999;
+        color: white;
+    }
+    .error-text {
+        color: #F44336;
+        font-weight: bold;
+    }
+    .success-text {
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .warn-text {
+        color: #ff9800;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+
+<div id="header">🍛 Volunteer Coupon Scanner</div>
+<div id="qr-reader"></div>
+<div id="status-message">Point the camera at a resident's QR code</div>
+
+<div id="overlay">
+    <div id="overlay-card"></div>
+</div>
+
+<script>
+const statusMessage = document.getElementById("status-message");
+const overlay = document.getElementById("overlay");
+const overlayCard = document.getElementById("overlay-card");
+
+let isBusy = false;
+let scanner = null;
+
+function extractCouponId(decodedText) {
+    // The QR encodes a full /verify/{coupon_id} URL - just
+    // take the final path segment as the coupon ID.
+    const parts = decodedText.split("/").filter(Boolean);
+    return parts[parts.length - 1];
+}
+
+function showOverlay(html) {
+    overlayCard.innerHTML = html;
+    overlay.style.display = "flex";
+}
+
+function hideOverlayAndResume() {
+    overlay.style.display = "none";
+    isBusy = false;
+    statusMessage.textContent = "Point the camera at a resident's QR code";
+    if (scanner) {
+        scanner.resume();
+    }
+}
+
+function fetchStatus(couponId) {
+
+    fetch("/api/coupon-status/" + encodeURIComponent(couponId))
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            });
+        })
+        .then(function (result) {
+
+            if (!result.ok) {
+
+                const message = result.data.error === "invalid_coupon"
+                    ? "This coupon was not found."
+                    : "Session expired - please re-enter the volunteer PIN.";
+
+                showOverlay(
+                    '<h2 class="error-text">⚠️ Error</h2>' +
+                    '<p>' + message + '</p>' +
+                    '<button class="btn btn-dismiss" onclick="hideOverlayAndResume()">OK</button>'
+                );
+                return;
+            }
+
+            const data = result.data;
+
+            if (data.remaining <= 0) {
+
+                showOverlay(
+                    '<h2 class="error-text">❌ Fully Redeemed</h2>' +
+                    '<p><b>' + data.name + '</b></p>' +
+                    '<p>Block ' + data.block + ', Flat ' + data.flat_number + '</p>' +
+                    '<p>All ' + data.total_members + ' member(s) already served.</p>' +
+                    '<button class="btn btn-dismiss" onclick="hideOverlayAndResume()">OK</button>'
+                );
+                return;
+            }
+
+            const alreadyServedNote = data.served_count > 0
+                ? '<p style="color:#888;">Already served: ' + data.served_count + ' of ' + data.total_members + '</p>'
+                : '';
+
+            showOverlay(
+                '<h2 class="success-text">✅ Valid Coupon</h2>' +
+                '<p><b>' + data.name + '</b></p>' +
+                '<p>Block ' + data.block + ', Flat ' + data.flat_number + '</p>' +
+                '<p>Total Members: ' + data.total_members + '</p>' +
+                alreadyServedNote +
+                '<p class="warn-text">Remaining: ' + data.remaining + '</p>' +
+                '<label>How many are being served now?</label><br>' +
+                '<input type="number" id="serve-count-input" min="1" max="' + data.remaining + '" value="' + data.remaining + '"><br>' +
+                '<button class="btn btn-confirm" onclick="confirmServe(\\'' + data.coupon_id + '\\')">✅ Confirm & Serve</button>' +
+                '<br><button class="btn btn-dismiss" onclick="hideOverlayAndResume()">Cancel</button>'
+            );
+        })
+        .catch(function () {
+            showOverlay(
+                '<h2 class="error-text">⚠️ Network Error</h2>' +
+                '<p>Could not reach the server. Check your connection and try again.</p>' +
+                '<button class="btn btn-dismiss" onclick="hideOverlayAndResume()">OK</button>'
+            );
+        });
+}
+
+function confirmServe(couponId) {
+
+    const input = document.getElementById("serve-count-input");
+    const serveCount = parseInt(input.value, 10);
+
+    if (!serveCount || serveCount < 1) {
+        return;
+    }
+
+    fetch("/api/coupon-serve/" + encodeURIComponent(couponId), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serve_count: serveCount })
+    })
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            });
+        })
+        .then(function (result) {
+
+            if (!result.ok) {
+                showOverlay(
+                    '<h2 class="error-text">⚠️ Error</h2>' +
+                    '<p>Could not update this coupon. Please try again.</p>' +
+                    '<button class="btn btn-dismiss" onclick="hideOverlayAndResume()">OK</button>'
+                );
+                return;
+            }
+
+            const data = result.data;
+
+            const statusLine = data.remaining <= 0
+                ? '<p class="success-text">✅ Fully redeemed - nothing left on this coupon.</p>'
+                : '<p class="warn-text">' + data.remaining + ' member(s) still remaining. Scan again when they arrive.</p>';
+
+            showOverlay(
+                '<h2 class="success-text">✅ Served ' + data.served_now + '</h2>' +
+                '<p>Total served so far: ' + data.new_served_count + ' of ' + data.total_members + '</p>' +
+                statusLine +
+                '<button class="btn btn-confirm" onclick="hideOverlayAndResume()">Next</button>'
+            );
+
+            // Auto-resume scanning shortly after a successful serve
+            setTimeout(hideOverlayAndResume, 2500);
+        })
+        .catch(function () {
+            showOverlay(
+                '<h2 class="error-text">⚠️ Network Error</h2>' +
+                '<p>Could not reach the server. Please try again.</p>' +
+                '<button class="btn btn-dismiss" onclick="hideOverlayAndResume()">OK</button>'
+            );
+        });
+}
+
+function onScanSuccess(decodedText) {
+
+    if (isBusy) return;
+    isBusy = true;
+
+    statusMessage.textContent = "Checking coupon...";
+
+    if (scanner) {
+        scanner.pause(true);
+    }
+
+    const couponId = extractCouponId(decodedText);
+    fetchStatus(couponId);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    scanner = new Html5Qrcode("qr-reader");
+
+    scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess
+    ).catch(function (err) {
+        statusMessage.textContent = "Camera access failed - please allow camera permission and reload.";
+    });
+
+});
+</script>
+
+</body>
+</html>
+"""
+
 # ============================================
 # View Registrations
 # ============================================
@@ -981,9 +1422,119 @@ def registrations():
     return result
 
 # ============================================
+# Dynamic Announcements
+# ============================================
+# Announcements are stored in a plain JSON file and read
+# fresh on every request (see announcement_service.py) -
+# adding/removing one takes effect immediately, with no
+# server restart or redeployment needed.
+# ============================================
+
+@app.get("/api/announcements")
+def api_get_announcements():
+    """
+    Public endpoint - the frontend polls this periodically
+    to display active announcements, even without push
+    notifications enabled.
+    """
+    return {"announcements": get_active_announcements()}
+
+
+class AnnouncementRequest(BaseModel):
+    message: str
+    type: str = "info"
+
+
+@app.post("/admin/announcements")
+def admin_add_announcement(data: AnnouncementRequest, request: Request):
+
+    require_admin(request)
+
+    if not data.message.strip():
+        raise HTTPException(status_code=400, detail="Announcement message cannot be empty.")
+
+    new_announcement = add_announcement(data.message, data.type)
+
+    # Push it to every subscribed device immediately
+    push_result = send_push_to_all(
+        title="LVS Ganesha Festival",
+        body=data.message
+    )
+
+    return {
+        "announcement": new_announcement,
+        "push": push_result
+    }
+
+
+@app.get("/admin/announcements")
+def admin_list_announcements(request: Request):
+
+    require_admin(request)
+
+    return {"announcements": get_all_announcements()}
+
+
+@app.delete("/admin/announcements/{announcement_id}")
+def admin_delete_announcement(announcement_id: str, request: Request):
+
+    require_admin(request)
+
+    found = deactivate_announcement(announcement_id)
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Announcement not found.")
+
+    return {"status": "deactivated", "id": announcement_id}
+
+
+# ============================================
+# Web Push Subscriptions
+# ============================================
+
+@app.get("/api/vapid-public-key")
+def api_vapid_public_key():
+    """
+    Public endpoint - the frontend fetches this before
+    subscribing to push notifications, so the VAPID public
+    key doesn't need to be hardcoded in the JS.
+    """
+    return {"public_key": VAPID_PUBLIC_KEY}
+
+
+class PushSubscriptionRequest(BaseModel):
+    endpoint: str
+    keys: dict
+
+
+@app.post("/api/push-subscribe")
+def api_push_subscribe(data: PushSubscriptionRequest):
+
+    result = save_subscription({
+        "endpoint": data.endpoint,
+        "keys": data.keys
+    })
+
+    return result
+
+
+class PushUnsubscribeRequest(BaseModel):
+    endpoint: str
+
+
+@app.post("/api/push-unsubscribe")
+def api_push_unsubscribe(data: PushUnsubscribeRequest):
+
+    remove_subscription(data.endpoint)
+
+    return {"status": "removed"}
+
+# ============================================
 # Serve Frontend (must be LAST - catches all
 # remaining routes and serves frontend/index.html
 # for "/" and other static files under frontend/)
 # ============================================
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+

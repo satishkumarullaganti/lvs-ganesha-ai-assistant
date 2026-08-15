@@ -8,7 +8,7 @@ from backend.config import (
     PUBLIC_BASE_URL
 )
 from backend.qr_service import generate_qr_code
-from backend.database.database import save_annaprasada_booking
+from backend.database.database import save_annaprasada_booking, get_total_booked_members_for_flat
 from backend.coupon_image_service import generate_annaprasada_coupon
 
 # ==========================================
@@ -193,6 +193,19 @@ Booking is now OPEN.
 
             booking = session["booking"]
 
+            # --------------------------------------------
+            # Informational (non-blocking) note if this
+            # flat has already booked Annaprasada before.
+            # Checked BEFORE saving the new booking, so the
+            # count reflects only prior bookings, not this
+            # one being created right now.
+            # --------------------------------------------
+
+            previously_booked = get_total_booked_members_for_flat(
+                block=booking["block"],
+                flat_number=booking["flat_number"]
+            )
+
             coupon_id = generate_coupon_id()
 
             serial_number = save_annaprasada_booking(
@@ -220,11 +233,25 @@ Booking is now OPEN.
                 verify_url=verify_url
             )
 
+            if previously_booked > 0:
+
+                prior_booking_note = (
+                    f"\nℹ️ Note: This flat has already booked "
+                    f"{previously_booked} Annaprasada coupon(s) "
+                    f"previously. This adds {booking['members']} more "
+                    f"- if that wasn't intended, please contact a "
+                    f"volunteer.\n"
+                )
+
+            else:
+
+                prior_booking_note = ""
+
             response = f"""
 🎉 Hi {booking['name']}!
 
 Your Annaprasada Coupon is confirmed.
-
+{prior_booking_note}
 ━━━━━━━━━━━━━━━━━━━━━━
 
 👤 Name : {booking['name']}

@@ -1110,3 +1110,165 @@ if ("serviceWorker" in navigator) {
     });
 
 }
+
+// ======================================
+// Push Notifications
+// ======================================
+// Converts the VAPID public key (base64 URL-safe string
+// from the backend) into the Uint8Array format the Push
+// API requires.
+
+function urlBase64ToUint8Array(base64String) {
+
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+
+    return outputArray;
+}
+
+function enableNotifications() {
+
+    const button = document.getElementById("enable-notifications-btn");
+
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        alert("Notifications aren't supported on this browser/device.");
+        return;
+    }
+
+    Notification.requestPermission().then(function (permission) {
+
+        if (permission !== "granted") {
+            alert("Notification permission was not granted.");
+            return;
+        }
+
+        navigator.serviceWorker.ready.then(function (registration) {
+
+            fetch("/api/vapid-public-key")
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+
+                    const applicationServerKey = urlBase64ToUint8Array(data.public_key);
+
+                    return registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: applicationServerKey
+                    });
+
+                })
+                .then(function (subscription) {
+
+                    return fetch("/api/push-subscribe", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(subscription.toJSON())
+                    });
+
+                })
+                .then(function () {
+
+                    if (button) {
+                        button.textContent = "✅ Alerts Enabled";
+                        button.disabled = true;
+                        button.style.opacity = "0.7";
+                    }
+
+                })
+                .catch(function (error) {
+                    console.log("Push subscription failed:", error);
+                    alert("Could not enable notifications. Please try again.");
+                });
+
+        });
+
+    });
+
+}
+
+// ======================================
+// Announcements Banner
+// ======================================
+// Polls the backend periodically so new announcements
+// appear on screen without needing to reload the page -
+// this covers residents who have the app/tab open but
+// haven't enabled push notifications.
+
+function loadAnnouncements() {
+
+    fetch("/api/announcements")
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+
+            const banner = document.getElementById("announcements-banner");
+
+            if (!banner) return;
+
+            const announcements = data.announcements || [];
+
+            if (announcements.length === 0) {
+                banner.style.display = "none";
+                banner.classList.remove("has-urgent");
+                banner.innerHTML = "";
+                return;
+            }
+
+            const hasUrgent = announcements.some(function (a) {
+                return a.type === "urgent";
+            });
+
+            const hasReminder = announcements.some(function (a) {
+                return a.type === "reminder";
+            });
+
+            // Urgent takes priority for the overall banner color
+            // if a mix of types is active at once.
+            banner.classList.toggle("has-urgent", hasUrgent);
+            banner.classList.toggle("has-reminder", !hasUrgent && hasReminder);
+
+            const tickerItems = announcements.map(function (announcement) {
+
+                let icon = "📢";
+                if (announcement.type === "urgent") icon = "🚨";
+                else if (announcement.type === "reminder") icon = "🔔";
+
+                return (
+                    '<span class="ticker-item">' +
+                    icon + " " + announcement.message +
+                    "</span>"
+                );
+
+            }).join("");
+
+            // Duplicate the items so the scroll loops seamlessly
+            // without a visible gap/jump when it wraps around.
+            banner.innerHTML =
+                '<div class="ticker-track">' + tickerItems + tickerItems + '</div>';
+
+            banner.style.display = "block";
+
+        })
+        .catch(function () {
+            // Silently ignore - announcements are a nice-to-have,
+            // not critical to the rest of the app working.
+        });
+
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    loadAnnouncements();
+
+    // Poll every 60 seconds for new announcements while
+    // the app is open.
+    setInterval(loadAnnouncements, 60000);
+
+});

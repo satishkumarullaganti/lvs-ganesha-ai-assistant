@@ -82,3 +82,60 @@ self.addEventListener("fetch", (event) => {
             })
     );
 });
+
+// ============================================
+// Push Notifications
+// ============================================
+// Fires even when the app/browser is fully closed on
+// Android (that's the whole point of Web Push) - the OS
+// wakes the service worker briefly just to handle this
+// event and show a native notification. On iOS this only
+// works if the PWA was added to the home screen and the
+// device is on iOS 16.4+.
+
+self.addEventListener("push", (event) => {
+
+    let payload = { title: "LVS Ganesha Festival", body: "New announcement" };
+
+    if (event.data) {
+        try {
+            payload = event.data.json();
+        } catch (e) {
+            payload.body = event.data.text();
+        }
+    }
+
+    const options = {
+        body: payload.body,
+        icon: "/assets/icons/icon-192.png",
+        badge: "/assets/icons/icon-192.png",
+        vibrate: [200, 100, 200]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(payload.title, options)
+    );
+});
+
+// Tapping the notification focuses an existing app tab if
+// one is open, or opens a new one otherwise.
+self.addEventListener("notificationclick", (event) => {
+
+    event.notification.close();
+
+    event.waitUntil(
+        self.clients.matchAll({ type: "window", includeUncontrolled: true })
+            .then((clientList) => {
+
+                for (const client of clientList) {
+                    if ("focus" in client) {
+                        return client.focus();
+                    }
+                }
+
+                if (self.clients.openWindow) {
+                    return self.clients.openWindow("/");
+                }
+            })
+    );
+});

@@ -2,7 +2,7 @@
 # Registration Service
 # ============================================
 
-from backend.database.database import save_registration
+from backend.database.database import save_registration, check_duplicate_competition_registration
 from backend.validators import validate_flat_number
 
 
@@ -185,6 +185,30 @@ class RegistrationService:
                 return "❌ Please enter a valid age."
 
             data["age"] = age
+
+            # --------------------------------------------
+            # Duplicate competition-entry check
+            # --------------------------------------------
+            # A competition only has one entry per person -
+            # registering for the same competition twice is
+            # always a genuine duplicate, unlike cultural
+            # programs where a second entry can be legitimate.
+            # --------------------------------------------
+
+            if check_duplicate_competition_registration(
+                name=data["name"],
+                block=data["block"],
+                flat_number=data["flat_number"],
+                competition=data["competition"]
+            ):
+
+                session["step"] = None
+                session["active"] = False
+
+                return (
+                    f"❌ You've already registered for {data['competition']}.\n\n"
+                    "If this is a mistake, please contact a volunteer."
+                )
 
             save_registration(
                 data["name"],

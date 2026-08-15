@@ -280,6 +280,51 @@ def save_registration(
 
 
 # ============================================
+# Duplicate Competition Registration Check
+# ============================================
+# Unlike cultural programs, a competition (Chess,
+# Carrom, etc.) only has ONE entry per person - there's
+# no equivalent of "two different performances" here, so
+# registering for the same competition twice is always a
+# genuine duplicate, not a legitimate second entry.
+#
+# Matched by name + block + flat_number, NOT mobile -
+# a phone number is easy to mistype or deliberately vary
+# between submissions, but a resident's flat is a much
+# more reliable, harder-to-fake identifier.
+
+def check_duplicate_competition_registration(name, block, flat_number, competition):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT id
+
+    FROM registrations
+
+    WHERE LOWER(name) = LOWER(?)
+
+    AND LOWER(block) = LOWER(?)
+
+    AND flat_number = ?
+
+    AND LOWER(competition) = LOWER(?)
+
+    LIMIT 1
+
+    """, (name, block, flat_number, competition))
+
+    row = cursor.fetchone()
+
+    conn.close()
+
+    return row is not None
+
+
+# ============================================
 # Save Annaprasada Booking
 # ============================================
 
@@ -332,6 +377,50 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
     conn.close()
 
     return new_id
+
+
+# ============================================
+# Get Total Already-Booked Members for a Flat
+# ============================================
+# This is informational only, not a block - a flat that
+# has already booked Annaprasada can still book again
+# (e.g. more guests staying over, or they simply need
+# more coupons), but the resident should be told how many
+# they've already booked so they don't lose track and
+# accidentally over-book.
+
+def get_total_booked_members_for_flat(block, flat_number):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT members
+
+    FROM annaprasada_bookings
+
+    WHERE LOWER(block) = LOWER(?)
+
+    AND flat_number = ?
+
+    """, (block, flat_number))
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    total = 0
+
+    for row in rows:
+
+        try:
+            total += int(row[0])
+        except (TypeError, ValueError):
+            pass
+
+    return total
 
 
 # ============================================
@@ -781,6 +870,62 @@ def save_volunteer_registration(
     conn.commit()
 
     conn.close()
+
+
+# ============================================
+# Get Already-Registered Volunteer Tasks
+# ============================================
+# Unlike cultural categories, a volunteer task (e.g.
+# "Registration Desk") has no equivalent of "two
+# different performances" - there's no legitimate reason
+# to be signed up for the exact same task twice, so this
+# blocks re-adding a task the person already has, while
+# still allowing them to add OTHER, not-yet-registered
+# tasks in the same or a later submission.
+#
+# Matched by name + block + flat_number, NOT mobile -
+# a phone number is easy to mistype or deliberately vary
+# between submissions, but a resident's flat is a much
+# more reliable, harder-to-fake identifier.
+
+def get_registered_tasks_for_person(name, block, flat_number):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT tasks
+
+    FROM volunteers
+
+    WHERE LOWER(name) = LOWER(?)
+
+    AND LOWER(block) = LOWER(?)
+
+    AND flat_number = ?
+
+    """, (name, block, flat_number))
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    already_registered = set()
+
+    for row in rows:
+
+        tasks_string = row[0] or ""
+
+        for task in tasks_string.split(","):
+
+            cleaned = task.strip()
+
+            if cleaned:
+                already_registered.add(cleaned.lower())
+
+    return already_registered
 
 
 # ============================================

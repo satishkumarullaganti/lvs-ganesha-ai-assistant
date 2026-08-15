@@ -1,0 +1,130 @@
+{
+    "announcements": [
+        {
+            "id": "922fc9a9c6",
+            "message": "Test announcement - please ignore",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T09:04:16.215493+00:00"
+        },
+        {
+            "id": "a8dc8d4ed9",
+            "message": "Test announcement 2",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T09:04:54.435258+00:00"
+        },
+        {
+            "id": "47eb5f0c8b",
+            "message": "Dance competition delayed by 20mins",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T09:18:06.917926+00:00"
+        },
+        {
+            "id": "df12272794",
+            "message": "Harathi will begin now. Please join",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T09:58:40.191028+00:00"
+        },
+        {
+            "id": "a049b927b4",
+            "message": "Residents, please join for Harathi",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T10:02:50.055755+00:00"
+        },
+        {
+            "id": "115140ccdb",
+            "message": "Volunteers, please join",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T10:05:51.359709+00:00"
+        },
+        {
+            "id": "6aeb48e532",
+            "message": "hello plz join",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T10:06:20.723648+00:00"
+        },
+        {
+            "id": "5d3696d859",
+            "message": "ol",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T10:06:38.199885+00:00"
+        },
+        {
+            "id": "1e0335b031",
+            "message": "Quiz is at 5 pm",
+            "type": "reminder",
+            "active": false,
+            "created_at": "2026-08-15T10:50:15.019257+00:00"
+        },
+        {
+            "id": "9a39cdfb25",
+            "message": "Testing triple ticker\"",
+            "type": "reminder",
+            "active": false,
+            "created_at": "2026-08-15T10:58:43.589364+00:00"
+        },
+        {
+            "id": "17ab2bbae6",
+            "message": "Testing  info",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T10:59:43.188258+00:00"
+        },
+        {
+            "id": "9894012353",
+            "message": "Testing urgent",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T10:59:58.875743+00:00"
+        },
+        {
+            "id": "ad54fd0cca",
+            "message": "\"Annaprasada distribution starts at 07:30 PM today\"",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T11:13:07.095679+00:00"
+        },
+        {
+            "id": "37afb0e18d",
+            "message": "\"Reminder: Chess and Carrom registrations close tomorrow\"",
+            "type": "reminder",
+            "active": false,
+            "created_at": "2026-08-15T11:13:25.178930+00:00"
+        },
+        {
+            "id": "5171fd493a",
+            "message": "\"Dance competition delayed by 30 minutes due to rain\"",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T11:13:47.000177+00:00"
+        },
+        {
+            "id": "1e1571c1eb",
+            "message": "Dance competition delayed by 30 minutes due to rain",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T11:18:54.348299+00:00"
+        },
+        {
+            "id": "056225a2d0",
+            "message": "Dance competition delayed by 30 minutes due to rain",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-15T11:19:42.427981+00:00"
+        },
+        {
+            "id": "038e1a5923",
+            "message": "Chess and Carrom registrations close tomorrow",
+            "type": "reminder",
+            "active": true,
+            "created_at": "2026-08-15T11:20:54.379944+00:00"
+        }
+    ]
+}
