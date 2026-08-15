@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from backend.models import ChatRequest
 from fastapi.staticfiles import StaticFiles
-from backend.validators import validate_flat_number
+from backend.validators import validate_flat_number, validate_mobile_number
 from backend.chat_service import get_ai_response
 from backend.registration_service import registration 
 from backend.annaprasada_service import annaprasada_service  
@@ -14,6 +14,10 @@ from backend.database.database import get_booking_by_coupon, serve_annaprasada_m
 from dotenv import load_dotenv
 load_dotenv()
 from backend.admin.admin_routes import router as admin_router, require_admin
+from backend.rag.rag_service import (
+    ask_rag,
+    is_festival_question
+)
 from backend.announcement_service import (
     get_active_announcements,
     get_all_announcements,
@@ -26,10 +30,6 @@ from backend.push_service import (
     send_push_to_all
 )
 from backend.config import VAPID_PUBLIC_KEY
-from backend.rag.rag_service import (
-    ask_rag,
-    is_festival_question
-)
 from backend.database.database import (
     create_tables,
     get_registrations,
@@ -39,6 +39,7 @@ from backend.database.database import (
     save_cultural_registration,
     get_cultural_registrations,
     check_recent_duplicate_cultural_registration,
+    get_previously_registered_categories,
     save_volunteer_registration,
     get_registered_tasks_for_person,
     get_volunteer_registrations
@@ -165,6 +166,35 @@ def register(data: RegistrationRequest):
             detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
         )
 
+    if not validate_mobile_number(data.mobile):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.mobile}' is not a valid 10-digit mobile number."
+        )
+
+    # --------------------------------------------
+    # Age validation
+    # --------------------------------------------
+    # The form sends age as a string - guard against
+    # non-numeric input (which would otherwise crash with
+    # a raw 500 error) and against absurd values (e.g. a
+    # phone number pasted into the wrong field).
+    # --------------------------------------------
+
+    try:
+        age_value = int(data.age)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.age}' is not a valid age. Please enter a number."
+        )
+
+    if age_value < 1 or age_value > 100:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.age}' doesn't look like a valid age. Please enter a value between 1 and 100."
+        )
+
     # --------------------------------------------
     # Duplicate competition-entry check
     # --------------------------------------------
@@ -193,7 +223,7 @@ def register(data: RegistrationRequest):
         block=data.block,
         flat_number=data.flat,
         mobile=data.mobile,
-        age=int(data.age),
+        age=age_value,
         competition=data.competition
     )
 
@@ -230,11 +260,26 @@ async def register_cultural(
 
 ):
 
+    name = name.strip()
+
+    if not name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please enter your name."
+        )
+
     if not validate_flat_number(block, flat):
 
         raise HTTPException(
             status_code=400,
             detail=f"Invalid flat number '{flat}' for {block} block. Please check and re-enter."
+        )
+
+    if not validate_mobile_number(mobile):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{mobile}' is not a valid 10-digit mobile number."
         )
 
     if not categories.strip():
@@ -245,6 +290,66 @@ async def register_cultural(
         )
 
     cleaned_other_details = other_details.strip() if other_details else None
+
+    # --------------------------------------------
+    # "Other" category requires details (server-side)
+    # --------------------------------------------
+    # The frontend already enforces this via JS, but that
+    # can be bypassed (direct API call, or a JS bug) - the
+    # server needs its own copy of this rule to actually
+    # be reliable, same lesson as the age/mobile gaps found
+    # earlier in this app.
+    # --------------------------------------------
+
+    requested_categories_list = [
+        c.strip() for c in categories.split(",") if c.strip()
+    ]
+
+    if any(c.lower() == "other" for c in requested_categories_list) and not cleaned_other_details:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Please specify details for the 'Other' category."
+        )
+
+    # --------------------------------------------
+    # Repeat-category requires performance details
+    # --------------------------------------------
+    # A person's FIRST registration for a category can
+    # leave details optional. But if they're registering
+    # for a category they've ALREADY registered for
+    # before, details become required - this ensures
+    # repeat entries always have something distinguishing
+    # them, instead of relying purely on the time-window
+    # accidental-resubmit guard below (which can be
+    # sidestepped by rewording the details slightly each
+    # time, or simply waiting a few minutes).
+    # --------------------------------------------
+
+    previously_registered = get_previously_registered_categories(
+        name=name,
+        block=block,
+        flat_number=flat
+    )
+
+    repeat_categories = [
+        c for c in requested_categories_list
+        if c.lower() in previously_registered
+    ]
+
+    if repeat_categories and not cleaned_other_details:
+
+        repeat_list = ", ".join(repeat_categories)
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"You've registered for {repeat_list} before. Since this "
+                "is another entry for the same category, please fill in "
+                "'Performance Details' (e.g. song/performance title) to "
+                "tell it apart from your earlier registration."
+            )
+        )
 
     # --------------------------------------------
     # Accidental double-submit guard
@@ -369,6 +474,12 @@ def register_volunteer(data: VolunteerRequest):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
+    if not validate_mobile_number(data.mobile):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.mobile}' is not a valid 10-digit mobile number."
         )
 
     if not data.tasks.strip():
@@ -547,12 +658,23 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
 
         reply = donation_service.process_donation(session_id, message)
 
-        return {
+        popup_name = None
+
+        if isinstance(reply, tuple):
+            reply, popup_name = reply
+
+        response_payload = {
             "response": _with_cancel_hint(
                 reply,
                 donation_service.is_active(session_id)
             )
         }
+
+        if popup_name:
+            response_payload["popup_name"] = popup_name
+            response_payload["popup_action"] = "donating"
+
+        return response_payload
 
     # ==========================================
     # Start Donation Flow
@@ -599,12 +721,23 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
 
         reply = annaprasada_service.process_booking(session_id, message)
 
-        return {
+        popup_name = None
+
+        if isinstance(reply, tuple):
+            reply, popup_name = reply
+
+        response_payload = {
             "response": _with_cancel_hint(
                 reply,
                 annaprasada_service.is_active(session_id)
             )
         }
+
+        if popup_name:
+            response_payload["popup_name"] = popup_name
+            response_payload["popup_action"] = "booking your Annaprasada coupon"
+
+        return response_payload
 
     # ==========================================
     # Start Annaprasada Coupon Booking
@@ -662,12 +795,26 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
 
         reply = registration.process(session_id, message)
 
-        return {
+        # A successful completion returns a tuple
+        # (text, name) instead of plain text - unpack it so
+        # the frontend can trigger the Ganesha thank-you
+        # popup, same as the web-form registrations.
+        popup_name = None
+
+        if isinstance(reply, tuple):
+            reply, popup_name = reply
+
+        response_payload = {
             "response": _with_cancel_hint(
                 reply,
                 registration.is_active(session_id)
             )
         }
+
+        if popup_name:
+            response_payload["popup_name"] = popup_name
+
+        return response_payload
 
     # ==========================================
     # Festival Schedule Queries
@@ -823,9 +970,20 @@ async def donation_upload_proof(
             detail="Unable to process this donation right now. Please try again."
         )
 
-    return {
+    popup_name = None
+
+    if isinstance(result, tuple):
+        result, popup_name = result
+
+    response_payload = {
         "response": result
     }
+
+    if popup_name:
+        response_payload["popup_name"] = popup_name
+        response_payload["popup_action"] = "donating"
+
+    return response_payload
 
 # ============================================
 # Volunteer Login (PIN gate)
@@ -1421,6 +1579,7 @@ def registrations():
 
     return result
 
+
 # ============================================
 # Dynamic Announcements
 # ============================================
@@ -1529,6 +1688,7 @@ def api_push_unsubscribe(data: PushUnsubscribeRequest):
 
     return {"status": "removed"}
 
+
 # ============================================
 # Serve Frontend (must be LAST - catches all
 # remaining routes and serves frontend/index.html
@@ -1536,5 +1696,3 @@ def api_push_unsubscribe(data: PushUnsubscribeRequest):
 # ============================================
 
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-

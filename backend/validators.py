@@ -116,3 +116,21 @@ def validate_flat_number_any_block(flat_number: str) -> bool:
             return True
 
     return False
+
+
+# ============================================
+# Mobile Number Validator
+# ============================================
+# Shared by every registration endpoint (competition,
+# cultural, volunteer) so server-side validation is
+# consistent everywhere, not just relying on client-side
+# JS (which can be bypassed or have gaps).
+
+def validate_mobile_number(mobile: str) -> bool:
+
+    if not mobile:
+        return False
+
+    cleaned = str(mobile).strip()
+
+    return cleaned.isdigit() and len(cleaned) == 10

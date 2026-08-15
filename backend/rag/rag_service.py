@@ -258,6 +258,10 @@ def is_festival_question(query):
         "drawing",
         "musical chairs",
         "quiz",
+        "register",
+        "registration",
+        "sign up",
+        "signup",
 
         # Cultural
         "cultural",
@@ -650,12 +654,16 @@ Answer:
 
     # A correct answer can legitimately have no digits at all -
     # e.g. "donations are purely voluntary, there is no minimum."
-    # Only treat a no-digit answer as a hedge/non-answer if it
-    # also doesn't contain a clear explicit statement either way.
-    answer_lower_for_amount = answer.lower()
-
+    # Check the RETRIEVED CONTEXT (stable, grounded) for a clear
+    # negation, rather than the LLM's generated answer text -
+    # the model can phrase the same grounded fact differently
+    # between calls (e.g. "no minimum" vs "not required" vs
+    # "voluntary contribution"), so checking the answer's exact
+    # wording is unreliable. If the context clearly states there
+    # is no minimum/maximum, trust the LLM's answer even if its
+    # specific phrasing varies.
     has_clear_negation = any(
-        phrase in answer_lower_for_amount
+        phrase in context_lower
         for phrase in [
             "no minimum", "no maximum", "not required",
             "voluntary", "any amount", "not fixed",

@@ -281,7 +281,10 @@ scanned again for whoever arrives later, until everyone's counted):
                 "booking": {}
             }
 
-            return response
+            # Tuple return (unlike every other step, which returns
+            # plain text) so main.py's /chat handler can detect
+            # success and trigger the Ganesha thank-you popup.
+            return (response, booking['name'])
 
 
 annaprasada_service = AnnaprasadaService()

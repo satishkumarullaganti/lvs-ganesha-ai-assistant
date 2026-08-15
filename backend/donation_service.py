@@ -154,7 +154,62 @@ Every contribution helps make this Ganesh festival memorable for our community.
         # Step 4 - Amount → show UPI details + payment proof widget
         elif session["step"] == 4:
 
-            session["donation"]["amount"] = message.strip()
+            raw_amount = message.strip()
+
+            # --------------------------------------------
+            # Amount validation
+            # --------------------------------------------
+            # Without this, non-numeric input (e.g. "abc")
+            # silently produces a broken UPI QR with no
+            # pre-filled amount and a nonsensical "Please
+            # pay ₹abc" message - and zero/negative amounts
+            # would otherwise sail through untouched too.
+            #
+            # Reject a leading minus sign explicitly BEFORE
+            # stripping non-digit characters - otherwise
+            # "-500" would have its "-" silently stripped
+            # and be treated as a valid positive 500.
+            # --------------------------------------------
+
+            if raw_amount.strip().startswith("-"):
+
+                return (
+                    "❌ Please enter a valid donation amount "
+                    "(numbers only, greater than 0).\n\n"
+                    "Example: 500"
+                )
+
+            amount_digits_only = re.sub(r"[^0-9.]", "", raw_amount)
+
+            try:
+                amount_value = float(amount_digits_only) if amount_digits_only else 0
+            except ValueError:
+                amount_value = 0
+
+            if amount_value <= 0:
+
+                return (
+                    "❌ Please enter a valid donation amount "
+                    "(numbers only, greater than 0).\n\n"
+                    "Example: 500"
+                )
+
+            if amount_value > 1000000:
+
+                return (
+                    "❌ That amount looks unusually large - please "
+                    "double-check and re-enter, or contact a volunteer "
+                    "for large donations."
+                )
+
+            # Store as a clean integer/decimal string (not the raw
+            # typed text) so the confirmation message and receipt
+            # always show a sane, correctly formatted amount.
+            if amount_value == int(amount_value):
+                session["donation"]["amount"] = str(int(amount_value))
+            else:
+                session["donation"]["amount"] = str(amount_value)
+
             session["step"] = 5
 
             # -----------------------------------------
@@ -167,10 +222,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
             payee_name = "LVS Excellency Ganesha Festival"
             flat_number = session["donation"]["flat_number"]
 
-            # Keep only digits/decimal point from the typed
-            # amount so a malformed UPI link can't be built
-            # from stray text (e.g. "500 rs" -> "500").
-            amount_clean = re.sub(r"[^0-9.]", "", session["donation"]["amount"])
+            amount_clean = session["donation"]["amount"]
 
             upi_params = {
                 "pa": UPI_ID_PHONEPE,
@@ -340,7 +392,12 @@ May Lord Ganesha bless you and your family. 🙏
             "donation": {}
         }
 
-        return response
+        # Tuple return so main.py can detect success and
+        # trigger the Ganesha thank-you popup - covers BOTH
+        # completion paths (typed UTR via chat, and screenshot
+        # upload via the separate /donation/upload-proof
+        # route), since both call this shared function.
+        return (response, donation['name'])
 
 
 donation_service = DonationService()

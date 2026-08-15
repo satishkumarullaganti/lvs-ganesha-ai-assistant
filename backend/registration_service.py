@@ -182,7 +182,14 @@ class RegistrationService:
                 age = int(message)
 
             except ValueError:
-                return "❌ Please enter a valid age."
+                return "❌ Please enter a valid age (numbers only)."
+
+            if age < 1 or age > 100:
+
+                return (
+                    "❌ Please enter a valid age between 1 and 100.\n\n"
+                    f"'{message}' doesn't look right - please re-enter."
+                )
 
             data["age"] = age
 
@@ -241,7 +248,15 @@ Thank you for registering.
             session["step"] = None
             session["data"] = {}
 
-            return summary
+            # Return a tuple here (unlike every other return point
+            # in this function, which return plain text) so
+            # main.py's /chat handler can detect a successful
+            # completion and trigger the Ganesha thank-you popup
+            # with the registrant's name - the popup can't be
+            # triggered from inside this chat-flow text response
+            # itself, so this is how that signal gets passed
+            # through to the frontend.
+            return (summary, data['name'])
 
 
 registration = RegistrationService()

@@ -814,6 +814,60 @@ def check_recent_duplicate_cultural_registration(
 
 
 # ============================================
+# Get Previously Registered Cultural Categories
+# (for a person, EVER - not time-limited)
+# ============================================
+# Used to decide whether "Performance Details" should be
+# required for this submission. A person's FIRST time
+# registering for a given category can leave details
+# optional (as before) - but if they're registering for a
+# category they've already registered for at any point in
+# the past, details become required, so there's always
+# something distinguishing repeat entries from each other
+# instead of relying purely on the accidental-resubmit
+# time-window guard above.
+
+def get_previously_registered_categories(name, block, flat_number):
+
+    conn = get_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT categories
+
+    FROM cultural_registrations
+
+    WHERE LOWER(name) = LOWER(?)
+
+    AND LOWER(block) = LOWER(?)
+
+    AND flat_number = ?
+
+    """, (name, block, flat_number))
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    previously_registered = set()
+
+    for row in rows:
+
+        categories_string = row[0] or ""
+
+        for category in categories_string.split(","):
+
+            cleaned = category.strip()
+
+            if cleaned:
+                previously_registered.add(cleaned.lower())
+
+    return previously_registered
+
+
+# ============================================
 # Save Volunteer Registration
 # ============================================
 

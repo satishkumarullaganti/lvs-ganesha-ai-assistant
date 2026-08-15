@@ -280,8 +280,10 @@ registerSubmitBtn.addEventListener("click", async function () {
         return;
     }
 
-    if (registrationData.age === "" || Number(registrationData.age) <= 0) {
-        alert("Please enter a valid age.");
+    const ageValue = Number(registrationData.age);
+
+    if (registrationData.age === "" || isNaN(ageValue) || ageValue < 1 || ageValue > 100) {
+        alert("Please enter a valid age between 1 and 100.");
         ageField.focus();
         return;
     }
@@ -315,7 +317,7 @@ registerSubmitBtn.addEventListener("click", async function () {
 
         }
 
-        alert("✅ Registration successful for " + registrationData.name + "!");
+        showThankYouPopup(registrationData.name);
 
         // Reset form and close modal
         nameField.value = "";
@@ -443,7 +445,7 @@ culturalRegisterSubmitBtn.addEventListener("click", async function () {
 
         }
 
-        alert("✅ Cultural Programs registration successful for " + name + "!");
+        showThankYouPopup(name);
 
         // Reset form and close modal
         document.querySelectorAll(".cultural-category:checked").forEach(function (checkbox) {
@@ -554,7 +556,7 @@ volunteerRegisterSubmitBtn.addEventListener("click", async function () {
 
         }
 
-        alert("✅ " + responseData.message);
+        showThankYouPopup(volunteerData.name);
 
         // Reset form and close modal
         document.querySelectorAll(".volunteer-task:checked").forEach(function (checkbox) {
@@ -728,6 +730,13 @@ async function sendMessage() {
         `;
 
         chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Registration completed via the chatbot flow -
+        // show the same Ganesha thank-you popup used for
+        // the web-form registrations.
+        if (data.popup_name && typeof showThankYouPopup === "function") {
+            showThankYouPopup(data.popup_name, data.popup_action);
+        }
 
     }
     catch (error) {
@@ -1057,6 +1066,10 @@ async function uploadDonationProof(inputElement) {
 
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
+        if (data.popup_name && typeof showThankYouPopup === "function") {
+            showThankYouPopup(data.popup_name, data.popup_action);
+        }
+
     } catch (error) {
 
         console.error("Donation proof upload error:", error);
@@ -1103,6 +1116,33 @@ if ("serviceWorker" in navigator) {
 
         navigator.serviceWorker
             .register("/sw.js")
+            .then(function () {
+
+                // Check whether this device already has an
+                // active push subscription from a previous
+                // visit - without this, the button always
+                // resets to "Enable Festival Alerts" on
+                // every page load, even after successfully
+                // subscribing before.
+                return navigator.serviceWorker.ready;
+
+            })
+            .then(function (registration) {
+
+                return registration.pushManager.getSubscription();
+
+            })
+            .then(function (existingSubscription) {
+
+                const button = document.getElementById("enable-notifications-btn");
+
+                if (existingSubscription && button) {
+                    button.textContent = "✅ Alerts Enabled";
+                    button.disabled = true;
+                    button.style.opacity = "0.7";
+                }
+
+            })
             .catch(function (error) {
                 console.log("Service worker registration failed:", error);
             });
@@ -1272,3 +1312,54 @@ document.addEventListener("DOMContentLoaded", function () {
     setInterval(loadAnnouncements, 60000);
 
 });
+
+// ======================================
+// Registration Thank You Popup
+// ======================================
+// Shown after any successful registration (competition,
+// cultural, volunteer) instead of a plain browser alert() -
+// same Ganesha branding used for the chatbot, for a
+// consistent, warmer confirmation experience.
+
+const thankYouModal = document.getElementById("thank-you-modal");
+const thankYouMessage = document.getElementById("thank-you-message");
+const closeThankYouModal = document.getElementById("close-thank-you-modal");
+const thankYouOkBtn = document.getElementById("thank-you-ok-btn");
+
+function showThankYouPopup(name, action) {
+
+    const displayName = name && name.trim() ? name.trim() : "there";
+    const actionText = action || "registering";
+
+    thankYouMessage.textContent =
+        "Hey " + displayName + ", thanks for " + actionText + "!";
+
+    thankYouModal.style.display = "block";
+
+}
+
+function hideThankYouPopup() {
+    thankYouModal.style.display = "none";
+}
+
+if (closeThankYouModal) {
+    closeThankYouModal.addEventListener("click", hideThankYouPopup);
+}
+
+if (thankYouOkBtn) {
+    thankYouOkBtn.addEventListener("click", hideThankYouPopup);
+}
+
+if (thankYouModal) {
+
+    thankYouModal.addEventListener("click", function (event) {
+
+        // Close if the dark overlay itself is clicked,
+        // not the card inside it.
+        if (event.target === thankYouModal) {
+            hideThankYouPopup();
+        }
+
+    });
+
+}
