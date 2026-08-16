@@ -117,6 +117,21 @@ TEST_MESSAGES = [
     ("Who sponsored the Ganesh Idol?", "RAG (fixed)"),
     ("What is the donation used for?", "RAG (fixed)"),
 
+    # ---- Register/registration keyword fix: previously fell
+    # through to GENERAL AI CHAT (no grounding, inconsistent
+    # answers) since neither "register" nor a real competition
+    # name was recognized - now should route to RAG. ----
+    ("How can I register cricket?", "RAG (fixed)"),
+    ("Can I register for football?", "RAG (fixed)"),
+    ("Is there a badminton registration?", "RAG (fixed)"),
+    ("How do I sign up for competitions?", "RAG (fixed)"),
+
+    # ---- Sanity check: literal "register" alone must still
+    # trigger the REGISTRATION FLOW action, not RAG - this
+    # confirms the new keywords didn't break the exact-match
+    # trigger that starts the chat-based registration wizard. ----
+    ("register", "REGISTRATION"),
+
     # ---- Donation: action requests (should start the flow) ----
     ("I want to make a donation", "DONATION FLOW"),
     ("donation", "DONATION FLOW"),
