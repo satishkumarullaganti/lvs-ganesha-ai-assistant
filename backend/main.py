@@ -7,6 +7,8 @@ from backend.validators import validate_flat_number, validate_mobile_number
 from backend.chat_service import get_ai_response
 from backend.registration_service import registration 
 from backend.annaprasada_service import annaprasada_service  
+from backend.festival_stats_service import festival_stats_service
+from backend.whatsapp_service import send_registration_confirmation
 from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -225,6 +227,14 @@ def register(data: RegistrationRequest):
         mobile=data.mobile,
         age=age_value,
         competition=data.competition
+    )
+
+    send_registration_confirmation(
+        name=data.name,
+        competition=data.competition,
+        block=data.block,
+        flat=data.flat,
+        mobile_number=data.mobile
     )
 
     return {
@@ -630,11 +640,13 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
             donation_service.is_active(session_id)
             or registration.is_active(session_id)
             or annaprasada_service.is_active(session_id)
+            or festival_stats_service.is_active(session_id)
         )
 
         donation_service.cancel(session_id)
         registration.cancel(session_id)
         annaprasada_service.cancel(session_id)
+        festival_stats_service.cancel(session_id)
 
         if was_active:
 
@@ -649,6 +661,55 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
         return {
             "response": "There's nothing active to cancel right now. How can I help?"
         }
+
+    # ==========================================
+    # Continue Festival Stats / Personal Lookup
+    # (if active) - checked EARLY, before the
+    # donation/annaprasada hijack-prevention checks
+    # below, since a message like "did my donation
+    # go through" contains the word "donation" and
+    # would otherwise risk being swept into starting
+    # a NEW donation instead of checking an existing
+    # one's status.
+    # ==========================================
+
+    if festival_stats_service.is_active(session_id):
+
+        reply = festival_stats_service.process_lookup(session_id, message)
+
+        return {
+            "response": _with_cancel_hint(
+                reply,
+                festival_stats_service.is_active(session_id)
+            )
+        }
+
+    stats_intent = festival_stats_service.detect_intent(message)
+
+    if stats_intent:
+
+        intent_type, payload = stats_intent
+
+        if intent_type == "aggregate":
+
+            # payload is already the full answer text - no
+            # identity check needed, since aggregate counts
+            # never expose any individual's personal data.
+            return {"response": payload}
+
+        elif intent_type == "lookup":
+
+            # payload is the lookup_type (e.g. "donation") -
+            # start the Name/Block/Flat identity-check flow
+            # before looking anything up.
+            reply = festival_stats_service.start_lookup(session_id, payload)
+
+            return {
+                "response": _with_cancel_hint(
+                    reply,
+                    festival_stats_service.is_active(session_id)
+                )
+            }
 
     # ==========================================
     # Continue Donation Flow (if active)
@@ -1687,6 +1748,227 @@ def api_push_unsubscribe(data: PushUnsubscribeRequest):
     remove_subscription(data.endpoint)
 
     return {"status": "removed"}
+
+
+# ============================================
+# WhatsApp Webhook (delivery status callbacks)
+# ============================================
+# Meta's "message accepted" response only confirms the
+# request was valid and queued - it does NOT confirm actual
+# delivery. Real delivery status (delivered/read/failed,
+# with a specific failure reason) only arrives here,
+# asynchronously, via this webhook - this is the only way
+# to get ground truth instead of guessing from dashboards.
+
+WHATSAPP_WEBHOOK_VERIFY_TOKEN = "lvs_ganesha_webhook_2026"
+
+
+@app.get("/webhooks/whatsapp")
+def verify_whatsapp_webhook(request: Request):
+    """
+    Meta calls this once, when you first register the
+    webhook URL in the developer dashboard, to confirm you
+    genuinely control this endpoint before it'll send any
+    real events here.
+    """
+
+    params = request.query_params
+
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+
+    if mode == "subscribe" and token == WHATSAPP_WEBHOOK_VERIFY_TOKEN:
+
+        print("[WhatsApp Webhook] Verified successfully by Meta.")
+        return int(challenge) if challenge else 0
+
+    print("[WhatsApp Webhook] Verification FAILED - token mismatch.")
+    raise HTTPException(status_code=403, detail="Verification failed")
+
+
+@app.post("/webhooks/whatsapp")
+async def receive_whatsapp_webhook(request: Request):
+    """
+    Meta POSTs real delivery status updates here (sent,
+    delivered, read, failed) for every message we send,
+    asynchronously after the initial "accepted" response.
+    This is genuinely the only reliable way to know what
+    actually happened to a message.
+    """
+
+    body = await request.json()
+
+    print("[WhatsApp Webhook] Received event:")
+    print(body)
+
+    try:
+
+        entry = body.get("entry", [{}])[0]
+        change = entry.get("changes", [{}])[0]
+        value = change.get("value", {})
+
+        statuses = value.get("statuses", [])
+
+        for status in statuses:
+
+            print(
+                f"[WhatsApp Webhook] Message {status.get('id')} -> "
+                f"status: {status.get('status')} "
+                f"(recipient: {status.get('recipient_id')})"
+            )
+
+            if status.get("status") == "failed":
+
+                errors = status.get("errors", [])
+
+                for error in errors:
+                    print(
+                        f"[WhatsApp Webhook] FAILURE REASON: "
+                        f"{error.get('title')} - {error.get('message')}"
+                    )
+
+    except (IndexError, KeyError, TypeError) as e:
+
+        print(f"[WhatsApp Webhook] Could not parse status from payload: {e}")
+
+    # Meta requires a 200 response, or it will retry
+    # delivering this same webhook event repeatedly.
+    return {"status": "received"}
+
+
+# ============================================
+# Privacy Policy
+# ============================================
+# Required by Meta before the WhatsApp app can be
+# published (Meta for Developers -> Publish checklist).
+# Genuinely describes what this app actually collects and
+# does, based on every registration/donation/booking flow
+# built into it - not generic boilerplate.
+
+@app.get("/privacy-policy", response_class=HTMLResponse)
+def privacy_policy():
+
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy - LVS Excellency Ganesha Festival App</title>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #fff8e8;
+        color: #222;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 30px 20px 60px;
+        line-height: 1.6;
+    }
+    h1 {
+        color: #d85b00;
+    }
+    h2 {
+        color: #ff9800;
+        margin-top: 32px;
+    }
+    .updated {
+        color: #888;
+        font-size: 14px;
+        margin-bottom: 30px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Privacy Policy</h1>
+<p class="updated">LVS Excellency Ganesha Festival AI Assistant</p>
+
+<p>This Privacy Policy explains how the LVS Excellency Ganesha Festival AI
+Assistant ("the App") collects, uses, and protects information from
+residents of LVS Excellency who use it during the Ganesha Festival.</p>
+
+<h2>Information We Collect</h2>
+<p>When you use the App to register for competitions, cultural programs,
+volunteering, Annaprasada booking, or donations, we collect:</p>
+<ul>
+    <li>Name</li>
+    <li>Block and Flat Number</li>
+    <li>Mobile Number</li>
+    <li>Age (for competition registrations)</li>
+    <li>Competition, category, or volunteer task selections</li>
+    <li>Donation amount and payment confirmation details (UTR reference
+        number or payment screenshot)</li>
+    <li>Push notification subscription details, only if you choose to
+        enable festival alerts</li>
+</ul>
+
+<h2>How We Use This Information</h2>
+<p>We use this information solely to:</p>
+<ul>
+    <li>Process and confirm your registrations, bookings, and donations</li>
+    <li>Verify donation payments against bank records</li>
+    <li>Send confirmation messages via WhatsApp and/or push notifications</li>
+    <li>Distribute Annaprasada coupons and coordinate volunteers</li>
+    <li>Contact you regarding festival-related matters if needed</li>
+</ul>
+
+<h2>How We Store and Protect Your Information</h2>
+<p>Your information is stored in a database maintained by the LVS
+Excellency Ganesha Festival Committee. Access is limited to committee
+members and volunteers directly involved in event administration. We do
+not sell, rent, or share your information with third parties for
+marketing purposes.</p>
+
+<h2>WhatsApp Communications</h2>
+<p>If you provide your mobile number, you may receive WhatsApp messages
+from the festival committee confirming your registrations, bookings, or
+donations. These messages are sent using Meta's WhatsApp Business
+Platform.</p>
+
+<h2>Push Notifications</h2>
+<p>If you enable festival alerts, your device receives a push
+subscription token used only to deliver festival announcements. You can
+disable this at any time through your browser or device settings.</p>
+
+<h2>Payment Information</h2>
+<p>Donation payments are made directly through your own UPI app. We do
+not store your bank account details, UPI PIN, or any sensitive payment
+credentials - we only record the transaction reference (UTR) or payment
+confirmation screenshot you choose to share for verification purposes.</p>
+
+<h2>Data Retention</h2>
+<p>Your information is retained for the duration of the festival and a
+reasonable period afterward for record-keeping purposes, after which it
+may be deleted.</p>
+
+<h2>Your Rights</h2>
+<p>You may contact the festival committee at any time to request access
+to, correction of, or deletion of your personal information.</p>
+
+<h2>Children's Information</h2>
+<p>Some festival competitions are open to children, whose parent or
+guardian typically completes registration on their behalf. We do not
+knowingly collect information directly from children without appropriate
+parental involvement in the registration process.</p>
+
+<h2>Changes to This Policy</h2>
+<p>This policy may be updated from time to time to reflect changes in how
+the App operates. Continued use of the App after changes constitutes
+acceptance of the updated policy.</p>
+
+<h2>Contact Us</h2>
+<p>For questions about this Privacy Policy or your personal information,
+please contact the LVS Excellency Ganesha Festival Committee through the
+festival app or in person.</p>
+
+<p style="margin-top:40px;color:#888;">LVS Excellency Ganesha Festival
+Committee</p>
+
+</body>
+</html>
+"""
 
 
 # ============================================

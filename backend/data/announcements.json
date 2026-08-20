@@ -123,8 +123,50 @@
             "id": "038e1a5923",
             "message": "Chess and Carrom registrations close tomorrow",
             "type": "reminder",
-            "active": true,
+            "active": false,
             "created_at": "2026-08-15T11:20:54.379944+00:00"
+        },
+        {
+            "id": "56b8e0a6e9",
+            "message": "\"Cultural program registrations close today at 9 PM\"",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-15T13:06:39.852917+00:00"
+        },
+        {
+            "id": "bda142bbb6",
+            "message": "Annaprasada distribution starts at 07:30 PM today",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-16T04:51:21.067752+00:00"
+        },
+        {
+            "id": "154fa9023f",
+            "message": "Annaprasada distribution starts at 07:30 PM today",
+            "type": "reminder",
+            "active": false,
+            "created_at": "2026-08-16T04:52:16.647836+00:00"
+        },
+        {
+            "id": "633579f50c",
+            "message": "Cultural program registrations close today at 9 PM",
+            "type": "urgent",
+            "active": false,
+            "created_at": "2026-08-16T05:08:13.494545+00:00"
+        },
+        {
+            "id": "45c393556f",
+            "message": "\ud83d\ude4f Residents, please register for the festival competitions and cultural programs! Don't miss out on the fun \u2014 Ganapathi Bappa Morya! \ud83c\udf89",
+            "type": "reminder",
+            "active": false,
+            "created_at": "2026-08-16T06:28:55.241947+00:00"
+        },
+        {
+            "id": "16e918da91",
+            "message": "Residents, please register for the events \u2014 Ganapathi Bappa Morya! \ud83c\udf89",
+            "type": "reminder",
+            "active": true,
+            "created_at": "2026-08-16T06:30:23.358016+00:00"
         }
     ]
 }

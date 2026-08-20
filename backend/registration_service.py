@@ -3,6 +3,7 @@
 # ============================================
 
 from backend.database.database import save_registration, check_duplicate_competition_registration
+from backend.whatsapp_service import send_registration_confirmation
 from backend.validators import validate_flat_number
 
 
@@ -224,6 +225,14 @@ class RegistrationService:
                 data["mobile"],
                 data["age"],
                 data["competition"]
+            )
+
+            send_registration_confirmation(
+                name=data["name"],
+                competition=data["competition"],
+                block=data["block"],
+                flat=data["flat_number"],
+                mobile_number=data["mobile"]
             )
 
             summary = f"""

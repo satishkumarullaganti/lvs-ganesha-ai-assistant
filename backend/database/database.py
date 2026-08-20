@@ -1007,3 +1007,162 @@ def get_volunteer_registrations():
     conn.close()
 
     return rows
+
+# ============================================
+# Festival Stats & Personal Lookup
+# ============================================
+# Aggregate functions return only counts/sums - never raw
+# rows with personal data, safe for anyone to ask.
+# Lookup functions require name+block+flat as an identity
+# check (same trust model used everywhere else in this app,
+# since there is no login system) - they return only the
+# requesting person's own matching records.
+
+def get_registration_count(competition=None):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if competition:
+        cursor.execute(
+            "SELECT COUNT(*) FROM registrations WHERE LOWER(competition) = LOWER(?)",
+            (competition,)
+        )
+    else:
+        cursor.execute("SELECT COUNT(*) FROM registrations")
+
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_total_donation_amount():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT amount FROM donations")
+    rows = cursor.fetchall()
+    conn.close()
+
+    total = 0.0
+    for row in rows:
+        try:
+            total += float(row[0])
+        except (TypeError, ValueError):
+            pass
+
+    return total
+
+
+def get_volunteer_count():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM volunteers")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_cultural_registration_count():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM cultural_registrations")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+
+
+def get_annaprasada_total_members():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT members FROM annaprasada_bookings")
+    rows = cursor.fetchall()
+    conn.close()
+
+    total = 0
+    for row in rows:
+        try:
+            total += int(row[0])
+        except (TypeError, ValueError):
+            pass
+
+    return total
+
+
+def lookup_registration_status(name, block, flat_number):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT competition, created_at
+        FROM registrations
+        WHERE LOWER(name) = LOWER(?) AND LOWER(block) = LOWER(?) AND flat_number = ?
+        ORDER BY created_at DESC
+    """, (name, block, flat_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def lookup_donation_status(name, block, flat_number):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT amount, status, receipt_id, created_at
+        FROM donations
+        WHERE LOWER(name) = LOWER(?) AND LOWER(block) = LOWER(?) AND flat_number = ?
+        ORDER BY created_at DESC
+    """, (name, block, flat_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def lookup_annaprasada_status(name, block, flat_number):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT coupon_id, members, served_count, is_used, created_at
+        FROM annaprasada_bookings
+        WHERE LOWER(name) = LOWER(?) AND LOWER(block) = LOWER(?) AND flat_number = ?
+        ORDER BY created_at DESC
+    """, (name, block, flat_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def lookup_volunteer_status(name, block, flat_number):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT tasks, created_at
+        FROM volunteers
+        WHERE LOWER(name) = LOWER(?) AND LOWER(block) = LOWER(?) AND flat_number = ?
+        ORDER BY created_at DESC
+    """, (name, block, flat_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def lookup_cultural_status(name, block, flat_number):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT categories, other_details, created_at
+        FROM cultural_registrations
+        WHERE LOWER(name) = LOWER(?) AND LOWER(block) = LOWER(?) AND flat_number = ?
+        ORDER BY created_at DESC
+    """, (name, block, flat_number))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows

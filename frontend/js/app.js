@@ -1134,13 +1134,7 @@ if ("serviceWorker" in navigator) {
             })
             .then(function (existingSubscription) {
 
-                const button = document.getElementById("enable-notifications-btn");
-
-                if (existingSubscription && button) {
-                    button.textContent = "✅ Alerts Enabled";
-                    button.disabled = true;
-                    button.style.opacity = "0.7";
-                }
+                _setNotificationButtonsEnabled(!!existingSubscription);
 
             })
             .catch(function (error) {
@@ -1175,9 +1169,40 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+// Keeps the hero "Enable Festival Alerts" button and the
+// top-right bell icon in sync with each other - there are
+// two entry points to the same action, so both need to
+// reflect the same enabled/disabled state.
+function _setNotificationButtonsEnabled(isEnabled) {
+
+    const heroButton = document.getElementById("enable-notifications-btn");
+    const bellButton = document.getElementById("bell-notifications-btn");
+
+    if (isEnabled) {
+
+        if (heroButton) {
+            heroButton.textContent = "✅ Alerts Enabled";
+            heroButton.disabled = true;
+            heroButton.style.opacity = "0.7";
+        }
+
+        if (bellButton) {
+            bellButton.classList.add("alerts-enabled");
+            bellButton.title = "Festival alerts enabled";
+        }
+
+    }
+
+}
+
 function enableNotifications() {
 
-    const button = document.getElementById("enable-notifications-btn");
+    const bellButton = document.getElementById("bell-notifications-btn");
+
+    if (bellButton && bellButton.classList.contains("alerts-enabled")) {
+        alert("✅ Festival alerts are already enabled on this device.");
+        return;
+    }
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         alert("Notifications aren't supported on this browser/device.");
@@ -1216,11 +1241,7 @@ function enableNotifications() {
                 })
                 .then(function () {
 
-                    if (button) {
-                        button.textContent = "✅ Alerts Enabled";
-                        button.disabled = true;
-                        button.style.opacity = "0.7";
-                    }
+                    _setNotificationButtonsEnabled(true);
 
                 })
                 .catch(function (error) {
@@ -1358,6 +1379,111 @@ if (thankYouModal) {
         // not the card inside it.
         if (event.target === thankYouModal) {
             hideThankYouPopup();
+        }
+
+    });
+
+}
+
+// ======================================
+// Floating WhatsApp Share Button
+// ======================================
+// Uses window.location.origin so this always points at
+// whatever domain the app is actually running on (ngrok
+// during dev, or the real production domain later) without
+// needing any hardcoded URL.
+
+const whatsappShareBtn = document.getElementById("whatsapp-share-btn");
+
+if (whatsappShareBtn) {
+
+    whatsappShareBtn.addEventListener("click", function (event) {
+
+        event.preventDefault();
+
+        const appUrl = window.location.origin;
+
+        const shareMessage =
+            "🙏 Check out the LVS Excellency Ganesha Festival App! 🎉\n\n" +
+            "Schedule, registrations, donations, Annaprasada booking and more, all in one place:\n" +
+            appUrl;
+
+        const whatsappUrl =
+            "https://wa.me/?text=" + encodeURIComponent(shareMessage);
+
+        window.open(whatsappUrl, "_blank");
+
+    });
+
+}
+
+// ======================================
+// Install App (Add to Home Screen)
+// ======================================
+// Chrome/Android fires "beforeinstallprompt" when the app
+// is installable - we capture that event and hold onto it,
+// since the browser only allows triggering install() in
+// response to an actual user gesture (our button click),
+// not automatically. iOS Safari does NOT support this
+// event at all (Apple has no programmatic install API), so
+// on iOS the button just shows manual instructions instead.
+
+let deferredInstallPrompt = null;
+
+const installAppBtn = document.getElementById("install-app-btn");
+
+window.addEventListener("beforeinstallprompt", function (event) {
+
+    event.preventDefault();
+    deferredInstallPrompt = event;
+
+});
+
+window.addEventListener("appinstalled", function () {
+
+    deferredInstallPrompt = null;
+
+    if (installAppBtn) {
+        installAppBtn.classList.add("app-installed");
+    }
+
+});
+
+function _isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+if (installAppBtn) {
+
+    installAppBtn.addEventListener("click", function () {
+
+        if (deferredInstallPrompt) {
+
+            deferredInstallPrompt.prompt();
+
+            deferredInstallPrompt.userChoice.then(function () {
+                deferredInstallPrompt = null;
+            });
+
+        } else if (_isIOSDevice()) {
+
+            alert(
+                "To install this app on your iPhone/iPad:\n\n" +
+                "1. Tap the Share button (square with an arrow) in Safari\n" +
+                "2. Scroll down and tap \"Add to Home Screen\"\n" +
+                "3. Tap \"Add\""
+            );
+
+        } else {
+
+            alert(
+                "This app may already be installed - check your home " +
+                "screen, or look for \"Open in app\" / an install icon " +
+                "in your browser's address bar.\n\n" +
+                "If not installed yet, look in your browser's menu for " +
+                "\"Install app\" or \"Add to Home Screen\"."
+            );
+
         }
 
     });

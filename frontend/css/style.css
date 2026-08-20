@@ -671,3 +671,81 @@ footer p {
     color: #d85b00;
     margin: 0 0 6px;
 }
+
+/* =========================================================
+   Floating WhatsApp Share Button
+   ========================================================= */
+
+#top-icon-row {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+}
+
+#top-icon-row button,
+#top-icon-row a {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#top-icon-row button:hover,
+#top-icon-row a:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#top-icon-row svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+#whatsapp-share-btn {
+    background: #25D366;
+}
+
+#bell-notifications-btn {
+    background: #ff9800;
+}
+
+#bell-notifications-btn.alerts-enabled {
+    background: #4CAF50;
+}
+
+#install-app-btn {
+    background: #616161;
+}
+
+#install-app-btn.app-installed {
+    display: none;
+}
+
+@media (max-width: 480px) {
+    #top-icon-row {
+        top: 12px;
+        right: 12px;
+        gap: 8px;
+    }
+    #top-icon-row button,
+    #top-icon-row a {
+        width: 34px;
+        height: 34px;
+    }
+    #top-icon-row svg {
+        width: 17px;
+        height: 17px;
+    }
+}
