@@ -7,6 +7,7 @@ from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_donation
 from backend.receipt_service import generate_receipt_pdf
+from backend.whatsapp_service import send_donation_confirmation
 from backend.validators import validate_flat_number
 
 
@@ -149,10 +150,27 @@ Every contribution helps make this Ganesh festival memorable for our community.
             session["donation"]["flat_number"] = flat
             session["step"] = 4
 
+            return (
+                "📱 Please enter your Mobile Number "
+                "(so we can send your receipt on WhatsApp too)."
+            )
+
+        # Step 4 - Mobile Number
+        elif session["step"] == 4:
+
+            mobile_input = message.strip()
+
+            if not mobile_input.isdigit() or len(mobile_input) != 10:
+
+                return "❌ Please enter a valid 10-digit mobile number."
+
+            session["donation"]["mobile"] = mobile_input
+            session["step"] = 5
+
             return "💰 Please enter the amount you wish to donate (₹)."
 
-        # Step 4 - Amount → show UPI details + payment proof widget
-        elif session["step"] == 4:
+        # Step 5 - Amount → show UPI details + payment proof widget
+        elif session["step"] == 5:
 
             raw_amount = message.strip()
 
@@ -210,7 +228,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
             else:
                 session["donation"]["amount"] = str(amount_value)
 
-            session["step"] = 5
+            session["step"] = 6
 
             # -----------------------------------------
             # Build a real UPI payment deep link so the
@@ -242,12 +260,20 @@ Every contribution helps make this Ganesh festival memorable for our community.
             return f"""
 💳 Please pay ₹{session['donation']['amount']} using any UPI app:
 
+<br><br>
+
+<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
+
+<p style="font-size:13px;color:#888;margin-top:8px;">Tap above to pay directly with GPay, PhonePe, or any UPI app on this phone.</p>
+
+<br>
+
 📱 GPay UPI ID : {UPI_ID_GPAY}
 📱 PhonePe UPI ID : {UPI_ID_PHONEPE}
 
-📷 Or scan the QR code below:
+<p style="font-size:13px;color:#888;margin-top:16px;">On a computer? Scan this QR code with your phone's UPI app instead:</p>
 
-<img src="/{upi_qr_path}" style="width:180px;margin-top:10px;border-radius:12px;">
+<img src="/{upi_qr_path}" style="width:160px;margin-top:6px;border-radius:12px;">
 
 <br><br>
 
@@ -266,8 +292,8 @@ once a screenshot is attached.
 <p style="font-size:13px;color:#888;margin-top:12px;">Prefer not to upload? Type your UPI Transaction Reference Number (UTR) below instead.</p>
 """
 
-        # Step 5 - Validate typed UTR, save as pending, issue provisional receipt
-        elif session["step"] == 5:
+        # Step 6 - Validate typed UTR, save as pending, issue provisional receipt
+        elif session["step"] == 6:
 
             utr_number = message.strip().replace(" ", "")
 
@@ -311,7 +337,7 @@ once a screenshot is attached.
 
         session = self._get_session(session_id)
 
-        if not session["active"] or session["step"] != 5:
+        if not session["active"] or session["step"] != 6:
             return None
 
         return self._finalize_donation(
@@ -339,7 +365,8 @@ once a screenshot is attached.
             utr_number=utr_number,
             proof_image_path=proof_image_path,
             status="pending",
-            block=donation.get("block")
+            block=donation.get("block"),
+            mobile=donation.get("mobile")
         )
 
         receipt_path = generate_receipt_pdf(
@@ -351,6 +378,14 @@ once a screenshot is attached.
             proof_uploaded=bool(proof_image_path),
             status="pending",
             block=donation.get("block")
+        )
+
+        send_donation_confirmation(
+            name=donation["name"],
+            amount=donation["amount"],
+            receipt_id=receipt_id,
+            receipt_pdf_path=receipt_path,
+            mobile_number=donation.get("mobile")
         )
 
         if utr_number:

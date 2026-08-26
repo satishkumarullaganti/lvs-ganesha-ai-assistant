@@ -25,6 +25,13 @@ from backend.admin.admin_service import (
     create_excel_file
 )
 
+from backend.database.database import (
+    verify_admin_password,
+    get_admin_user_by_username,
+    log_admin_activity,
+    get_recent_activity_log
+)
+
 # ============================================
 # Admin Router
 # ============================================
@@ -53,8 +60,21 @@ ADMIN_PASSWORD = os.getenv(
 # ============================================
 # Active Admin Sessions
 # ============================================
+# Maps session_token -> username, so every action can be
+# attributed to a specific person, not just "an admin".
 
-admin_sessions = set()
+admin_sessions = {}
+
+
+# ============================================
+# Get Current Admin Username
+# ============================================
+
+def get_current_admin_username(request: Request):
+
+    session_token = request.cookies.get("admin_session")
+
+    return admin_sessions.get(session_token, "unknown")
 
 
 # ============================================
@@ -101,24 +121,34 @@ def admin_login(
     credentials: AdminLoginRequest
 ):
 
-    if not ADMIN_PASSWORD:
+    # --------------------------------------------
+    # First, check individual admin accounts (the
+    # proper multi-user system) - each person has
+    # their own username/password, and every action
+    # gets attributed to them specifically.
+    # --------------------------------------------
 
-        raise HTTPException(
-            status_code=500,
-            detail="Admin password is not configured"
-        )
+    if verify_admin_password(credentials.username, credentials.password):
 
-    username_valid = hmac.compare_digest(
-        credentials.username,
-        ADMIN_USERNAME
-    )
+        user_row = get_admin_user_by_username(credentials.username)
+        logged_in_username = user_row[1]  # stored username, correct casing
 
-    password_valid = hmac.compare_digest(
-        credentials.password,
+    # --------------------------------------------
+    # Fall back to the original single shared .env
+    # credential, so nothing breaks for whoever was
+    # already using it before individual accounts
+    # existed.
+    # --------------------------------------------
+
+    elif (
         ADMIN_PASSWORD
-    )
+        and hmac.compare_digest(credentials.username, ADMIN_USERNAME)
+        and hmac.compare_digest(credentials.password, ADMIN_PASSWORD)
+    ):
 
-    if not username_valid or not password_valid:
+        logged_in_username = ADMIN_USERNAME
+
+    else:
 
         raise HTTPException(
             status_code=401,
@@ -129,9 +159,9 @@ def admin_login(
         32
     )
 
-    admin_sessions.add(
-        session_token
-    )
+    admin_sessions[session_token] = logged_in_username
+
+    log_admin_activity(logged_in_username, "logged_in")
 
     response = {
         "success": True,
@@ -170,9 +200,14 @@ def admin_logout(
 
     if session_token:
 
-        admin_sessions.discard(
-            session_token
+        logged_out_username = admin_sessions.get(session_token, "unknown")
+
+        admin_sessions.pop(
+            session_token,
+            None
         )
+
+        log_admin_activity(logged_out_username, "logged_out")
 
     from fastapi.responses import JSONResponse
 
@@ -620,6 +655,11 @@ async def update_single_record(
                 detail="Record not found"
             )
 
+        log_admin_activity(
+            get_current_admin_username(request),
+            "updated_record",
+            f"{table_name} #{record_id}"
+        )
 
         return {
             "success": True,
@@ -662,6 +702,12 @@ def delete_single_record(
                 detail="Record not found"
             )
 
+        log_admin_activity(
+            get_current_admin_username(request),
+            "deleted_record",
+            f"{table_name} #{record_id}"
+        )
+
         return {
             "success": True,
             "message":
@@ -674,3 +720,27 @@ def delete_single_record(
             status_code=400,
             detail=str(e)
         )
+
+
+# ============================================
+# Activity Log
+# ============================================
+
+@router.get("/activity-log")
+def activity_log(request: Request):
+
+    require_admin(request)
+
+    entries = get_recent_activity_log()
+
+    return {
+        "entries": [
+            {
+                "username": username,
+                "action": action,
+                "details": details,
+                "timestamp": timestamp
+            }
+            for username, action, details, timestamp in entries
+        ]
+    }

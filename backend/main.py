@@ -12,10 +12,10 @@ from backend.whatsapp_service import send_registration_confirmation
 from backend.donation_service import donation_service
 from backend.schedule_service import schedule_service
 from fastapi.responses import HTMLResponse, JSONResponse
-from backend.database.database import get_booking_by_coupon, serve_annaprasada_members
+from backend.database.database import get_booking_by_coupon, serve_annaprasada_members, log_admin_activity
 from dotenv import load_dotenv
 load_dotenv()
-from backend.admin.admin_routes import router as admin_router, require_admin
+from backend.admin.admin_routes import router as admin_router, require_admin, get_current_admin_username
 from backend.rag.rag_service import (
     ask_rag,
     is_festival_question
@@ -1675,6 +1675,12 @@ def admin_add_announcement(data: AnnouncementRequest, request: Request):
 
     new_announcement = add_announcement(data.message, data.type)
 
+    log_admin_activity(
+        get_current_admin_username(request),
+        "posted_announcement",
+        f"[{data.type}] {data.message[:80]}"
+    )
+
     # Push it to every subscribed device immediately
     push_result = send_push_to_all(
         title="LVS Ganesha Festival",
@@ -1704,6 +1710,12 @@ def admin_delete_announcement(announcement_id: str, request: Request):
 
     if not found:
         raise HTTPException(status_code=404, detail="Announcement not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "deactivated_announcement",
+        announcement_id
+    )
 
     return {"status": "deactivated", "id": announcement_id}
 

@@ -10,6 +10,7 @@ from backend.config import (
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_annaprasada_booking, get_total_booked_members_for_flat
 from backend.coupon_image_service import generate_annaprasada_coupon
+from backend.whatsapp_service import send_annaprasada_confirmation
 
 # ==========================================
 # Booking Status
@@ -190,6 +191,23 @@ Booking is now OPEN.
         elif session["step"] == 4:
 
             session["booking"]["flat_number"] = message.strip()
+            session["step"] = 5
+
+            return (
+                "📱 Please enter your Mobile Number "
+                "(so we can send your coupon on WhatsApp too)."
+            )
+
+        # Step 5 - Mobile Number
+        elif session["step"] == 5:
+
+            mobile_input = message.strip()
+
+            if not mobile_input.isdigit() or len(mobile_input) != 10:
+
+                return "❌ Please enter a valid 10-digit mobile number."
+
+            session["booking"]["mobile"] = mobile_input
 
             booking = session["booking"]
 
@@ -213,7 +231,8 @@ Booking is now OPEN.
                 name=booking["name"],
                 block=booking["block"],
                 flat_number=booking["flat_number"],
-                members=booking["members"]
+                members=booking["members"],
+                mobile=booking["mobile"]
             )
 
             # -----------------------------------------------
@@ -231,6 +250,16 @@ Booking is now OPEN.
                 name=booking["name"],
                 members=booking["members"],
                 verify_url=verify_url
+            )
+
+            send_annaprasada_confirmation(
+                name=booking["name"],
+                members=booking["members"],
+                block=booking["block"],
+                flat=booking["flat_number"],
+                coupon_id=coupon_id,
+                coupon_image_path=coupon_path,
+                mobile_number=booking["mobile"]
             )
 
             if previously_booked > 0:

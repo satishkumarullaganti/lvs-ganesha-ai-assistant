@@ -165,8 +165,22 @@
             "id": "16e918da91",
             "message": "Residents, please register for the events \u2014 Ganapathi Bappa Morya! \ud83c\udf89",
             "type": "reminder",
-            "active": true,
+            "active": false,
             "created_at": "2026-08-16T06:30:23.358016+00:00"
+        },
+        {
+            "id": "458cfc65a5",
+            "message": "\ud83d\ude4f Ganesha Idol Donor \ud83d\ude4f\ud83c\udf3a Mr. Bangaru Ramesh \ud83c\udf3a",
+            "type": "info",
+            "active": false,
+            "created_at": "2026-08-26T04:03:46.792499+00:00"
+        },
+        {
+            "id": "afebe336a4",
+            "message": "\ud83d\ude4f Ganesha Idol Donor \ud83d\ude4f\ud83c\udf3a Mr. Bangaru Ramesh \ud83c\udf3a",
+            "type": "reminder",
+            "active": true,
+            "created_at": "2026-08-26T04:05:44.795576+00:00"
         }
     ]
 }

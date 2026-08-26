@@ -34,7 +34,7 @@ load_dotenv(_ENV_PATH)
 # Festival Configuration
 # ===========================================
 
-ANNAPRASADA_DATE = date(2026, 8, 16)
+ANNAPRASADA_DATE = date(2026, 8, 26)
 
 # Booking opens 2 days before the event
 BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)    

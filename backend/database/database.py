@@ -111,6 +111,18 @@ def create_tables():
             "ALTER TABLE annaprasada_bookings ADD COLUMN booking_group_id TEXT"
         )
 
+    # --------------------------------------------
+    # Migration: mobile number, so WhatsApp
+    # confirmations can be sent and residents can
+    # be reached for their bookings (previously the
+    # booking flow never actually asked for this).
+    # --------------------------------------------
+
+    if "mobile" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN mobile TEXT"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS donations(
@@ -161,6 +173,11 @@ def create_tables():
     if "block" not in existing_columns:
         cursor.execute(
             "ALTER TABLE donations ADD COLUMN block TEXT"
+        )
+
+    if "mobile" not in existing_columns:
+        cursor.execute(
+            "ALTER TABLE donations ADD COLUMN mobile TEXT"
         )
 
     cursor.execute("""
@@ -328,7 +345,7 @@ def check_duplicate_competition_registration(name, block, flat_number, competiti
 # Save Annaprasada Booking
 # ============================================
 
-def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None):
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None):
 
     conn = get_connection()
 
@@ -348,11 +365,13 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         members,
 
-        booking_group_id
+        booking_group_id,
+
+        mobile
 
     )
 
-    VALUES(?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?)
 
     """, (
 
@@ -366,7 +385,9 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         members,
 
-        booking_group_id
+        booking_group_id,
+
+        mobile
 
     ))
 
@@ -525,7 +546,7 @@ def serve_annaprasada_members(coupon_id, count_to_serve):
 # Save Donation
 # ============================================
 
-def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_image_path=None, status="pending", block=None):
+def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_image_path=None, status="pending", block=None, mobile=None):
 
     conn = get_connection()
 
@@ -549,11 +570,13 @@ def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_
 
         status,
 
-        block
+        block,
+
+        mobile
 
     )
 
-    VALUES(?,?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -571,7 +594,9 @@ def save_donation(receipt_id, name, flat_number, amount, utr_number=None, proof_
 
         status,
 
-        block
+        block,
+
+        mobile
 
     ))
 
@@ -1165,4 +1190,143 @@ def lookup_cultural_status(name, block, flat_number):
     """, (name, block, flat_number))
     rows = cursor.fetchall()
     conn.close()
+    return rows
+
+
+# ============================================
+# Multi-Admin Accounts & Activity Log
+# ============================================
+# Passwords are hashed with PBKDF2 (built into Python's
+# hashlib, no extra dependency needed) with a unique random
+# salt per user - never stored in plain text, unlike the
+# single legacy .env admin credential this coexists with.
+
+import hashlib
+import secrets as _secrets
+
+
+def _init_admin_tables():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin_users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        password_salt TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS admin_activity_log(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+_init_admin_tables()
+
+
+def _hash_password(password, salt=None):
+
+    if salt is None:
+        salt = _secrets.token_hex(16)
+
+    hashed = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100_000
+    ).hex()
+
+    return hashed, salt
+
+
+def add_admin_user(name, username, password):
+
+    password_hash, salt = _hash_password(password)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO admin_users(name, username, password_hash, password_salt)
+        VALUES (?, ?, ?, ?)
+    """, (name, username, password_hash, salt))
+
+    conn.commit()
+    conn.close()
+
+
+def get_admin_user_by_username(username):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT name, username, password_hash, password_salt
+        FROM admin_users
+        WHERE LOWER(username) = LOWER(?)
+    """, (username,))
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return row
+
+
+def verify_admin_password(username, password):
+
+    row = get_admin_user_by_username(username)
+
+    if row is None:
+        return False
+
+    _, _, stored_hash, salt = row
+
+    computed_hash, _ = _hash_password(password, salt)
+
+    return _secrets.compare_digest(computed_hash, stored_hash)
+
+
+def log_admin_activity(username, action, details=None):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO admin_activity_log(username, action, details)
+        VALUES (?, ?, ?)
+    """, (username, action, details))
+
+    conn.commit()
+    conn.close()
+
+
+def get_recent_activity_log(limit=100):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT username, action, details, created_at
+        FROM admin_activity_log
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
     return rows
