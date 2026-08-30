@@ -152,6 +152,7 @@ def detect_category(query):
     # keyword (cultural, volunteer) AND a committee keyword
     # (coordinator) - the person is asking "who", which is a
     # committee_details.md lookup, not a cultural/volunteer one.
+
     if any(
         keyword in query_lower
         for keyword in committee_keywords
@@ -162,6 +163,7 @@ def detect_category(query):
     # like "where is the annaprasada distribution" contains
     # both a schedule-ish word (annaprasada) and a location
     # word (where) - location intent should win here.
+
     if any(
         keyword in query_lower
         for keyword in location_keywords
@@ -199,6 +201,7 @@ def detect_category(query):
         return "donation"
 
     return "general"
+
 
 # --------------------------------------------------
 # Detect whether question is festival-related
@@ -303,80 +306,259 @@ def is_festival_question(query):
         keyword in query_lower
         for keyword in festival_keywords
     )
+
+
 # --------------------------------------------------
 # Search knowledge base
 # --------------------------------------------------
 
 def _build_retrieval_queries(query):
+
     original = query.strip()
-    normalized = re.sub(r"\s+", " ", original.lower()).strip()
-    cleaned = re.sub(r"\b(what|when|where|who|why|how|is|are|the|a|an|of|on|at|for|to|and|in|does|will|can|do|i|we|you|it|this|that|please|tell|me)\b", " ", normalized)
-    cleaned = re.sub(r"[^a-z0-9\s]", " ", cleaned)
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+    normalized = re.sub(
+        r"\s+",
+        " ",
+        original.lower()
+    ).strip()
+
+    cleaned = re.sub(
+        r"\b(what|when|where|who|why|how|is|are|the|a|an|of|on|at|for|to|and|in|does|will|can|do|i|we|you|it|this|that|please|tell|me)\b",
+        " ",
+        normalized
+    )
+
+    cleaned = re.sub(
+        r"[^a-z0-9\s]",
+        " ",
+        cleaned
+    )
+
+    cleaned = re.sub(
+        r"\s+",
+        " ",
+        cleaned
+    ).strip()
+
     variants = [original]
+
     if cleaned and cleaned != normalized:
         variants.append(cleaned)
-    rules_match = re.search(r"\b(?:rules?|guidelines?)\s+(?:for\s+)?(.+)", cleaned)
+
+    rules_match = re.search(
+        r"\b(?:rules?|guidelines?)\s+(?:for\s+)?(.+)",
+        cleaned
+    )
+
     if rules_match and rules_match.group(1).strip():
-        variants.append(f"{rules_match.group(1).strip()} rules")
-    important_terms = ["tambola", "chess", "carrom", "drawing", "musical chairs", "committee president", "committee", "organizer", "organiser", "coordinator", "president", "secretary", "treasurer", "volunteer", "donation", "sponsor", "dance", "singing", "skit"]
+        variants.append(
+            f"{rules_match.group(1).strip()} rules"
+        )
+
+    important_terms = [
+        "tambola",
+        "chess",
+        "carrom",
+        "drawing",
+        "musical chairs",
+        "committee president",
+        "committee",
+        "organizer",
+        "organiser",
+        "coordinator",
+        "president",
+        "secretary",
+        "treasurer",
+        "volunteer",
+        "donation",
+        "sponsor",
+        "dance",
+        "singing",
+        "skit"
+    ]
+
     for term in important_terms:
         if term in normalized:
             variants.append(term)
-    result=[]; seen=set()
+
+    result = []
+    seen = set()
+
     for item in variants:
-        key=item.strip().lower()
+
+        key = item.strip().lower()
+
         if key and key not in seen:
-            seen.add(key); result.append(item.strip())
+            seen.add(key)
+            result.append(item.strip())
+
     return result[:4]
 
+
 def _query_chroma(query, n_results=10):
+
     query_embedding = create_embedding(query)
-    return collection.query(query_embeddings=[query_embedding], n_results=n_results)
+
+    return collection.query(
+        query_embeddings=[query_embedding],
+        n_results=n_results
+    )
+
 
 def search_knowledge(query, number_of_results=5):
+
     category = detect_category(query)
+
     # Schedule and donation questions can have their answer
-    # split across multiple related sections (donation info is
-    # spread across About/Amount/Sponsor/FAQ sections in the
-    # same doc), so give them a bit more retrieval headroom to
-    # reduce the odds of the right chunk being crowded out.
+    # split across multiple related sections.
     if category == "schedule":
         number_of_results = 8
+
     elif category == "donation":
         number_of_results = 7
-    candidates=[]
+
+    candidates = []
+
     for retrieval_query in _build_retrieval_queries(query):
+
         try:
-            results=_query_chroma(retrieval_query, n_results=10)
-            documents=results.get("documents", [[]])[0]
-            metadatas=results.get("metadatas", [[]])[0]
-            distances=results.get("distances", [[]])[0]
-            for document, metadata, distance in zip(documents, metadatas, distances):
-                candidates.append({"document":document, "metadata":metadata or {}, "distance":distance})
+
+            results = _query_chroma(
+                retrieval_query,
+                n_results=10
+            )
+
+            documents = results.get(
+                "documents",
+                [[]]
+            )[0]
+
+            metadatas = results.get(
+                "metadatas",
+                [[]]
+            )[0]
+
+            distances = results.get(
+                "distances",
+                [[]]
+            )[0]
+
+            for document, metadata, distance in zip(
+                documents,
+                metadatas,
+                distances
+            ):
+
+                candidates.append({
+                    "document": document,
+                    "metadata": metadata or {},
+                    "distance": distance
+                })
+
         except Exception as error:
-            print(f"RAG retrieval failed for query '{retrieval_query}': {error}")
-    unique=[]; seen=set()
+
+            print(
+                f"RAG retrieval failed for query "
+                f"'{retrieval_query}': {error}"
+            )
+
+    unique = []
+    seen = set()
+
     for candidate in candidates:
-        key=candidate["document"].strip()
+
+        key = candidate["document"].strip()
+
         if not key or key in seen:
             continue
-        seen.add(key); unique.append(candidate)
-    filtered=[c for c in unique if c["distance"] <= MAX_RELEVANT_DISTANCE]
-    priority_sources={"schedule":["festival_schedule.md"],"location":["festival_schedule.md"],"competition":["competition_rules.md"],"cultural":["cultural_programs.md"],"volunteer":["volunteer_rules.md"],"donation":["donation_information.md"],"committee":["committee_details.md"],"general":[]}
-    preferred_sources=priority_sources.get(category, [])
-    filtered.sort(key=lambda item:(0 if item["metadata"].get("source", "") in preferred_sources else 1, item["distance"]))
-    ordered=filtered[:number_of_results]
-    return {"documents":[x["document"] for x in ordered], "sources":list(dict.fromkeys(x["metadata"].get("source", "") for x in ordered if x["metadata"].get("source", "")))}
+
+        seen.add(key)
+        unique.append(candidate)
+
+    # Keep only sufficiently relevant vector results.
+    filtered = [
+        candidate
+        for candidate in unique
+        if candidate["distance"] <= MAX_RELEVANT_DISTANCE
+    ]
+
+    priority_sources = {
+        "schedule": [
+            "festival_schedule.md"
+        ],
+
+        "location": [
+            "festival_schedule.md"
+        ],
+
+        "competition": [
+            "competition_rules.md"
+        ],
+
+        "cultural": [
+            "cultural_programs.md"
+        ],
+
+        "volunteer": [
+            "volunteer_rules.md"
+        ],
+
+        "donation": [
+            "donation_information.md"
+        ],
+
+        "committee": [
+            "committee_details.md"
+        ],
+
+        "general": []
+    }
+
+    preferred_sources = priority_sources.get(
+        category,
+        []
+    )
+
+    # Put the category's official source first.
+    filtered.sort(
+        key=lambda item: (
+            0
+            if item["metadata"].get("source", "")
+            in preferred_sources
+            else 1,
+            item["distance"]
+        )
+    )
+
+    ordered = filtered[:number_of_results]
+
+    return {
+        "documents": [
+            item["document"]
+            for item in ordered
+        ],
+
+        "sources": list(
+            dict.fromkeys(
+                item["metadata"].get(
+                    "source",
+                    ""
+                )
+                for item in ordered
+                if item["metadata"].get(
+                    "source",
+                    ""
+                )
+            )
+        )
+    }
 
 
 # --------------------------------------------------
 # Build context
 # --------------------------------------------------
 
-def build_context(
-    documents
-):
+def build_context(documents):
 
     if not documents:
         return ""
@@ -401,9 +583,7 @@ def build_context(
 # Generate RAG response
 # --------------------------------------------------
 
-def ask_rag(
-    question
-):
+def ask_rag(question):
 
     search_results = search_knowledge(
         question
@@ -432,33 +612,78 @@ def ask_rag(
         }
 
     # --------------------------------------------------
-    # Lexical grounding check (hard guardrail)
+    # Lexical grounding check
     # --------------------------------------------------
-    # Semantic similarity alone isn't reliable enough -
-    # a chunk can be "close enough" in embedding space
-    # without actually answering the question, and small
-    # local LLMs (like llama3.2:3b) don't always follow
-    # "don't invent information" instructions strictly.
     #
-    # As a hard, code-level safeguard: check whether the
-    # question's significant words actually appear in the
-    # retrieved context. If there's no real lexical overlap,
-    # treat this as "not found" WITHOUT calling the LLM at
-    # all - so it can't fabricate an answer on weak context.
+    # Vector retrieval has already established semantic
+    # relevance. This check is an additional safety guard.
+    #
+    # IMPORTANT:
+    # If the expected official document for a detected
+    # category was retrieved, allow the LLM to use that
+    # context even if the exact question words do not
+    # appear literally in the chunk.
+    #
+    # This prevents valid questions such as:
+    #
+    # "Who is the President of LVS Ganesha committee?"
+    #
+    # from being rejected simply because the retrieved
+    # committee document doesn't contain every word from
+    # the question.
     # --------------------------------------------------
 
     GROUNDING_STOPWORDS = {
-        "what", "when", "where", "who", "why", "how",
-        "is", "are", "the", "a", "an", "of", "on", "at",
-        "for", "to", "and", "in", "does", "will", "can",
-        "do", "i", "we", "you", "it", "this", "that",
-        "available", "yes", "no", "please", "need",
-        "want", "get", "know", "tell", "info",
-        "information", "about", "there", "any", "some"
+        "what",
+        "when",
+        "where",
+        "who",
+        "why",
+        "how",
+        "is",
+        "are",
+        "the",
+        "a",
+        "an",
+        "of",
+        "on",
+        "at",
+        "for",
+        "to",
+        "and",
+        "in",
+        "does",
+        "will",
+        "can",
+        "do",
+        "i",
+        "we",
+        "you",
+        "it",
+        "this",
+        "that",
+        "available",
+        "yes",
+        "no",
+        "please",
+        "need",
+        "want",
+        "get",
+        "know",
+        "tell",
+        "info",
+        "information",
+        "about",
+        "there",
+        "any",
+        "some"
     }
 
     question_words = set(
-        re.findall(r"[a-z0-9]+", question.lower())
+        re.findall(
+            r"[a-z0-9]+",
+            question.lower()
+        )
     ) - GROUNDING_STOPWORDS
 
     context_lower = context.lower()
@@ -468,7 +693,53 @@ def ask_rag(
         for word in question_words
     )
 
-    if not has_lexical_overlap:
+    # Category-specific fallback.
+    #
+    # If semantic retrieval found the expected official
+    # document for the detected category, consider the
+    # context grounded enough to send to the LLM.
+
+    category = detect_category(
+        question
+    )
+
+    category_sources = {
+        "committee": "committee_details.md",
+
+        "schedule": "festival_schedule.md",
+
+        "location": "festival_schedule.md",
+
+        "competition": "competition_rules.md",
+
+        "cultural": "cultural_programs.md",
+
+        "volunteer": "volunteer_rules.md",
+
+        "donation": "donation_information.md"
+    }
+
+    expected_source = category_sources.get(
+        category
+    )
+
+    has_expected_source = (
+        expected_source is not None
+        and expected_source in sources
+    )
+
+    # Only reject the context when:
+    #
+    # 1. There is no lexical overlap, AND
+    # 2. The expected category source was not retrieved.
+    #
+    # This preserves the grounding guardrail while allowing
+    # legitimate category-specific RAG results.
+
+    if (
+        not has_lexical_overlap
+        and not has_expected_source
+    ):
 
         return {
             "response": (
@@ -477,6 +748,10 @@ def ask_rag(
             ),
             "sources": []
         }
+
+    # --------------------------------------------------
+    # LLM Prompt
+    # --------------------------------------------------
 
     prompt = f"""
 You are the LVS Excellency Ganesha Festival AI Assistant.
@@ -495,6 +770,7 @@ was asked. Do not repeat unrelated details from the
 knowledge base that don't answer the question.
 
 IMPORTANT:
+
 If the question asks about a date, time, event,
 or festival schedule, prefer the official
 festival schedule information over general
@@ -530,15 +806,17 @@ IMPORTANT RULES:
 5. Do NOT treat the absence of information as evidence
    that something is available or allowed.
 
-6. Do NOT invent facilities such as parking, accommodation,
-   transport, food, security, or other arrangements unless
-   they are explicitly mentioned in the knowledge base.
+6. Do NOT invent facilities such as parking,
+   accommodation, transport, food, security, or other
+   arrangements unless they are explicitly mentioned
+   in the knowledge base.
 
-7. Answer only the specific question asked. Do not reproduce
-   the entire retrieved document unless the user explicitly
-   asks for the complete information or schedule.
+7. Answer only the specific question asked. Do not
+   reproduce the entire retrieved document unless the
+   user explicitly asks for the complete information
+   or schedule.
 
-   8. If the user asks about a specific event, program,
+8. If the user asks about a specific event, program,
    competition, dance, singing, or cultural activity,
    answer using information specifically related
    to that event or activity.
@@ -556,36 +834,35 @@ IMPORTANT RULES:
     Festival knowledge base."
 
 12. Never reference "Source 1", "Source 2", document
-    names, or any internal labels in your answer - the
-    resident should never see how the knowledge base is
-    structured internally.
+    names, or any internal labels in your answer.
+    The resident should never see how the knowledge
+    base is structured internally.
 
 13. Do not quote the knowledge base text verbatim or
     wrap phrases in quotation marks. Always paraphrase
     in your own plain words.
 
 14. Give exactly one clear, direct answer. Do not say
-    "yes" and then contradict it with "however" or "but"
-    in the same answer - decide the correct answer first,
-    then state only that.
+    "yes" and then contradict it with "however" or
+    "but" in the same answer - decide the correct
+    answer first, then state only that.
 
 15. If a specific number, amount, name, or detail asked
     about is not directly stated in the Festival
     Knowledge Base above, respond with exactly:
     "I don't have that information in the LVS Ganesha
-    Festival knowledge base." Do not explain what
-    conditions would need to be met for that detail to
-    exist, and do not describe your own answering rules
-    or policy - just give the one-sentence response above.
+    Festival knowledge base."
+
+    Do not explain what conditions would need to be met
+    for that detail to exist, and do not describe your
+    own answering rules or policy - just give the
+    one-sentence response above.
 
 16. For yes/no questions, work out the correct answer
     FIRST, then make sure your opening word matches it.
+
     Do not begin with "Yes." if the fact you go on to
-    state actually means no (or the reverse). For example,
-    if a resident asks whether something can be reused and
-    the knowledge base says it cannot be reused, the answer
-    must begin with "No," not "Yes."
-   
+    state actually means no (or the reverse).
 
 Festival Knowledge Base:
 ------------------------
@@ -617,30 +894,23 @@ Answer:
     ]
 
     # --------------------------------------------------
-    # Numeric-amount guardrail (hard code-level check)
-    # --------------------------------------------------
-    # Some source documents describe amount-type policies
-    # in many different phrasings ("should be provided only
-    # when officially confirmed", "should not invent a
-    # minimum...", etc.) - trying to strip every paraphrase
-    # at ingest time is unreliable, since new wording can
-    # always slip through.
-    #
-    # Instead, validate the LLM's actual answer: if the
-    # resident asked about a minimum/maximum/cost/fee/price
-    # and the generated answer contains no digits at all,
-    # the model is very likely hedging around missing data
-    # instead of giving a real number - force the standard
-    # "not available" response instead of letting a vague,
-    # policy-sounding non-answer through.
+    # Numeric-amount guardrail
     # --------------------------------------------------
 
     AMOUNT_QUESTION_WORDS = {
-        "minimum", "maximum", "amount", "cost", "fee",
-        "fees", "price", "how much"
+        "minimum",
+        "maximum",
+        "amount",
+        "cost",
+        "fee",
+        "fees",
+        "price",
+        "how much"
     }
 
-    question_lower_for_amount = question.lower()
+    question_lower_for_amount = (
+        question.lower()
+    )
 
     asks_about_amount = any(
         term in question_lower_for_amount
@@ -652,26 +922,28 @@ Answer:
         for character in answer
     )
 
-    # A correct answer can legitimately have no digits at all -
-    # e.g. "donations are purely voluntary, there is no minimum."
-    # Check the RETRIEVED CONTEXT (stable, grounded) for a clear
-    # negation, rather than the LLM's generated answer text -
-    # the model can phrase the same grounded fact differently
-    # between calls (e.g. "no minimum" vs "not required" vs
-    # "voluntary contribution"), so checking the answer's exact
-    # wording is unreliable. If the context clearly states there
-    # is no minimum/maximum, trust the LLM's answer even if its
-    # specific phrasing varies.
+    # A correct answer can legitimately have no digits.
+    # Check the retrieved context for a clear negation.
+
     has_clear_negation = any(
         phrase in context_lower
         for phrase in [
-            "no minimum", "no maximum", "not required",
-            "voluntary", "any amount", "not fixed",
-            "no fixed amount", "no specific amount"
+            "no minimum",
+            "no maximum",
+            "not required",
+            "voluntary",
+            "any amount",
+            "not fixed",
+            "no fixed amount",
+            "no specific amount"
         ]
     )
 
-    if asks_about_amount and not has_digit_in_answer and not has_clear_negation:
+    if (
+        asks_about_amount
+        and not has_digit_in_answer
+        and not has_clear_negation
+    ):
 
         answer = (
             "I don't have that information in the LVS Ganesha "
@@ -683,39 +955,35 @@ Answer:
     # --------------------------------------------------
     # Committee role-responsibility guardrail
     # --------------------------------------------------
-    # committee_details.md lists every role's NAME once, and
-    # separately lists RESPONSIBILITIES only for roles that
-    # actually have documented duties. Roles like Vice
-    # President and Joint Secretary appear only once (the name
-    # entry) with no matching entry in the Responsibilities
-    # section.
-    #
-    # A small local LLM can still generate a plausible-sounding
-    # answer by blending a nearby role's real responsibilities
-    # onto the one actually asked about (e.g. attributing the
-    # Secretary's duties to the Vice President because both
-    # appear close together in the same retrieved chunk).
-    #
-    # Hard check: if the question asks what a specific role
-    # does, and that role's name appears in context only once
-    # (no separate Responsibilities entry), refuse instead of
-    # letting the LLM guess.
-    # --------------------------------------------------
 
     COMMITTEE_ROLES = [
-        "vice president", "president", "joint secretary",
-        "secretary", "treasurer", "cultural coordinator",
-        "volunteer coordinator", "food coordinator",
-        "annaprasada coordinator", "decoration coordinator",
+        "vice president",
+        "president",
+        "joint secretary",
+        "secretary",
+        "treasurer",
+        "cultural coordinator",
+        "volunteer coordinator",
+        "food coordinator",
+        "annaprasada coordinator",
+        "decoration coordinator",
         "event coordinator"
     ]
 
     DUTY_QUESTION_WORDS = {
-        "do", "does", "role", "responsibility",
-        "responsibilities", "duty", "duties", "job"
+        "do",
+        "does",
+        "role",
+        "responsibility",
+        "responsibilities",
+        "duty",
+        "duties",
+        "job"
     }
 
-    question_lower_for_role = question.lower()
+    question_lower_for_role = (
+        question.lower()
+    )
 
     asks_about_role_duty = any(
         word in question_lower_for_role.split()
@@ -723,18 +991,28 @@ Answer:
         for word in DUTY_QUESTION_WORDS
     )
 
-    # Match the longest role name first so "vice president"
-    # isn't mistakenly matched as just "president"
+    # Match longest role name first.
     matched_role = None
 
-    for role in sorted(COMMITTEE_ROLES, key=len, reverse=True):
+    for role in sorted(
+        COMMITTEE_ROLES,
+        key=len,
+        reverse=True
+    ):
+
         if role in question_lower_for_role:
+
             matched_role = role
             break
 
-    if asks_about_role_duty and matched_role:
+    if (
+        asks_about_role_duty
+        and matched_role
+    ):
 
-        role_occurrences = context_lower.count(matched_role)
+        role_occurrences = context_lower.count(
+            matched_role
+        )
 
         if role_occurrences < 2:
 
@@ -748,18 +1026,6 @@ Answer:
     # --------------------------------------------------
     # "Yes, but actually no" contradiction guardrail
     # --------------------------------------------------
-    # A small local LLM can answer a yes/no question by
-    # leading with "Yes." and then immediately stating a
-    # fact that actually means "no" (e.g. "Yes. A redeemed
-    # coupon cannot be redeemed again." in answer to "Can I
-    # use it twice?"). The information itself isn't wrong,
-    # but the leading word directly contradicts it and would
-    # mislead a resident skimming the answer.
-    #
-    # If the answer opens with "Yes" but contains a clear
-    # negation shortly after, strip the misleading opener
-    # so the answer isn't self-contradictory.
-    # --------------------------------------------------
 
     answer_stripped = answer.strip()
 
@@ -770,9 +1036,20 @@ Answer:
     )
 
     NEGATION_PHRASES = [
-        "cannot", "can not", "can't", "won't", "will not",
-        "should not", "shouldn't", "must not", "mustn't",
-        "is not", "isn't", "are not", "aren't", "not be"
+        "cannot",
+        "can not",
+        "can't",
+        "won't",
+        "will not",
+        "should not",
+        "shouldn't",
+        "must not",
+        "mustn't",
+        "is not",
+        "isn't",
+        "are not",
+        "aren't",
+        "not be"
     ]
 
     contains_negation = any(
@@ -780,7 +1057,10 @@ Answer:
         for phrase in NEGATION_PHRASES
     )
 
-    if starts_with_yes and contains_negation:
+    if (
+        starts_with_yes
+        and contains_negation
+    ):
 
         answer = re.sub(
             r"^yes[\.,!]?\s*",

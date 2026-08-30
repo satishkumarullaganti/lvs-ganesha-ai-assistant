@@ -1489,3 +1489,49 @@ if (installAppBtn) {
     });
 
 }
+// ======================================
+// Opening Mantra
+// ======================================
+// Browsers block audio-with-sound autoplay on page load
+// for anyone who hasn't already interacted with the site -
+// this is a deliberate, universal browser policy, not
+// something we can code around. So this tries to autoplay
+// (works for some return visits), and gracefully falls
+// back to a small tap-to-play prompt if the browser blocks
+// it - nothing silently fails without the resident knowing.
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const mantraAudio = document.getElementById("mantra-audio");
+    const mantraPrompt = document.getElementById("mantra-tap-prompt");
+    const mantraTapBtn = document.getElementById("mantra-tap-btn");
+
+    if (!mantraAudio) return;
+
+    const playPromise = mantraAudio.play();
+
+    if (playPromise !== undefined) {
+
+        playPromise.catch(function () {
+
+            // Autoplay was blocked - show the tap prompt instead.
+            if (mantraPrompt) {
+                mantraPrompt.style.display = "block";
+            }
+
+        });
+
+    }
+
+    if (mantraTapBtn) {
+
+        mantraTapBtn.addEventListener("click", function () {
+
+            mantraAudio.play();
+            mantraPrompt.style.display = "none";
+
+        });
+
+    }
+
+});

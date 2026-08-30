@@ -749,3 +749,33 @@ footer p {
         height: 17px;
     }
 }
+
+/* =========================================================
+   Opening Mantra Tap Prompt
+   ========================================================= */
+
+#mantra-tap-prompt {
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 997;
+    animation: mantra-fade-in 0.4s ease;
+}
+
+#mantra-tap-btn {
+    background: #d85b00;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes mantra-fade-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

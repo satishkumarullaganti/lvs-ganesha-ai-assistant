@@ -149,7 +149,7 @@ Booking is now OPEN.
 
         session = self._get_session(session_id)
 
-        # Step 1 - Members
+        # Step 1 - Members (total)
         if session["step"] == 1:
 
             members_input = message.strip()
@@ -169,37 +169,71 @@ Booking is now OPEN.
             session["booking"]["members"] = members_input
             session["step"] = 2
 
-            return "👤 Please enter your Full Name."
+            return (
+                f"👨‍👩‍👧 Of these {members_input} member(s), how many "
+                f"are adults?"
+            )
 
-        # Step 2 - Name
+        # Step 2 - Adults (children is computed as the
+        # remainder, not asked separately - this avoids the
+        # "numbers don't add up" problem entirely, since it
+        # can never happen by construction).
         elif session["step"] == 2:
 
-            session["booking"]["name"] = message.strip()
+            adults_input = message.strip()
+            total_members = int(session["booking"]["members"])
+
+            if not adults_input.isdigit():
+
+                return "❌ Please enter a valid number of adults (e.g. 2)."
+
+            adults_count = int(adults_input)
+
+            if adults_count < 0 or adults_count > total_members:
+
+                return (
+                    f"❌ Number of adults must be between 0 and "
+                    f"{total_members} (the total members you entered "
+                    f"earlier). Please re-enter."
+                )
+
+            children_count = total_members - adults_count
+
+            session["booking"]["adults"] = str(adults_count)
+            session["booking"]["children"] = str(children_count)
             session["step"] = 3
+
+            return "👤 Please enter your Full Name."
+
+        # Step 3 - Name
+        elif session["step"] == 3:
+
+            session["booking"]["name"] = message.strip()
+            session["step"] = 4
 
             return "🏢 Please enter your Block."
 
-        # Step 3 - Block
-        elif session["step"] == 3:
+        # Step 4 - Block
+        elif session["step"] == 4:
 
             session["booking"]["block"] = message.strip()
-            session["step"] = 4
+            session["step"] = 5
 
             return "🏠 Please enter your Flat Number."
 
-        # Step 4 - Flat Number
-        elif session["step"] == 4:
+        # Step 5 - Flat Number
+        elif session["step"] == 5:
 
             session["booking"]["flat_number"] = message.strip()
-            session["step"] = 5
+            session["step"] = 6
 
             return (
                 "📱 Please enter your Mobile Number "
                 "(so we can send your coupon on WhatsApp too)."
             )
 
-        # Step 5 - Mobile Number
-        elif session["step"] == 5:
+        # Step 6 - Mobile Number
+        elif session["step"] == 6:
 
             mobile_input = message.strip()
 
@@ -232,7 +266,9 @@ Booking is now OPEN.
                 block=booking["block"],
                 flat_number=booking["flat_number"],
                 members=booking["members"],
-                mobile=booking["mobile"]
+                mobile=booking["mobile"],
+                adults=booking["adults"],
+                children=booking["children"]
             )
 
             # -----------------------------------------------
@@ -244,6 +280,8 @@ Booking is now OPEN.
             # -----------------------------------------------
             verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
 
+            # Coupon image is UNCHANGED - still shows the
+            # TOTAL members count only, exactly as before.
             coupon_path = generate_annaprasada_coupon(
                 coupon_id=coupon_id,
                 serial_number=serial_number,
@@ -252,6 +290,8 @@ Booking is now OPEN.
                 verify_url=verify_url
             )
 
+            # WhatsApp confirmation is UNCHANGED too - same
+            # signature/content as before.
             send_annaprasada_confirmation(
                 name=booking["name"],
                 members=booking["members"],
@@ -289,7 +329,7 @@ Your Annaprasada Coupon is confirmed.
 
 🏠 Flat : {booking['flat_number']}
 
-👥 Members : {booking['members']}
+👥 Members : {booking['members']} (Adults: {booking['adults']}, Children: {booking['children']})
 
 🎟️ Coupon ID : {coupon_id}
 

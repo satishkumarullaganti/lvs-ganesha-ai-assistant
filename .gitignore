@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+backend/database/festival.db
+backend/rag/chroma_db/
+static/donation_proofs/
+static/receipts/
+static/qrcodes/
+static/coupons/
+frontend/assets/audio/
+backend.zip
+*.db
+*.sqlite3

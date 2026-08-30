@@ -123,6 +123,24 @@ def create_tables():
             "ALTER TABLE annaprasada_bookings ADD COLUMN mobile TEXT"
         )
 
+    # --------------------------------------------
+    # Migration: adults/children breakdown, per the
+    # committee's request - the coupon/QR still shows
+    # the TOTAL members count as before, but this lets
+    # the committee separately track adult vs child
+    # counts (e.g. for food-quantity planning).
+    # --------------------------------------------
+
+    if "adults" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN adults TEXT"
+        )
+
+    if "children" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN children TEXT"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS donations(
@@ -345,7 +363,7 @@ def check_duplicate_competition_registration(name, block, flat_number, competiti
 # Save Annaprasada Booking
 # ============================================
 
-def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None):
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None, adults=None, children=None):
 
     conn = get_connection()
 
@@ -367,11 +385,15 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         booking_group_id,
 
-        mobile
+        mobile,
+
+        adults,
+
+        children
 
     )
 
-    VALUES(?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -387,7 +409,11 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         booking_group_id,
 
-        mobile
+        mobile,
+
+        adults,
+
+        children
 
     ))
 
@@ -536,10 +562,6 @@ def serve_annaprasada_members(coupon_id, count_to_serve):
         "total_members": total_members,
         "remaining": total_members - new_served_count
     }
-
-    conn.commit()
-
-    conn.close()
 
 
 # ============================================
