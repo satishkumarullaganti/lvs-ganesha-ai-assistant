@@ -15,6 +15,16 @@ def generate_receipt_id():
     return "DN" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
 
 
+def generate_register_receipt_id():
+    """
+    Separate prefix (RG instead of DN) for donations entered
+    via the security-desk register scan, so admins can tell
+    at a glance in the dashboard/exports which donations came
+    in online vs. were collected in-person and scanned later.
+    """
+    return "RG" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
+
+
 # ==========================================
 # Donation Service
 # ==========================================
@@ -433,6 +443,66 @@ May Lord Ganesha bless you and your family. 🙏
         # upload via the separate /donation/upload-proof
         # route), since both call this shared function.
         return (response, donation['name'])
+
+    # ========================================
+    # Save a donation collected in-person at the
+    # security desk register (not via chat flow)
+    # ========================================
+    # Used by the admin register-scan feature: an
+    # admin uploads a photo of the register page,
+    # OCR/vision extracts rows, the admin reviews
+    # and corrects them, and each confirmed row is
+    # saved through this method - reusing the exact
+    # same save + receipt + WhatsApp path as an
+    # online donation, just without a UTR/screenshot.
+    # Always saves with status="pending", matching
+    # the online flow (verification is a separate,
+    # later admin step either way).
+    # ========================================
+
+    def save_register_donation(self, name, block, flat_number, amount, mobile=None):
+
+        receipt_id = generate_register_receipt_id()
+
+        save_donation(
+            receipt_id=receipt_id,
+            name=name,
+            flat_number=flat_number,
+            amount=str(amount),
+            utr_number=None,
+            proof_image_path=None,
+            status="pending",
+            block=block,
+            mobile=mobile
+        )
+
+        receipt_path = generate_receipt_pdf(
+            receipt_id=receipt_id,
+            name=name,
+            flat_number=flat_number,
+            amount=str(amount),
+            utr_number=None,
+            proof_uploaded=False,
+            status="pending",
+            block=block
+        )
+
+        whatsapp_sent = False
+
+        if mobile:
+            whatsapp_sent = send_donation_confirmation(
+                name=name,
+                amount=str(amount),
+                receipt_id=receipt_id,
+                receipt_pdf_path=receipt_path,
+                mobile_number=mobile
+            )
+
+        return {
+            "receipt_id": receipt_id,
+            "receipt_path": receipt_path,
+            "whatsapp_sent": whatsapp_sent
+        }
 
 
 donation_service = DonationService()

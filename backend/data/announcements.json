@@ -179,7 +179,7 @@
             "id": "afebe336a4",
             "message": "\ud83d\ude4f Ganesha Idol Donor \ud83d\ude4f\ud83c\udf3a Mr. Bangaru Ramesh \ud83c\udf3a",
             "type": "reminder",
-            "active": true,
+            "active": false,
             "created_at": "2026-08-26T04:05:44.795576+00:00"
         },
         {
@@ -202,6 +202,20 @@
             "type": "reminder",
             "active": true,
             "created_at": "2026-08-27T06:33:53.150081+00:00"
+        },
+        {
+            "id": "3a533042cb",
+            "message": "All volunteers please gather at partyhall",
+            "type": "urgent",
+            "active": true,
+            "created_at": "2026-08-30T05:54:59.621834+00:00"
+        },
+        {
+            "id": "e987c8d9bd",
+            "message": "Annaprasada distribution starts at 07:30 PM today",
+            "type": "info",
+            "active": true,
+            "created_at": "2026-08-30T05:55:31.871241+00:00"
         }
     ]
 }

@@ -1282,27 +1282,21 @@ function loadAnnouncements() {
                 return;
             }
 
-            const hasUrgent = announcements.some(function (a) {
-                return a.type === "urgent";
-            });
-
-            const hasReminder = announcements.some(function (a) {
-                return a.type === "reminder";
-            });
-
-            // Urgent takes priority for the overall banner color
-            // if a mix of types is active at once.
-            banner.classList.toggle("has-urgent", hasUrgent);
-            banner.classList.toggle("has-reminder", !hasUrgent && hasReminder);
-
             const tickerItems = announcements.map(function (announcement) {
 
                 let icon = "📢";
-                if (announcement.type === "urgent") icon = "🚨";
-                else if (announcement.type === "reminder") icon = "🔔";
+                let typeClass = "type-info";
+
+                if (announcement.type === "urgent") {
+                    icon = "🚨";
+                    typeClass = "type-urgent";
+                } else if (announcement.type === "reminder") {
+                    icon = "🔔";
+                    typeClass = "type-reminder";
+                }
 
                 return (
-                    '<span class="ticker-item">' +
+                    '<span class="ticker-item ' + typeClass + '">' +
                     icon + " " + announcement.message +
                     "</span>"
                 );

@@ -875,6 +875,15 @@
 
             </button>
 
+
+            <button
+                class="tab"
+                data-type="register-scan">
+
+                📷 Register Scan
+
+            </button>
+
         </div>
 
 
@@ -972,6 +981,86 @@
 
         </div>
 
+
+
+        <div id="register-scan-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">📷 Scan Donation Register</h3>
+
+                <p style="color:#777;font-size:14px;margin-top:0;">
+                    Upload a photo of the security desk register page.
+                    Extracted entries will appear below for you to review
+                    and correct before saving.
+                </p>
+
+                <input
+                    type="file"
+                    id="register-scan-file-input"
+                    accept="image/*"
+                    style="margin-bottom:12px;"
+                >
+
+                <br>
+
+                <button
+                    id="register-scan-upload-btn"
+                    onclick="scanRegisterImage()"
+                    style="background:#ff9800;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                    🔍 Scan Register
+                </button>
+
+                <span id="register-scan-status" style="margin-left:12px;font-size:14px;"></span>
+
+            </div>
+
+            <div id="register-scan-review-container" style="display:none;background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">Review Extracted Entries</h3>
+
+                <p style="color:#777;font-size:14px;">
+                    Rows highlighted in red have an invalid flat number or
+                    missing data - please check and correct them before saving.
+                </p>
+
+                <div style="overflow-x:auto;">
+
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+
+                        <thead>
+                            <tr style="background:#fdf3e7;text-align:left;">
+                                <th style="padding:10px;border:1px solid #eee;">Name</th>
+                                <th style="padding:10px;border:1px solid #eee;">Block</th>
+                                <th style="padding:10px;border:1px solid #eee;">Flat No</th>
+                                <th style="padding:10px;border:1px solid #eee;">Mobile</th>
+                                <th style="padding:10px;border:1px solid #eee;">Amount (₹)</th>
+                                <th style="padding:10px;border:1px solid #eee;">Remove</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="register-scan-rows-body">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div style="margin-top:16px;">
+
+                    <button
+                        onclick="confirmRegisterDonations()"
+                        style="background:#4caf50;color:white;border:none;border-radius:8px;padding:12px 26px;font-size:15px;font-weight:bold;cursor:pointer;">
+                        ✅ Confirm &amp; Save All
+                    </button>
+
+                    <span id="register-scan-confirm-status" style="margin-left:14px;font-size:14px;"></span>
+
+                </div>
+
+            </div>
+
+        </div>
 
     </section>
 
@@ -1842,20 +1931,30 @@ document
                     const tableContainer = document.getElementById("table-container");
                     const toolbar = document.querySelector(".toolbar");
                     const announcementsPanel = document.getElementById("announcements-panel");
+                    const registerScanPanel = document.getElementById("register-scan-panel");
 
                     if (this.dataset.type === "announcements") {
 
                         tableContainer.style.display = "none";
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "block";
+                        registerScanPanel.style.display = "none";
 
                         loadAnnouncementsAdminList();
+
+                    } else if (this.dataset.type === "register-scan") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "block";
 
                     } else {
 
                         tableContainer.style.display = "block";
                         if (toolbar) toolbar.style.display = "flex";
                         announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
 
                         loadTable(
                             this.dataset.type
@@ -2244,6 +2343,199 @@ function showError(
     error.style.display =
         "block";
 
+}
+
+
+/* ==========================================
+   REGISTER SCAN (OCR) MANAGEMENT
+========================================== */
+
+const BLOCK_OPTIONS = ["South", "North", "Terrace"];
+
+async function scanRegisterImage() {
+
+    const fileInput = document.getElementById("register-scan-file-input");
+    const statusEl = document.getElementById("register-scan-status");
+    const reviewContainer = document.getElementById("register-scan-review-container");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        statusEl.textContent = "❌ Please choose a photo first.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    statusEl.textContent = "⏳ Scanning... this may take a few seconds.";
+    statusEl.style.color = "#777";
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+
+        const response = await fetch("/admin/register/scan", {
+            method: "POST",
+            credentials: "include",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Scan failed.");
+        }
+
+        if (!data.extracted_rows || data.extracted_rows.length === 0) {
+            statusEl.textContent = "⚠️ No entries could be read from this photo. Try a clearer image.";
+            statusEl.style.color = "#c62828";
+            reviewContainer.style.display = "none";
+            return;
+        }
+
+        statusEl.textContent = `✅ Extracted ${data.row_count} entr${data.row_count === 1 ? "y" : "ies"}. Review below.`;
+        statusEl.style.color = "#2e7d32";
+
+        renderRegisterScanRows(data.extracted_rows);
+        reviewContainer.style.display = "block";
+
+    } catch (error) {
+
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+function renderRegisterScanRows(rows) {
+
+    const tbody = document.getElementById("register-scan-rows-body");
+    tbody.innerHTML = "";
+
+    rows.forEach((row, index) => {
+
+        const tr = document.createElement("tr");
+        tr.dataset.rowIndex = index;
+
+        const isInvalid = row.flat_valid === false
+            || !row.name || !row.block || !row.flat_number || !row.amount;
+
+        if (isInvalid) {
+            tr.style.background = "#ffebee";
+        }
+
+        const blockOptionsHtml = BLOCK_OPTIONS.map(b =>
+            `<option value="${b}" ${row.block === b ? "selected" : ""}>${b}</option>`
+        ).join("");
+
+        tr.innerHTML = `
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.name || ""}" data-field="name"
+                    style="width:130px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <select data-field="block" style="padding:6px;border:1px solid #ccc;border-radius:6px;">
+                    <option value="">--</option>
+                    ${blockOptionsHtml}
+                </select>
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.flat_number || ""}" data-field="flat_number"
+                    style="width:80px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.mobile || ""}" data-field="mobile"
+                    style="width:110px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="number" value="${row.amount || ""}" data-field="amount"
+                    style="width:90px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <button onclick="this.closest('tr').remove()"
+                    style="background:#e57373;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
+                    ✕
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function confirmRegisterDonations() {
+
+    const tbody = document.getElementById("register-scan-rows-body");
+    const confirmStatusEl = document.getElementById("register-scan-confirm-status");
+    const rowElements = tbody.querySelectorAll("tr");
+
+    if (rowElements.length === 0) {
+        confirmStatusEl.textContent = "❌ No rows to save.";
+        confirmStatusEl.style.color = "#c62828";
+        return;
+    }
+
+    const rows = [];
+
+    rowElements.forEach(tr => {
+
+        const getVal = (field) =>
+            tr.querySelector(`[data-field="${field}"]`).value.trim();
+
+        rows.push({
+            name: getVal("name"),
+            block: getVal("block"),
+            flat_number: getVal("flat_number"),
+            mobile: getVal("mobile") || null,
+            amount: getVal("amount")
+        });
+    });
+
+    confirmStatusEl.textContent = "⏳ Saving...";
+    confirmStatusEl.style.color = "#777";
+
+    try {
+
+        const response = await fetch("/admin/register/confirm", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rows)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Save failed.");
+        }
+
+        confirmStatusEl.textContent =
+            `✅ Saved ${data.saved_count} of ${data.total_count} entries.`;
+        confirmStatusEl.style.color = "#2e7d32";
+
+        data.results.forEach((result, index) => {
+
+            const tr = tbody.querySelector(`tr[data-row-index="${index}"]`);
+
+            if (result.success) {
+                if (tr) tr.remove();
+            } else {
+                if (tr) {
+                    tr.style.background = "#ffebee";
+                    tr.title = result.error;
+                }
+            }
+        });
+
+        if (data.saved_count === data.total_count) {
+
+            document.getElementById("register-scan-review-container").style.display = "none";
+            document.getElementById("register-scan-file-input").value = "";
+            document.getElementById("register-scan-status").textContent = "";
+        }
+
+    } catch (error) {
+
+        confirmStatusEl.textContent = "❌ " + error.message;
+        confirmStatusEl.style.color = "#c62828";
+    }
 }
 
 

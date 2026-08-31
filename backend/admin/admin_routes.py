@@ -1,11 +1,14 @@
 import os
 import secrets
 import hmac
+import uuid
 
 from fastapi import (
     APIRouter,
     HTTPException,
-    Request
+    Request,
+    UploadFile,
+    File
 )
 
 from fastapi.responses import (
@@ -31,6 +34,10 @@ from backend.database.database import (
     log_admin_activity,
     get_recent_activity_log
 )
+
+from backend.register_ocr_service import extract_register_rows
+from backend.validators import validate_flat_number
+from backend.donation_service import donation_service
 
 # ============================================
 # Admin Router
@@ -344,6 +351,135 @@ def donations(
     return {
         "columns": columns,
         "data": rows
+    }
+
+
+# ============================================
+# Register Scan (OCR-assisted donation entry)
+# ============================================
+# Admin uploads a photo of the security-desk
+# donation register. Gemini vision extracts
+# rows, the admin reviews/corrects them in the
+# frontend, then confirmed rows are saved
+# through the exact same save + receipt +
+# WhatsApp path as an online donation - just
+# without a UTR/screenshot, and always as
+# "pending" status like the online flow.
+# ============================================
+
+REGISTER_SCANS_DIR = "static/register_scans"
+os.makedirs(REGISTER_SCANS_DIR, exist_ok=True)
+
+
+@router.post("/register/scan")
+async def admin_scan_register(
+    request: Request,
+    file: UploadFile = File(...)
+):
+
+    require_admin(request)
+
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.join(REGISTER_SCANS_DIR, unique_filename)
+
+    contents = await file.read()
+
+    with open(save_path, "wb") as f:
+        f.write(contents)
+
+    extracted_rows = extract_register_rows(save_path)
+
+    # Flag rows that fail existing flat-number validation
+    # so the admin's eye goes straight to likely OCR errors.
+    for row in extracted_rows:
+
+        block = row.get("block")
+        flat_number = row.get("flat_number")
+
+        if block and flat_number:
+            row["flat_valid"] = validate_flat_number(block, flat_number)
+        else:
+            row["flat_valid"] = False
+
+    return {
+        "extracted_rows": extracted_rows,
+        "row_count": len(extracted_rows)
+    }
+
+
+@router.post("/register/confirm")
+async def admin_confirm_register_donations(
+    request: Request,
+    rows: list[dict]
+):
+
+    require_admin(request)
+
+    results = []
+
+    for row in rows:
+
+        name = (row.get("name") or "").strip()
+        block = row.get("block")
+        flat_number = (row.get("flat_number") or "").strip()
+        amount = row.get("amount")
+        mobile = row.get("mobile")
+
+        if not name or not block or not flat_number or not amount:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Missing required field (name, block, flat_number, or amount)."
+            })
+            continue
+
+        if not validate_flat_number(block, flat_number):
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": f"Invalid flat number '{flat_number}' for {block} block."
+            })
+            continue
+
+        try:
+
+            result = donation_service.save_register_donation(
+                name=name,
+                block=block,
+                flat_number=flat_number,
+                amount=amount,
+                mobile=mobile
+            )
+
+            results.append({
+                "row": row,
+                "success": True,
+                "receipt_id": result["receipt_id"],
+                "whatsapp_sent": result["whatsapp_sent"]
+            })
+
+        except Exception as error:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": str(error)
+            })
+
+    saved_count = sum(1 for r in results if r["success"])
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "register_scan_confirmed",
+        f"Saved {saved_count}/{len(rows)} register-scanned donations"
+    )
+
+    return {
+        "results": results,
+        "saved_count": saved_count,
+        "total_count": len(rows)
     }
 
 
