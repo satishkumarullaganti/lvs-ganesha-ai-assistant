@@ -32,7 +32,8 @@ from backend.database.database import (
     verify_admin_password,
     get_admin_user_by_username,
     log_admin_activity,
-    get_recent_activity_log
+    get_recent_activity_log,
+    change_admin_password
 )
 
 from backend.register_ocr_service import extract_register_rows
@@ -92,6 +93,12 @@ class AdminLoginRequest(BaseModel):
 
     username: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+
+    old_password: str
+    new_password: str
 
 
 # ============================================
@@ -230,6 +237,60 @@ def admin_logout(
     )
 
     return result
+
+
+# ============================================
+# Change Own Password
+# ============================================
+# Lets any logged-in individual admin (not the single
+# shared .env fallback account) update their own password
+# without needing server access. Requires the current
+# password to be re-entered as confirmation.
+# ============================================
+
+@router.post("/change-password")
+def admin_change_password(
+    request: Request,
+    body: ChangePasswordRequest
+):
+
+    require_admin(request)
+
+    current_username = get_current_admin_username(request)
+
+    # The single shared .env-based fallback account has no
+    # row in admin_users, so there's nothing to update for it.
+    if current_username == ADMIN_USERNAME:
+
+        raise HTTPException(
+            status_code=400,
+            detail="This account's password is set in the server's "
+                   "environment file and can't be changed here. "
+                   "Please contact whoever manages the server."
+        )
+
+    if len(body.new_password) < 8:
+
+        raise HTTPException(
+            status_code=400,
+            detail="New password must be at least 8 characters long."
+        )
+
+    if not verify_admin_password(current_username, body.old_password):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Current password is incorrect."
+        )
+
+    change_admin_password(current_username, body.new_password)
+
+    log_admin_activity(current_username, "changed_own_password")
+
+    return {
+        "success": True,
+        "message": "Password updated successfully."
+    }
 
 
 # ============================================

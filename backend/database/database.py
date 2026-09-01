@@ -1289,7 +1289,27 @@ def add_admin_user(name, username, password):
 
     conn.commit()
     conn.close()
+def change_admin_password(username, new_password):
+    """
+    Updates an existing admin user's password. Generates a
+    fresh salt (never reuses the old one) and re-hashes the
+    new password with it, same as add_admin_user does on
+    creation.
+    """
 
+    password_hash, salt = _hash_password(new_password)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE admin_users
+        SET password_hash = ?, password_salt = ?
+        WHERE username = ?
+    """, (password_hash, salt, username))
+
+    conn.commit()
+    conn.close()
 
 def get_admin_user_by_username(username):
 
@@ -1351,4 +1371,4 @@ def get_recent_activity_log(limit=100):
     rows = cursor.fetchall()
     conn.close()
 
-    return rows
+    return rows 
