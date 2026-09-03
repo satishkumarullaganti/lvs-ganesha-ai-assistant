@@ -1310,7 +1310,72 @@ def change_admin_password(username, new_password):
 
     conn.commit()
     conn.close()
+# ============================================
+# Add this function to backend/database/database.py,
+# anywhere near your other lookup-style functions.
+# ============================================
 
+def find_known_resident(mobile):
+    """
+    Looks up a mobile number across every table that captures
+    name/block/flat, to support the "remember me" flow - if a
+    resident has donated, registered, or booked Annaprasada
+    before, we can skip re-asking their name/block/flat next
+    time and just confirm it instead.
+
+    Checks tables in this order and returns the FIRST match
+    found (most recently added tables checked first, since
+    those are more likely to have current/correct details):
+    donations, registrations, cultural_registrations,
+    annaprasada_bookings.
+
+    Returns a dict {"name": ..., "block": ..., "flat_number": ...}
+    if found, or None if this mobile number has never been used
+    before anywhere in the system.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    tables_to_check = [
+        ("donations", "name", "block", "flat_number", "mobile"),
+        ("registrations", "name", "block", "flat_number", "mobile"),
+        ("cultural_registrations", "name", "block", "flat_number", "mobile"),
+        ("annaprasada_bookings", "name", "block", "flat_number", "mobile"),
+    ]
+
+    for table, name_col, block_col, flat_col, mobile_col in tables_to_check:
+
+        try:
+
+            cursor.execute(f"""
+                SELECT {name_col}, {block_col}, {flat_col}
+                FROM {table}
+                WHERE {mobile_col} = ?
+                ORDER BY id DESC
+                LIMIT 1
+            """, (mobile,))
+
+            row = cursor.fetchone()
+
+            if row and row[0] and row[1] and row[2]:
+
+                conn.close()
+
+                return {
+                    "name": row[0],
+                    "block": row[1],
+                    "flat_number": row[2]
+                }
+
+        except Exception:
+            # Table/column might not exist in some older DBs -
+            # skip it rather than crash the whole lookup.
+            continue
+
+    conn.close()
+
+    return None
 def get_admin_user_by_username(username):
 
     conn = get_connection()

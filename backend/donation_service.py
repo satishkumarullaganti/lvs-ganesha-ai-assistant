@@ -5,7 +5,7 @@ import urllib.parse
 
 from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
 from backend.qr_service import generate_qr_code
-from backend.database.database import save_donation
+from backend.database.database import save_donation, find_known_resident
 from backend.receipt_service import generate_receipt_pdf
 from backend.whatsapp_service import send_donation_confirmation
 from backend.validators import validate_flat_number
@@ -28,16 +28,26 @@ def generate_register_receipt_id():
 # ==========================================
 # Donation Service
 # ==========================================
-# IMPORTANT: This service is now SESSION-AWARE.
+# IMPORTANT: This service is SESSION-AWARE.
 # Every method takes a session_id, and donation
 # state is stored per-session, not shared across
 # every visitor.
+#
+# UPDATED FLOW: mobile number is now asked FIRST
+# (instead of last). If that number matches a
+# previous donation/registration/booking anywhere
+# in the system, we greet the resident by name and
+# confirm their known block/flat instead of asking
+# again - only the amount still needs to be entered.
+# If the number is new, the flow continues exactly
+# as before (name, block, flat, mobile already have
+# it, then amount).
 # ==========================================
 
 class DonationService:
 
     def __init__(self):
-        # session_id -> {"active": bool, "step": int, "donation": dict}
+        # session_id -> {"active": bool, "step": int|str, "donation": dict}
         self.sessions = {}
 
     def _get_session(self, session_id):
@@ -68,7 +78,7 @@ class DonationService:
 
         self.sessions[session_id] = {
             "active": True,
-            "step": 1,
+            "step": "mobile",
             "donation": {}
         }
 
@@ -77,7 +87,7 @@ class DonationService:
 
 Every contribution helps make this Ganesh festival memorable for our community.
 
-👤 Please enter your Name.
+📱 Please enter your Mobile Number to get started.
 
 (Type 'cancel' anytime to stop.)
 """
@@ -86,7 +96,65 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
         session = self._get_session(session_id)
 
-        # Step 1 - Name
+        # --------------------------------------------
+        # Step: Mobile (asked FIRST now)
+        # --------------------------------------------
+        if session["step"] == "mobile":
+
+            mobile_input = message.strip()
+
+            if not mobile_input.isdigit() or len(mobile_input) != 10:
+                return "❌ Please enter a valid 10-digit mobile number."
+
+            session["donation"]["mobile"] = mobile_input
+
+            known = find_known_resident(mobile_input)
+
+            if known:
+
+                session["donation"]["name"] = known["name"]
+                session["donation"]["block"] = known["block"]
+                session["donation"]["flat_number"] = known["flat_number"]
+                session["step"] = "confirm_known"
+
+                return (
+                    f"👋 Welcome back, {known['name']}!\n\n"
+                    f"🏢 Block: {known['block']}\n"
+                    f"🏠 Flat: {known['flat_number']}\n\n"
+                    "Is this still correct? (Yes / No)"
+                )
+
+            session["step"] = 1
+
+            return "👤 Please enter your Name."
+
+        # --------------------------------------------
+        # Step: Confirm known details
+        # --------------------------------------------
+        if session["step"] == "confirm_known":
+
+            answer = message.strip().lower()
+
+            if answer in ["yes", "y", "correct", "yeah", "yep"]:
+
+                session["step"] = 5
+
+                return "💰 Please enter the amount you wish to donate (₹)."
+
+            if answer in ["no", "n", "nope"]:
+
+                # Details have changed - fall back to asking
+                # everything fresh, same as a new resident.
+                session["donation"]["name"] = None
+                session["donation"]["block"] = None
+                session["donation"]["flat_number"] = None
+                session["step"] = 1
+
+                return "No problem! 👤 Please enter your Name."
+
+            return "❌ Please reply Yes or No."
+
+        # Step 1 - Name (only reached for new/unrecognized residents)
         if session["step"] == 1:
 
             session["donation"]["name"] = message.strip()
@@ -126,8 +194,6 @@ Every contribution helps make this Ganesh festival memorable for our community.
             original_flat = message.strip()
             block = session["donation"]["block"]
 
-            # Allow optional prefixes such as S004/N008, mirroring
-            # the same cleanup used in the main registration flow.
             flat = (
                 original_flat.upper()
                     .replace("SOUTH", "")
@@ -158,23 +224,6 @@ Every contribution helps make this Ganesh festival memorable for our community.
                 )
 
             session["donation"]["flat_number"] = flat
-            session["step"] = 4
-
-            return (
-                "📱 Please enter your Mobile Number "
-                "(so we can send your receipt on WhatsApp too)."
-            )
-
-        # Step 4 - Mobile Number
-        elif session["step"] == 4:
-
-            mobile_input = message.strip()
-
-            if not mobile_input.isdigit() or len(mobile_input) != 10:
-
-                return "❌ Please enter a valid 10-digit mobile number."
-
-            session["donation"]["mobile"] = mobile_input
             session["step"] = 5
 
             return "💰 Please enter the amount you wish to donate (₹)."
@@ -183,21 +232,6 @@ Every contribution helps make this Ganesh festival memorable for our community.
         elif session["step"] == 5:
 
             raw_amount = message.strip()
-
-            # --------------------------------------------
-            # Amount validation
-            # --------------------------------------------
-            # Without this, non-numeric input (e.g. "abc")
-            # silently produces a broken UPI QR with no
-            # pre-filled amount and a nonsensical "Please
-            # pay ₹abc" message - and zero/negative amounts
-            # would otherwise sail through untouched too.
-            #
-            # Reject a leading minus sign explicitly BEFORE
-            # stripping non-digit characters - otherwise
-            # "-500" would have its "-" silently stripped
-            # and be treated as a valid positive 500.
-            # --------------------------------------------
 
             if raw_amount.strip().startswith("-"):
 
@@ -230,22 +264,12 @@ Every contribution helps make this Ganesh festival memorable for our community.
                     "for large donations."
                 )
 
-            # Store as a clean integer/decimal string (not the raw
-            # typed text) so the confirmation message and receipt
-            # always show a sane, correctly formatted amount.
             if amount_value == int(amount_value):
                 session["donation"]["amount"] = str(int(amount_value))
             else:
                 session["donation"]["amount"] = str(amount_value)
 
             session["step"] = 6
-
-            # -----------------------------------------
-            # Build a real UPI payment deep link so the
-            # QR actually opens a pre-filled payment
-            # screen in GPay/PhonePe/any UPI app, instead
-            # of encoding a meaningless tracking string.
-            # -----------------------------------------
 
             payee_name = "LVS Excellency Ganesha Festival"
             flat_number = session["donation"]["flat_number"]
@@ -309,12 +333,6 @@ once a screenshot is attached.
 
             digit_count = sum(ch.isdigit() for ch in utr_number)
 
-            # Real UPI UTR/RRN numbers are almost entirely digits
-            # (typically 12 digits, sometimes with a couple of
-            # letters for certain bank formats). Require the
-            # string to be mostly numeric so plain words like
-            # "donation" or "paid" can't slip through as a fake
-            # reference number.
             is_valid_utr = (
                 utr_number.isalnum()
                 and 9 <= len(utr_number) <= 25
@@ -339,8 +357,6 @@ once a screenshot is attached.
 
     # ========================================
     # Finalize with an uploaded screenshot
-    # (called from the /donation/upload-proof
-    # route instead of the normal chat flow)
     # ========================================
 
     def finalize_with_screenshot(self, session_id, proof_image_path):
@@ -437,27 +453,11 @@ May Lord Ganesha bless you and your family. 🙏
             "donation": {}
         }
 
-        # Tuple return so main.py can detect success and
-        # trigger the Ganesha thank-you popup - covers BOTH
-        # completion paths (typed UTR via chat, and screenshot
-        # upload via the separate /donation/upload-proof
-        # route), since both call this shared function.
         return (response, donation['name'])
 
     # ========================================
     # Save a donation collected in-person at the
     # security desk register (not via chat flow)
-    # ========================================
-    # Used by the admin register-scan feature: an
-    # admin uploads a photo of the register page,
-    # OCR/vision extracts rows, the admin reviews
-    # and corrects them, and each confirmed row is
-    # saved through this method - reusing the exact
-    # same save + receipt + WhatsApp path as an
-    # online donation, just without a UTR/screenshot.
-    # Always saves with status="pending", matching
-    # the online flow (verification is a separate,
-    # later admin step either way).
     # ========================================
 
     def save_register_donation(self, name, block, flat_number, amount, mobile=None):
