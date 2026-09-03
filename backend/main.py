@@ -768,7 +768,19 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
         for hint in DONATION_QUESTION_HINTS
     )
 
-    if "donation" in lower_message_donation_check and not looks_like_donation_question:
+    # Matches "donate", "donating", "donation", "donations",
+    # and "contribute"/"contributing"/"contribution" - not
+    # just the exact word "donation", so natural phrasing
+    # like "need to donate" or "want to contribute" also
+    # triggers the flow correctly.
+    DONATION_TRIGGER_WORDS = ["donat", "contribut"]
+
+    looks_like_donation_request = any(
+        word in lower_message_donation_check
+        for word in DONATION_TRIGGER_WORDS
+    )
+
+    if looks_like_donation_request and not looks_like_donation_question:
 
         return {
             "response": donation_service.start_donation(session_id)
@@ -825,13 +837,24 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
         "why", "who", "?"
     ]
 
+    # Matches "annaprasada", "coupon"/"coupons", and "book"/
+    # "booking" together with prasadam-related context, so
+    # phrases like "need to book coupons" or "want a coupon"
+    # trigger booking, not just the exact word "annaprasada".
+    ANNAPRASADA_TRIGGER_WORDS = [
+        "annaprasada",
+        "annaprasadam",
+        "prasadam",
+        "coupon"
+    ]
+
     lower_message_check = message.lower()
 
     looks_like_schedule_question = any(
         hint in lower_message_check for hint in INFORMATIONAL_QUESTION_HINTS
     )
 
-    if "annaprasada" in lower_message_check and not looks_like_schedule_question:
+    if any(word in lower_message_check for word in ANNAPRASADA_TRIGGER_WORDS) and not looks_like_schedule_question:
 
         result = annaprasada_service.check_booking_status(session_id)
 
@@ -842,7 +865,33 @@ def chat(chat_request: ChatRequest, request: Request, response: Response):
     # -----------------------------
     # Start / Restart Registration
     # -----------------------------
-    if message.lower().strip() == "register":
+    # Matches "register", "registration", "registering",
+    # and "want to compete"/"competition" - not just the
+    # single exact word "register", so natural phrasing like
+    # "want to register for the competition" also works.
+    REGISTRATION_TRIGGER_WORDS = ["regist", "competition", "compete"]
+
+    lower_message_registration_check = message.lower()
+
+    looks_like_registration_request = any(
+        word in lower_message_registration_check
+        for word in REGISTRATION_TRIGGER_WORDS
+    )
+
+    # Same question-hint pattern as donation/annaprasada above,
+    # so "what competitions are there" or "when does
+    # registration close" goes to RAG, not the signup flow.
+    REGISTRATION_QUESTION_HINTS = [
+        "what", "when", "how", "is there", "are there",
+        "does", "why", "who", "which", "?"
+    ]
+
+    looks_like_registration_question = any(
+        hint in lower_message_registration_check
+        for hint in REGISTRATION_QUESTION_HINTS
+    )
+
+    if looks_like_registration_request and not looks_like_registration_question:
         # Always start a fresh registration session
 
         return {
