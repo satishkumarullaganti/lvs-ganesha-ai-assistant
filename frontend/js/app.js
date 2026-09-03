@@ -705,6 +705,12 @@ async function sendMessage() {
         // -----------------------------
         // AI Response
         // -----------------------------
+        const speechSafeText = data.response
+            .replace(/<[^>]*>/g, " ")   // strip HTML tags before reading aloud
+            .replace(/[🙏🪔🎉🏆👤🏢🏠📱💰🔎🧾⏳📥✅❌📆🕒📍🎂👥🎟️👋1️⃣2️⃣3️⃣]/g, "");
+
+        const speakId = "speak-" + Date.now();
+
         chatContainer.innerHTML += `
 
         <div class="bot-message" style="margin-top:20px;">
@@ -717,9 +723,18 @@ async function sendMessage() {
 
             <div class="message">
 
-                <strong>LVS AI Assistant</strong>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <strong>LVS AI Assistant</strong>
+                    <button
+                        type="button"
+                        onclick="speakText(this, ${JSON.stringify(speechSafeText)})"
+                        title="Listen to this answer"
+                        style="background:none;border:none;font-size:18px;cursor:pointer;flex-shrink:0;">
+                        🔊
+                    </button>
+                </div>
 
-                <br><br>
+                <br>
 
                 ${data.response}
 
@@ -1566,3 +1581,170 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 });
+
+/* ==========================================
+   VOICE INPUT (Speech-to-Text)
+========================================== */
+// Uses the browser's built-in Web Speech API - no
+// server calls, no API costs, works entirely on-device.
+// Supported well on Chrome/Edge (desktop + Android).
+// Safari/iOS support is limited, so the mic button is
+// hidden entirely there rather than showing something
+// that silently fails.
+
+let voiceRecognition = null;
+let isListening = false;
+
+function initVoiceRecognition() {
+
+    const SpeechRecognitionAPI =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const micBtn = document.getElementById("mic-btn");
+
+    if (!SpeechRecognitionAPI) {
+        // Not supported on this browser (e.g. Safari/iOS) -
+        // hide the mic button entirely rather than showing
+        // something that won't work.
+        if (micBtn) micBtn.style.display = "none";
+        return;
+    }
+
+    voiceRecognition = new SpeechRecognitionAPI();
+    voiceRecognition.lang = "en-IN";
+    voiceRecognition.continuous = false;
+    voiceRecognition.interimResults = false;
+
+    voiceRecognition.onresult = function (event) {
+
+        const transcript = event.results[0][0].transcript;
+
+        // Fills the text box for the resident to review/edit
+        // before sending - not auto-sent, since a misheard
+        // word (e.g. a flat number) could otherwise submit
+        // wrong data without them noticing.
+        userInput.value = transcript;
+        userInput.focus();
+    };
+
+    voiceRecognition.onerror = function () {
+        stopListeningUI();
+    };
+
+    voiceRecognition.onend = function () {
+        stopListeningUI();
+    };
+}
+
+function stopListeningUI() {
+
+    isListening = false;
+
+    const micBtn = document.getElementById("mic-btn");
+
+    if (micBtn) {
+        micBtn.style.background = "#1976d2";
+        micBtn.innerHTML = "🎤";
+    }
+}
+
+function toggleVoiceInput() {
+
+    if (!voiceRecognition) {
+        initVoiceRecognition();
+    }
+
+    if (!voiceRecognition) {
+        // Still not available after init attempt - browser
+        // doesn't support it.
+        return;
+    }
+
+    const micBtn = document.getElementById("mic-btn");
+
+    if (isListening) {
+
+        voiceRecognition.stop();
+        stopListeningUI();
+        return;
+    }
+
+    isListening = true;
+
+    if (micBtn) {
+        micBtn.style.background = "#c62828";
+        micBtn.innerHTML = "⏹";
+    }
+
+    try {
+        voiceRecognition.start();
+    } catch (error) {
+        // start() throws if called while already running -
+        // safe to ignore, onend will reset the UI shortly.
+        console.warn("Voice recognition start error:", error);
+    }
+}
+
+// Set up on page load so the mic button is hidden early
+// if unsupported, rather than flashing visible then hiding.
+document.addEventListener("DOMContentLoaded", initVoiceRecognition);
+
+
+/* ==========================================
+   VOICE OUTPUT (Text-to-Speech)
+========================================== */
+// Uses the browser's built-in speechSynthesis API - same
+// no-cost, on-device approach as voice input above.
+
+let currentSpeechUtterance = null;
+
+function speakText(buttonElement, text) {
+
+    if (!window.speechSynthesis) {
+        // Not supported on this browser - silently do
+        // nothing rather than showing a broken button.
+        return;
+    }
+
+    // If this exact button is already speaking, tapping it
+    // again stops playback instead of restarting it.
+    if (currentSpeechUtterance && buttonElement.dataset.speaking === "true") {
+
+        window.speechSynthesis.cancel();
+        buttonElement.dataset.speaking = "false";
+        buttonElement.innerHTML = "🔊";
+        currentSpeechUtterance = null;
+        return;
+    }
+
+    // Stop any other response currently being read aloud,
+    // so only one plays at a time.
+    window.speechSynthesis.cancel();
+
+    document.querySelectorAll("[data-speaking='true']").forEach(function (btn) {
+        btn.dataset.speaking = "false";
+        btn.innerHTML = "🔊";
+    });
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-IN";
+    utterance.rate = 0.95;
+
+    utterance.onend = function () {
+        buttonElement.dataset.speaking = "false";
+        buttonElement.innerHTML = "🔊";
+        currentSpeechUtterance = null;
+    };
+
+    utterance.onerror = function () {
+        buttonElement.dataset.speaking = "false";
+        buttonElement.innerHTML = "🔊";
+        currentSpeechUtterance = null;
+    };
+
+    buttonElement.dataset.speaking = "true";
+    buttonElement.innerHTML = "⏸";
+    currentSpeechUtterance = utterance;
+
+    window.speechSynthesis.speak(utterance);
+}
