@@ -118,10 +118,15 @@ Every contribution helps make this Ganesh festival memorable for our community.
                 session["step"] = "confirm_known"
 
                 return (
-                    f"👋 Welcome back, {known['name']}!\n\n"
+                    f"👋 Welcome back!\n\n"
+                    f"This number is linked to:\n"
+                    f"👤 {known['name']}\n"
                     f"🏢 Block: {known['block']}\n"
                     f"🏠 Flat: {known['flat_number']}\n\n"
-                    "Is this still correct? (Yes / No)"
+                    "Please choose:\n\n"
+                    "1️⃣ Yes, same details\n"
+                    "2️⃣ Different family member, same Block/Flat\n"
+                    "3️⃣ No, everything is different"
                 )
 
             session["step"] = 1
@@ -135,16 +140,29 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
             answer = message.strip().lower()
 
-            if answer in ["yes", "y", "correct", "yeah", "yep"]:
+            # Option 1 - same person, same everything
+            if answer in ["1", "yes", "y", "correct", "yeah", "yep"]:
 
                 session["step"] = 5
 
                 return "💰 Please enter the amount you wish to donate (₹)."
 
-            if answer in ["no", "n", "nope"]:
+            # Option 2 - different family member, same address -
+            # keep block/flat, only ask for the new name
+            if answer in ["2", "different", "family", "family member"]:
 
-                # Details have changed - fall back to asking
-                # everything fresh, same as a new resident.
+                session["donation"]["name"] = None
+                session["step"] = "name_only"
+
+                return (
+                    f"👤 Please enter the Name for this donation "
+                    f"(Block {session['donation']['block']}, "
+                    f"Flat {session['donation']['flat_number']} will stay the same)."
+                )
+
+            # Option 3 - nothing matches, start completely fresh
+            if answer in ["3", "no", "n", "nope"]:
+
                 session["donation"]["name"] = None
                 session["donation"]["block"] = None
                 session["donation"]["flat_number"] = None
@@ -152,7 +170,19 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
                 return "No problem! 👤 Please enter your Name."
 
-            return "❌ Please reply Yes or No."
+            return "❌ Please reply 1, 2, or 3."
+
+        # --------------------------------------------
+        # Step: Name only (Option 2 path - block/flat
+        # already known, just need the new name before
+        # jumping straight to the amount)
+        # --------------------------------------------
+        if session["step"] == "name_only":
+
+            session["donation"]["name"] = message.strip()
+            session["step"] = 5
+
+            return "💰 Please enter the amount you wish to donate (₹)."
 
         # Step 1 - Name (only reached for new/unrecognized residents)
         if session["step"] == 1:
