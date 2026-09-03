@@ -347,11 +347,11 @@ once a screenshot is attached.
 
 <br><br>
 
-<input type="file" id="donation-proof-input" accept="image/*" onchange="enableDonationSubmit(this)" style="margin-bottom:10px;">
+<input type="file" id="donation-proof-input" class="donation-proof-input" accept="image/*" onchange="enableDonationSubmit(this)" style="margin-bottom:10px;">
 
 <br>
 
-<button id="donation-submit-btn" onclick="submitDonationProof()" disabled style="background:#ccc;color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;cursor:not-allowed;">✅ I've Paid</button>
+<button id="donation-submit-btn" class="donation-submit-btn" onclick="submitDonationProof(this)" disabled style="background:#ccc;color:white;border:none;border-radius:10px;padding:12px 24px;font-size:15px;cursor:not-allowed;">✅ I've Paid</button>
 
 <p style="font-size:13px;color:#888;margin-top:12px;">Prefer not to upload? Type your UPI Transaction Reference Number (UTR) below instead.</p>
 """

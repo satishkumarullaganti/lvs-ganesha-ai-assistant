@@ -8,7 +8,11 @@ from backend.config import (
     PUBLIC_BASE_URL
 )
 from backend.qr_service import generate_qr_code
-from backend.database.database import save_annaprasada_booking, get_total_booked_members_for_flat
+from backend.database.database import (
+    save_annaprasada_booking,
+    get_total_booked_members_for_flat,
+    find_known_resident
+)
 from backend.coupon_image_service import generate_annaprasada_coupon
 from backend.whatsapp_service import send_annaprasada_confirmation
 
@@ -29,10 +33,6 @@ class BookingStatus(Enum):
 def generate_coupon_id(suffix_index=None):
     base = "AP" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
 
-    # When generating several coupons in the same booking
-    # (one per family member), append the loop index so two
-    # coupons created back-to-back in the same request can
-    # never collide, even if the random part happens to match.
     if suffix_index is not None:
         base += f"-{suffix_index}"
 
@@ -42,16 +42,23 @@ def generate_coupon_id(suffix_index=None):
 # ==========================================
 # Annaprasada Service
 # ==========================================
-# IMPORTANT: This service is now SESSION-AWARE.
-# Every method takes a session_id, and booking
-# state is stored per-session, not shared across
-# every visitor.
+# IMPORTANT: This service is session-aware, same as
+# before. UPDATED FLOW: mobile is now asked right
+# after adults/children (instead of last, after
+# name/block/flat). If that number matches a
+# previous donation/registration/booking, we offer
+# three options instead of re-asking every field:
+#   1. Same person, same details
+#   2. Different family member, same Block/Flat
+#   3. Everything is different
+# If the number is new, the flow continues as before
+# (name, block, flat - mobile is already collected).
 # ==========================================
 
 class AnnaprasadaService:
 
     def __init__(self):
-        # session_id -> {"active": bool, "step": int, "booking": dict}
+        # session_id -> {"active": bool, "step": int|str, "booking": dict}
         self.sessions = {}
 
     def _get_session(self, session_id):
@@ -174,10 +181,7 @@ Booking is now OPEN.
                 f"are adults?"
             )
 
-        # Step 2 - Adults (children is computed as the
-        # remainder, not asked separately - this avoids the
-        # "numbers don't add up" problem entirely, since it
-        # can never happen by construction).
+        # Step 2 - Adults
         elif session["step"] == 2:
 
             adults_input = message.strip()
@@ -201,11 +205,95 @@ Booking is now OPEN.
 
             session["booking"]["adults"] = str(adults_count)
             session["booking"]["children"] = str(children_count)
+            session["step"] = "mobile"
+
+            return (
+                "📱 Please enter your Mobile Number "
+                "(so we can send your coupon on WhatsApp too)."
+            )
+
+        # --------------------------------------------
+        # Mobile (asked right after adults/children now)
+        # --------------------------------------------
+        elif session["step"] == "mobile":
+
+            mobile_input = message.strip()
+
+            if not mobile_input.isdigit() or len(mobile_input) != 10:
+                return "❌ Please enter a valid 10-digit mobile number."
+
+            session["booking"]["mobile"] = mobile_input
+
+            known = find_known_resident(mobile_input)
+
+            if known:
+
+                session["booking"]["name"] = known["name"]
+                session["booking"]["block"] = known["block"]
+                session["booking"]["flat_number"] = known["flat_number"]
+                session["step"] = "confirm_known"
+
+                return (
+                    f"👋 Welcome back!\n\n"
+                    f"This number is linked to:\n"
+                    f"👤 {known['name']}\n"
+                    f"🏢 Block: {known['block']}\n"
+                    f"🏠 Flat: {known['flat_number']}\n\n"
+                    "Please choose:\n\n"
+                    "1️⃣ Yes, same details\n"
+                    "2️⃣ Different family member, same Block/Flat\n"
+                    "3️⃣ No, everything is different"
+                )
+
             session["step"] = 3
 
             return "👤 Please enter your Full Name."
 
-        # Step 3 - Name
+        # --------------------------------------------
+        # Confirm known details
+        # --------------------------------------------
+        elif session["step"] == "confirm_known":
+
+            answer = message.strip().lower()
+
+            if answer in ["1", "yes", "y", "correct", "yeah", "yep"]:
+
+                return self._finalize_booking(session_id)
+
+            if answer in ["2", "different", "family", "family member"]:
+
+                session["booking"]["name"] = None
+                session["step"] = "name_only"
+
+                booking = session["booking"]
+
+                return (
+                    f"👤 Please enter the Name for this booking "
+                    f"(Block {booking['block']}, Flat "
+                    f"{booking['flat_number']} will stay the same)."
+                )
+
+            if answer in ["3", "no", "n", "nope"]:
+
+                session["booking"]["name"] = None
+                session["booking"]["block"] = None
+                session["booking"]["flat_number"] = None
+                session["step"] = 3
+
+                return "No problem! 👤 Please enter your Full Name."
+
+            return "❌ Please reply 1, 2, or 3."
+
+        # --------------------------------------------
+        # Name only (Option 2 path)
+        # --------------------------------------------
+        elif session["step"] == "name_only":
+
+            session["booking"]["name"] = message.strip()
+
+            return self._finalize_booking(session_id)
+
+        # Step 3 - Name (new resident, or Option 3 path)
         elif session["step"] == 3:
 
             session["booking"]["name"] = message.strip()
@@ -225,98 +313,76 @@ Booking is now OPEN.
         elif session["step"] == 5:
 
             session["booking"]["flat_number"] = message.strip()
-            session["step"] = 6
 
-            return (
-                "📱 Please enter your Mobile Number "
-                "(so we can send your coupon on WhatsApp too)."
+            return self._finalize_booking(session_id)
+
+    # ========================================
+    # Shared finalize logic - builds the coupon,
+    # saves the booking, sends WhatsApp confirmation.
+    # Called from three different points in the flow
+    # above (full new entry, Option 1 same details,
+    # Option 2 name-only), so this stays in one place
+    # rather than being duplicated three times.
+    # ========================================
+
+    def _finalize_booking(self, session_id):
+
+        session = self._get_session(session_id)
+        booking = session["booking"]
+
+        previously_booked = get_total_booked_members_for_flat(
+            block=booking["block"],
+            flat_number=booking["flat_number"]
+        )
+
+        coupon_id = generate_coupon_id()
+
+        serial_number = save_annaprasada_booking(
+            coupon_id=coupon_id,
+            name=booking["name"],
+            block=booking["block"],
+            flat_number=booking["flat_number"],
+            members=booking["members"],
+            mobile=booking["mobile"],
+            adults=booking["adults"],
+            children=booking["children"]
+        )
+
+        verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
+
+        coupon_path = generate_annaprasada_coupon(
+            coupon_id=coupon_id,
+            serial_number=serial_number,
+            name=booking["name"],
+            members=booking["members"],
+            verify_url=verify_url
+        )
+
+        send_annaprasada_confirmation(
+            name=booking["name"],
+            members=booking["members"],
+            block=booking["block"],
+            flat=booking["flat_number"],
+            coupon_id=coupon_id,
+            coupon_image_path=coupon_path,
+            mobile_number=booking["mobile"]
+        )
+
+        if previously_booked > 0:
+
+            prior_booking_note = (
+                f"\nℹ️ Note: This flat has already booked "
+                f"{previously_booked} Annaprasada coupon(s) "
+                f"previously. This adds {booking['members']} more "
+                f"- if that wasn't intended, please contact a "
+                f"volunteer.\n"
             )
 
-        # Step 6 - Mobile Number
-        elif session["step"] == 6:
+        else:
 
-            mobile_input = message.strip()
+            prior_booking_note = ""
 
-            if not mobile_input.isdigit() or len(mobile_input) != 10:
-
-                return "❌ Please enter a valid 10-digit mobile number."
-
-            session["booking"]["mobile"] = mobile_input
-
-            booking = session["booking"]
-
-            # --------------------------------------------
-            # Informational (non-blocking) note if this
-            # flat has already booked Annaprasada before.
-            # Checked BEFORE saving the new booking, so the
-            # count reflects only prior bookings, not this
-            # one being created right now.
-            # --------------------------------------------
-
-            previously_booked = get_total_booked_members_for_flat(
-                block=booking["block"],
-                flat_number=booking["flat_number"]
-            )
-
-            coupon_id = generate_coupon_id()
-
-            serial_number = save_annaprasada_booking(
-                coupon_id=coupon_id,
-                name=booking["name"],
-                block=booking["block"],
-                flat_number=booking["flat_number"],
-                members=booking["members"],
-                mobile=booking["mobile"],
-                adults=booking["adults"],
-                children=booking["children"]
-            )
-
-            # -----------------------------------------------
-            # IMPORTANT: this URL gets encoded INTO the QR
-            # code itself, so it must be the PUBLIC ngrok/
-            # production URL, not a local IP - otherwise
-            # volunteer phones on different networks can't
-            # reach it.
-            # -----------------------------------------------
-            verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
-
-            # Coupon image is UNCHANGED - still shows the
-            # TOTAL members count only, exactly as before.
-            coupon_path = generate_annaprasada_coupon(
-                coupon_id=coupon_id,
-                serial_number=serial_number,
-                name=booking["name"],
-                members=booking["members"],
-                verify_url=verify_url
-            )
-
-            # WhatsApp confirmation is UNCHANGED too - same
-            # signature/content as before.
-            send_annaprasada_confirmation(
-                name=booking["name"],
-                members=booking["members"],
-                block=booking["block"],
-                flat=booking["flat_number"],
-                coupon_id=coupon_id,
-                coupon_image_path=coupon_path,
-                mobile_number=booking["mobile"]
-            )
-
-            if previously_booked > 0:
-
-                prior_booking_note = (
-                    f"\nℹ️ Note: This flat has already booked "
-                    f"{previously_booked} Annaprasada coupon(s) "
-                    f"previously. This adds {booking['members']} more "
-                    f"- if that wasn't intended, please contact a "
-                    f"volunteer.\n"
-                )
-
-            else:
-
-                prior_booking_note = ""
-
-            response = f"""
+        response = f"""
 🎉 Hi {booking['name']}!
 
 Your Annaprasada Coupon is confirmed.
@@ -344,16 +410,13 @@ scanned again for whoever arrives later, until everyone's counted):
 🙏 Thank you!
 """
 
-            self.sessions[session_id] = {
-                "active": False,
-                "step": 0,
-                "booking": {}
-            }
+        self.sessions[session_id] = {
+            "active": False,
+            "step": 0,
+            "booking": {}
+        }
 
-            # Tuple return (unlike every other step, which returns
-            # plain text) so main.py's /chat handler can detect
-            # success and trigger the Ganesha thank-you popup.
-            return (response, booking['name'])
+        return (response, booking['name'])
 
 
 annaprasada_service = AnnaprasadaService()

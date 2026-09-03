@@ -893,7 +893,27 @@ donationCard.addEventListener("click", function () {
 
 function enableDonationSubmit(inputElement) {
 
-    const submitBtn = document.getElementById("donation-submit-btn");
+    // Find the submit button that belongs to THIS specific
+    // donation message, not just the first one with this ID
+    // anywhere on the page. Since donation messages can be
+    // shown more than once in the same chat session (e.g. a
+    // second donation for a different family member), using
+    // getElementById alone would always grab the very first
+    // one ever rendered, even if it's from an earlier,
+    // already-completed donation. Walking up to the shared
+    // container and querying within it scopes the lookup to
+    // just this message's own button.
+    const container = inputElement.closest(".message, .bot-message, div");
+
+    let submitBtn = container
+        ? container.querySelector(".donation-submit-btn")
+        : null;
+
+    // Fallback for older messages rendered before this fix,
+    // which may still use the plain ID-based button.
+    if (!submitBtn) {
+        submitBtn = document.getElementById("donation-submit-btn");
+    }
 
     if (!submitBtn) return;
 
@@ -913,9 +933,26 @@ function enableDonationSubmit(inputElement) {
 
 }
 
-function submitDonationProof() {
+function submitDonationProof(buttonElement) {
 
-    const inputElement = document.getElementById("donation-proof-input");
+    // Same scoping fix as enableDonationSubmit above - find
+    // the file input that belongs to THIS message's button,
+    // not just the first "donation-proof-input" on the page.
+    let inputElement = null;
+
+    if (buttonElement) {
+
+        const container = buttonElement.closest(".message, .bot-message, div");
+
+        inputElement = container
+            ? container.querySelector(".donation-proof-input")
+            : null;
+    }
+
+    // Fallback for older messages rendered before this fix.
+    if (!inputElement) {
+        inputElement = document.getElementById("donation-proof-input");
+    }
 
     if (!inputElement || !inputElement.files || inputElement.files.length === 0) {
         return;

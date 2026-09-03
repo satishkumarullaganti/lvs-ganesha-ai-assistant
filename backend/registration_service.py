@@ -1,8 +1,25 @@
 # ============================================
 # Registration Service
 # ============================================
+# UPDATED FLOW: mobile number is now asked right
+# after choosing a competition (instead of last).
+# If that number matches a previous donation/
+# registration/booking anywhere in the system, we
+# offer three options instead of re-asking every
+# field:
+#   1. Same person, same details
+#   2. Different family member, same Block/Flat
+#   3. Everything is different
+# If the number is new, the flow continues exactly
+# as before (name, block, flat, then age - mobile
+# is already collected by that point).
+# ============================================
 
-from backend.database.database import save_registration, check_duplicate_competition_registration
+from backend.database.database import (
+    save_registration,
+    check_duplicate_competition_registration,
+    find_known_resident
+)
 from backend.whatsapp_service import send_registration_confirmation
 from backend.validators import validate_flat_number
 
@@ -80,11 +97,94 @@ class RegistrationService:
         if step == "competition":
 
             data["competition"] = message.title()
+            session["step"] = "mobile"
+
+            return "📱 Please enter your Mobile Number."
+
+        # --------------------------------------------
+        # Mobile (asked right after competition now)
+        # --------------------------------------------
+        if step == "mobile":
+
+            mobile_input = message.strip()
+
+            if not mobile_input.isdigit() or len(mobile_input) != 10:
+                return "❌ Please enter a valid 10-digit mobile number."
+
+            data["mobile"] = mobile_input
+
+            known = find_known_resident(mobile_input)
+
+            if known:
+
+                data["name"] = known["name"]
+                data["block"] = known["block"]
+                data["flat_number"] = known["flat_number"]
+                session["step"] = "confirm_known"
+
+                return (
+                    f"👋 Welcome back!\n\n"
+                    f"This number is linked to:\n"
+                    f"👤 {known['name']}\n"
+                    f"🏢 Block: {known['block']}\n"
+                    f"🏠 Flat: {known['flat_number']}\n\n"
+                    "Please choose:\n\n"
+                    "1️⃣ Yes, same details\n"
+                    "2️⃣ Different family member, same Block/Flat\n"
+                    "3️⃣ No, everything is different"
+                )
+
             session["step"] = "name"
 
             return "👤 Please enter your Full Name."
 
-        # Name
+        # --------------------------------------------
+        # Confirm known details
+        # --------------------------------------------
+        if step == "confirm_known":
+
+            answer = message.strip().lower()
+
+            if answer in ["1", "yes", "y", "correct", "yeah", "yep"]:
+
+                session["step"] = "age"
+
+                return "🎂 Enter Age."
+
+            if answer in ["2", "different", "family", "family member"]:
+
+                data["name"] = None
+                session["step"] = "name_only"
+
+                return (
+                    f"👤 Please enter the Name for this registration "
+                    f"(Block {data['block']}, Flat {data['flat_number']} "
+                    f"will stay the same)."
+                )
+
+            if answer in ["3", "no", "n", "nope"]:
+
+                data["name"] = None
+                data["block"] = None
+                data["flat_number"] = None
+                session["step"] = "name"
+
+                return "No problem! 👤 Please enter your Full Name."
+
+            return "❌ Please reply 1, 2, or 3."
+
+        # --------------------------------------------
+        # Name only (Option 2 path)
+        # --------------------------------------------
+        if step == "name_only":
+
+            data["name"] = message.strip()
+            session["step"] = "age"
+
+            return "🎂 Enter Age."
+
+        # Name (only reached for new/unrecognized residents,
+        # or Option 3 - everything different)
         if step == "name":
 
             data["name"] = message
@@ -124,7 +224,6 @@ class RegistrationService:
             original_flat = message.strip()
             flat = message.upper()
 
-            # Allow optional prefixes such as S004/N008.
             flat = (
                 flat.replace("SOUTH", "")
                     .replace("NORTH", "")
@@ -137,9 +236,6 @@ class RegistrationService:
 
             block = data["block"]
 
-            # Central validator:
-            # - exactly 3 digits
-            # - valid range for the selected block
             if not validate_flat_number(block, flat):
 
                 if block == "Terrace":
@@ -159,19 +255,6 @@ class RegistrationService:
                 )
 
             data["flat_number"] = flat
-            session["step"] = "mobile"
-
-            return "📱 Enter Mobile Number."
-
-        # Mobile
-        if step == "mobile":
-
-            message = message.strip()
-
-            if not message.isdigit() or len(message) != 10:
-                return "❌ Please enter a valid 10-digit mobile number."
-
-            data["mobile"] = message
             session["step"] = "age"
 
             return "🎂 Enter Age."
@@ -193,15 +276,6 @@ class RegistrationService:
                 )
 
             data["age"] = age
-
-            # --------------------------------------------
-            # Duplicate competition-entry check
-            # --------------------------------------------
-            # A competition only has one entry per person -
-            # registering for the same competition twice is
-            # always a genuine duplicate, unlike cultural
-            # programs where a second entry can be legitimate.
-            # --------------------------------------------
 
             if check_duplicate_competition_registration(
                 name=data["name"],
@@ -257,14 +331,6 @@ Thank you for registering.
             session["step"] = None
             session["data"] = {}
 
-            # Return a tuple here (unlike every other return point
-            # in this function, which return plain text) so
-            # main.py's /chat handler can detect a successful
-            # completion and trigger the Ganesha thank-you popup
-            # with the registrant's name - the popup can't be
-            # triggered from inside this chat-flow text response
-            # itself, so this is how that signal gets passed
-            # through to the frontend.
             return (summary, data['name'])
 
 
