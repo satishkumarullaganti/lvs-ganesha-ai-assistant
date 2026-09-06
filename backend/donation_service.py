@@ -326,27 +326,29 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 <br><br>
 
-<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
-
-<p style="font-size:13px;color:#888;margin-top:8px;">Tap above to pay directly with GPay, PhonePe, or any UPI app on this phone.</p>
+📷 Scan this QR code with your UPI app's scanner (most reliable):
 
 <br>
 
-📱 UPI ID ({UPI_PAYEE_NAME}) : {UPI_ID}
+<img src="/{upi_qr_path}" style="width:180px;margin-top:6px;border-radius:12px;">
 
-<p style="font-size:13px;color:#888;margin-top:16px;">On a computer? Scan this QR code with your phone's UPI app instead:</p>
+<p style="font-size:13px;color:#888;margin-top:8px;">You can also save this image and scan it from your gallery inside GPay/PhonePe.</p>
 
-<img src="/{upi_qr_path}" style="width:160px;margin-top:6px;border-radius:12px;">
+<br>
+
+📱 Or pay manually to this UPI ID:
+
+<p style="font-size:15px;font-weight:bold;margin:4px 0 12px;">{UPI_PAYEE_NAME} : {UPI_ID}</p>
+
+<p style="font-size:13px;color:#888;margin-top:4px;">On some phones, the button below may show a "Dismiss" screen instead of completing the payment - if that happens, please use the QR code or manual UPI ID above instead.</p>
+
+<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;margin-top:8px;">💳 Try Pay ₹{session['donation']['amount']} Now</a>
 
 <br><br>
 
 🔎 To verify your payment, attach a screenshot of the
 payment success screen. The button below will unlock
 once a screenshot is attached.
-
-<br><br>
-
-<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
 
 <br><br>
 
