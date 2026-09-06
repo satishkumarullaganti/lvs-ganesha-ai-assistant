@@ -33,7 +33,10 @@ from backend.database.database import (
     get_admin_user_by_username,
     log_admin_activity,
     get_recent_activity_log,
-    change_admin_password
+    change_admin_password,
+    add_admin_user,
+    get_all_admin_users,
+    delete_admin_user
 )
 
 from backend.register_ocr_service import extract_register_rows
@@ -75,6 +78,16 @@ admin_sessions = {}
 
 
 # ============================================
+# Active Admin Session -> Section Mapping
+# ============================================
+# None/empty = full admin (sees every section, can
+# edit). A value here restricts that session to VIEW
+# only the matching section, for its whole lifetime.
+
+admin_session_sections = {}
+
+
+# ============================================
 # Get Current Admin Username
 # ============================================
 
@@ -83,6 +96,20 @@ def get_current_admin_username(request: Request):
     session_token = request.cookies.get("admin_session")
 
     return admin_sessions.get(session_token, "unknown")
+
+
+# ============================================
+# Get Current Admin's Assigned Section
+# ============================================
+# None means this session is a full admin (no
+# restriction). A string means it can only view that
+# one section.
+
+def get_current_admin_section(request: Request):
+
+    session_token = request.cookies.get("admin_session")
+
+    return admin_session_sections.get(session_token)
 
 
 # ============================================
@@ -127,6 +154,49 @@ def require_admin(request: Request):
 
 
 # ============================================
+# Verify Section-Restricted View Access
+# ============================================
+# Used on every GET route that only shows ONE section's
+# data. A full admin (no section on their account) can
+# view every section, same as before this feature
+# existed. A section-restricted account is only let
+# through when the section it's assigned matches the
+# section being requested.
+
+def require_section_view(request: Request, section: str):
+
+    require_admin(request)
+
+    account_section = get_current_admin_section(request)
+
+    if account_section and account_section != section:
+        raise HTTPException(
+            status_code=403,
+            detail="Your login does not have access to this section."
+        )
+
+
+# ============================================
+# Verify FULL (non-restricted) Admin Access
+# ============================================
+# Used on anything that changes data, spans multiple
+# sections (e.g. the dashboard, the activity log), or
+# manages other admin accounts. A section-restricted
+# login is always view-only and is blocked here,
+# regardless of which section it's assigned to.
+
+def require_full_admin(request: Request):
+
+    require_admin(request)
+
+    if get_current_admin_section(request):
+        raise HTTPException(
+            status_code=403,
+            detail="Your login is view-only and cannot perform this action."
+        )
+
+
+# ============================================
 # Admin Login
 # ============================================
 
@@ -146,6 +216,7 @@ def admin_login(
 
         user_row = get_admin_user_by_username(credentials.username)
         logged_in_username = user_row[1]  # stored username, correct casing
+        logged_in_section = user_row[4]   # None = full admin
 
     # --------------------------------------------
     # Fall back to the original single shared .env
@@ -161,6 +232,7 @@ def admin_login(
     ):
 
         logged_in_username = ADMIN_USERNAME
+        logged_in_section = None  # the .env fallback account is always full admin
 
     else:
 
@@ -174,6 +246,7 @@ def admin_login(
     )
 
     admin_sessions[session_token] = logged_in_username
+    admin_session_sections[session_token] = logged_in_section
 
     log_admin_activity(logged_in_username, "logged_in")
 
@@ -217,6 +290,11 @@ def admin_logout(
         logged_out_username = admin_sessions.get(session_token, "unknown")
 
         admin_sessions.pop(
+            session_token,
+            None
+        )
+
+        admin_session_sections.pop(
             session_token,
             None
         )
@@ -313,7 +391,9 @@ def auth_status(
     )
 
     return {
-        "authenticated": authenticated
+        "authenticated": authenticated,
+        "username": admin_sessions.get(session_token) if authenticated else None,
+        "section": admin_session_sections.get(session_token) if authenticated else None
     }
 
 
@@ -326,7 +406,7 @@ def dashboard(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     return get_dashboard_summary()
 
@@ -340,7 +420,7 @@ def registrations(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, "registrations")
 
     columns, rows = get_table_data(
         "registrations"
@@ -361,7 +441,7 @@ def cultural(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, "cultural")
 
     columns, rows = get_table_data(
         "cultural"
@@ -382,7 +462,7 @@ def volunteers(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, "volunteers")
 
     columns, rows = get_table_data(
         "volunteers"
@@ -403,7 +483,7 @@ def donations(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, "donations")
 
     columns, rows = get_table_data(
         "donations"
@@ -438,7 +518,7 @@ async def admin_scan_register(
     file: UploadFile = File(...)
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
     save_path = os.path.join(REGISTER_SCANS_DIR, unique_filename)
@@ -474,7 +554,7 @@ async def admin_confirm_register_donations(
     rows: list[dict]
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     results = []
 
@@ -553,7 +633,7 @@ def annaprasada(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, "annaprasada")
 
     columns, rows = get_table_data(
         "annaprasada"
@@ -574,7 +654,7 @@ def export_all(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file()
 
@@ -606,7 +686,7 @@ def export_registrations(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file(
         only_table="registrations"
@@ -641,7 +721,7 @@ def export_cultural(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file(
         only_table="cultural"
@@ -676,7 +756,7 @@ def export_volunteers(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file(
         only_table="volunteers"
@@ -711,7 +791,7 @@ def export_donations(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file(
         only_table="donations"
@@ -746,7 +826,7 @@ def export_annaprasada(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     workbook = create_excel_file(
         only_table="annaprasada"
@@ -781,7 +861,7 @@ def get_single_record(
     request: Request
 ):
 
-    require_admin(request)
+    require_section_view(request, table_name)
 
 
     try:
@@ -824,7 +904,7 @@ async def update_single_record(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     try:
 
@@ -883,7 +963,7 @@ def delete_single_record(
     request: Request
 ):
 
-    require_admin(request)
+    require_full_admin(request)
 
     try:
 
@@ -926,7 +1006,7 @@ def delete_single_record(
 @router.get("/activity-log")
 def activity_log(request: Request):
 
-    require_admin(request)
+    require_full_admin(request)
 
     entries = get_recent_activity_log()
 
@@ -941,3 +1021,132 @@ def activity_log(request: Request):
             for username, action, details, timestamp in entries
         ]
     }
+
+# ============================================
+# Manage Section-Restricted Logins
+# (full admin only)
+# ============================================
+
+AVAILABLE_SECTIONS = [
+    "registrations",
+    "cultural",
+    "volunteers",
+    "donations",
+    "annaprasada",
+    "announcements",
+    "tshirt-orders",
+]
+
+
+class CreateAdminUserRequest(BaseModel):
+
+    name: str
+    username: str
+    password: str
+    section: str = ""   # empty string = full admin
+
+
+@router.get("/users")
+def list_admin_users(request: Request):
+
+    require_full_admin(request)
+
+    rows = get_all_admin_users()
+
+    return {
+        "users": [
+            {
+                "name": name,
+                "username": username,
+                "section": section,
+                "created_at": created_at
+            }
+            for name, username, section, created_at in rows
+        ],
+        "available_sections": AVAILABLE_SECTIONS
+    }
+
+
+@router.post("/users")
+def create_admin_user(body: CreateAdminUserRequest, request: Request):
+
+    require_full_admin(request)
+
+    name = body.name.strip()
+    username = body.username.strip()
+
+    if not name or not username:
+        raise HTTPException(
+            status_code=400,
+            detail="Name and username are required."
+        )
+
+    if len(body.password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long."
+        )
+
+    section = body.section.strip() or None
+
+    if section and section not in AVAILABLE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown section '{section}'."
+        )
+
+    if username.lower() == ADMIN_USERNAME.strip().lower():
+        raise HTTPException(
+            status_code=400,
+            detail="That username is reserved for the server's built-in admin account."
+        )
+
+    if get_admin_user_by_username(username) is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="That username is already taken."
+        )
+
+    add_admin_user(name, username, body.password, section)
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "created_admin_user",
+        f"{username} (section: {section or 'full admin'})"
+    )
+
+    return {"success": True}
+
+
+@router.delete("/users/{username}")
+def remove_admin_user(username: str, request: Request):
+
+    require_full_admin(request)
+
+    if username.strip().lower() == ADMIN_USERNAME.strip().lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete the server's built-in admin account."
+        )
+
+    if username.strip().lower() == get_current_admin_username(request).strip().lower():
+        raise HTTPException(
+            status_code=400,
+            detail="You can't delete the account you're currently logged in as."
+        )
+
+    deleted = delete_admin_user(username)
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Admin user not found."
+        )
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "deleted_admin_user",
+        username
+    )
+
+    return {"success": True}
