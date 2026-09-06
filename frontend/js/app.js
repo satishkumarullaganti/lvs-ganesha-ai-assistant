@@ -92,19 +92,39 @@ const volunteerNameField = document.getElementById("volunteer-reg-name");
 const volunteerBlockField = document.getElementById("volunteer-reg-block");
 const volunteerFlatField = document.getElementById("volunteer-reg-flat");
 const volunteerMobileField = document.getElementById("volunteer-reg-mobile");
-const volunteerOtherCheckbox = document.getElementById("volunteer-other-checkbox");
-const volunteerOtherDetailsField = document.getElementById("volunteer-other-details");
 
-// Show/hide the "Other" details text field based on checkbox state
-volunteerOtherCheckbox.addEventListener("change", function () {
+// ===== Volunteer Registration: auto-fill for a returning resident =====
+let volunteerLastLookedUpMobile = "";
 
-    volunteerOtherDetailsField.style.display = volunteerOtherCheckbox.checked ? "block" : "none";
+async function lookupVolunteerResident() {
+    if (!volunteerMobileField) return;
 
-    if (!volunteerOtherCheckbox.checked) {
-        volunteerOtherDetailsField.value = "";
+    const mobile = volunteerMobileField.value.trim();
+
+    if (!/^\d{10}$/.test(mobile) || mobile === volunteerLastLookedUpMobile) {
+        return;
     }
 
-});
+    volunteerLastLookedUpMobile = mobile;
+
+    try {
+        const res = await fetch("/api/lookup-resident/" + encodeURIComponent(mobile));
+        const data = await res.json();
+
+        if (data.found) {
+            if (volunteerNameField && !volunteerNameField.value) volunteerNameField.value = data.name;
+            if (volunteerBlockField && !volunteerBlockField.value) volunteerBlockField.value = data.block;
+            if (volunteerFlatField && !volunteerFlatField.value) volunteerFlatField.value = data.flat_number;
+        }
+    } catch (err) {
+        // Silent failure - this is a convenience, not a required step.
+    }
+}
+
+if (volunteerMobileField) {
+    volunteerMobileField.addEventListener("input", lookupVolunteerResident);
+    volunteerMobileField.addEventListener("blur", lookupVolunteerResident);
+}
 
 // ======================================
 // Send Button
@@ -498,8 +518,7 @@ volunteerRegisterSubmitBtn.addEventListener("click", async function () {
         name: volunteerNameField.value.trim(),
         block: volunteerBlockField.value,
         flat: volunteerFlatField.value.trim(),
-        mobile: volunteerMobileField.value.trim(),
-        other_details: volunteerOtherDetailsField.value.trim()
+        mobile: volunteerMobileField.value.trim()
     };
 
     // -----------------------------
@@ -520,12 +539,6 @@ volunteerRegisterSubmitBtn.addEventListener("click", async function () {
     if (!/^[0-9]{10}$/.test(volunteerData.mobile)) {
         alert("Please enter a valid 10-digit mobile number.");
         volunteerMobileField.focus();
-        return;
-    }
-
-    if (volunteerOtherCheckbox.checked && volunteerData.other_details === "") {
-        alert("Please specify details for 'Other'.");
-        volunteerOtherDetailsField.focus();
         return;
     }
 
@@ -565,8 +578,6 @@ volunteerRegisterSubmitBtn.addEventListener("click", async function () {
         volunteerNameField.value = "";
         volunteerFlatField.value = "";
         volunteerMobileField.value = "";
-        volunteerOtherDetailsField.value = "";
-        volunteerOtherDetailsField.style.display = "none";
         volunteerBlockField.selectedIndex = 0;
 
         volunteerModal.style.display = "none";
