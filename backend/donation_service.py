@@ -340,13 +340,13 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 <br><br>
 
-<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
-
-<br><br>
-
 🔎 To verify your payment, attach a screenshot of the
 payment success screen. The button below will unlock
 once a screenshot is attached.
+
+<br><br>
+
+<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
 
 <br><br>
 
