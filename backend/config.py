@@ -24,8 +24,7 @@ import os as _os
 # correct via a standalone diagnostic.
 # --------------------------------------------------
 from dotenv import load_dotenv
-
-_PROJECT_ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+_PROJECT_ROOT = _os.path.dirname(_os.path.abspath(__file__))
 _ENV_PATH = _os.path.join(_PROJECT_ROOT, ".env")
 
 load_dotenv(_ENV_PATH)
@@ -34,17 +33,17 @@ load_dotenv(_ENV_PATH)
 # Festival Configuration
 # ===========================================
 
-ANNAPRASADA_DATE = date(2026, 8, 27)
+ANNAPRASADA_DATE = date(2026, 9, 6)
 
 # Booking opens 2 days before the event
 BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)    
 
 # ==========================================
-# Donation UPI Details (TESTING - dummy IDs)
+# Donation UPI Details
 # ==========================================
 
-UPI_ID_GPAY = "satishkumarullaganti@okhdfcbank"
-UPI_ID_PHONEPE = "9866406054-2@ybl"
+UPI_ID = "reshmabinu2001@okaxis"
+UPI_PAYEE_NAME = "Reshma Binuprasad"
 
 # ==========================================
 # Public Base URL
@@ -54,7 +53,7 @@ UPI_ID_PHONEPE = "9866406054-2@ybl"
 # so volunteer/attendee phones on any network can reach it.
 # If your ngrok URL ever changes, update it here only.
 
-PUBLIC_BASE_URL = "https://agency-unwrapped-judicial.ngrok-free.dev"
+PUBLIC_BASE_URL = "http://lvsganesha.duckdns.org"
 
 # ==========================================
 # Web Push Notifications (VAPID)
