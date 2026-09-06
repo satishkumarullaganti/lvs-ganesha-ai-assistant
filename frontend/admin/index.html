@@ -2,367 +2,833 @@
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>LVS Admin Login</title>
+    <title>LVS Excellency Ganesha AI Assistant</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+    <!-- PWA: manifest + icons + theme color -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff9800">
 
-        body {
-            margin: 0;
-            min-height: 100vh;
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16.png">
+    <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
 
-            display: flex;
-            justify-content: center;
-            align-items: center;
+    <!-- iOS "Add to Home Screen" support (iOS ignores the -->
+    <!-- web manifest for some of this, so these are needed too) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LVS Ganesha">
 
-            font-family: Arial, sans-serif;
+    <link rel="stylesheet" href="css/style.css">
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #fff7e6,
-                    #fff0cc
-                );
-        }
-
-        .login-container {
-            width: 100%;
-            max-width: 420px;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: white;
-
-            border-radius: 20px;
-
-            padding: 40px 35px;
-
-            box-shadow:
-                0 15px 40px rgba(0, 0, 0, 0.12);
-
-            text-align: center;
-
-            border-top: 6px solid #ff9800;
-        }
-
-        .logo {
-            width: 85px;
-            height: 85px;
-
-            border-radius: 50%;
-
-            object-fit: contain;
-
-            margin-bottom: 15px;
-        }
-
-        h1 {
-            margin: 5px 0;
-
-            color: #333;
-
-            font-size: 26px;
-        }
-
-        .subtitle {
-            color: #777;
-
-            margin-bottom: 30px;
-
-            font-size: 15px;
-        }
-
-        .input-group {
-            text-align: left;
-
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-
-            margin-bottom: 7px;
-
-            font-weight: bold;
-
-            color: #444;
-        }
-
-        input {
-            width: 100%;
-
-            padding: 13px 14px;
-
-            border: 1px solid #ddd;
-
-            border-radius: 10px;
-
-            font-size: 16px;
-
-            outline: none;
-        }
-
-        input:focus {
-            border-color: #ff9800;
-
-            box-shadow:
-                0 0 0 3px rgba(
-                    255,
-                    152,
-                    0,
-                    0.12
-                );
-        }
-
-        .login-btn {
-            width: 100%;
-
-            padding: 14px;
-
-            border: none;
-
-            border-radius: 10px;
-
-            background: #ff9800;
-
-            color: white;
-
-            font-size: 17px;
-
-            font-weight: bold;
-
-            cursor: pointer;
-        }
-
-        .login-btn:hover {
-            background: #f57c00;
-        }
-
-        .login-btn:disabled {
-            opacity: 0.6;
-
-            cursor: not-allowed;
-        }
-
-        .error {
-            display: none;
-
-            margin-bottom: 18px;
-
-            padding: 11px;
-
-            border-radius: 8px;
-
-            background: #ffebee;
-
-            color: #c62828;
-
-            font-size: 14px;
-        }
-
-        .footer {
-            margin-top: 25px;
-
-            font-size: 12px;
-
-            color: #999;
-        }
-    </style>
 </head>
 
 <body>
 
-    <div class="login-container">
+    <!-- Header -->
+    <header>
 
-        <div class="login-card">
+        <h1>🪔 LVS Excellency</h1>
 
+        <p>Ganesha AI Assistant</p>
+
+    </header>
+
+    <!-- Announcements Banner -->
+    <div id="announcements-banner" style="display:none;"></div>
+
+    <!-- Main Content -->
+    <main>
+
+        <!-- Hero Section -->
+<section id="hero">
+
+    <p class="hero-tagline">
+        Your Smart Festival Companion
+    </p>
+
+    <div class="hero-badge">
+        <img
+            src="assets/images/app_logo.png"
+            alt="LVS Excellency Badge">
+    </div>
+
+    <div class="hero-visual-card">
+
+        <div class="hero-logo-panel">
             <img
-                src="/static/images/app_logo.png"
-                class="logo"
-                alt="LVS Logo"
-                onerror="this.style.display='none'"
-            >
+                src="assets/images/lvs_logo.png"
+                class="society-logo"
+                alt="LVS Logo">
+        </div>
 
-            <h1>🪔 LVS Admin</h1>
+        <div class="hero-ganesha-panel">
+            <img
+                src="assets/images/ganesha.png"
+                class="ganesha-image"
+                alt="Lord Ganesha">
+        </div>
 
-            <div class="subtitle">
-                Ganesha Festival 2026
+    </div>
+
+    <h2>
+        🙏 Ganapathi Bappa Morya!
+    </h2>
+
+    <h3>
+        Welcome to
+        <br>
+        LVS Excellency Ganesha Festival 2026
+    </h3>
+
+    <p class="hero-description">
+        May Lord Ganesha bless you with wisdom, prosperity and happiness.
+    </p>
+
+    <button
+        id="enable-notifications-btn"
+        onclick="enableNotifications()"
+        style="background:#ff9800;color:white;border:none;border-radius:20px;padding:10px 20px;font-size:14px;cursor:pointer;margin-bottom:16px;">
+        🔔 Enable Festival Alerts
+    </button>
+
+    <div id="festival-countdown" class="countdown-card">
+
+        <p id="countdown-label" class="countdown-label">
+            🎉 Festival Begins In
+        </p>
+
+        <div id="countdown-grid" class="countdown-grid">
+
+            <div class="countdown-unit">
+                <span id="cd-days">--</span>
+                <small>Days</small>
             </div>
 
-            <div
-                id="error-message"
-                class="error">
+            <div class="countdown-unit">
+                <span id="cd-hours">--</span>
+                <small>Hours</small>
             </div>
 
-            <form id="login-form">
+            <div class="countdown-unit">
+                <span id="cd-mins">--</span>
+                <small>Mins</small>
+            </div>
 
-                <div class="input-group">
+            <div class="countdown-unit">
+                <span id="cd-secs">--</span>
+                <small>Secs</small>
+            </div>
 
-                    <label for="username">
-                        Username
-                    </label>
+        </div>
 
-                    <input
-                        type="text"
-                        id="username"
-                        placeholder="Enter username"
-                        autocomplete="username"
-                        required
-                    >
+        <p id="countdown-message" class="countdown-message"></p>
+
+    </div>
+
+</section>
+
+<!-- Daily Prasadam Section -->
+        <section id="daily-prasadam-section">
+
+            <h2 class="section-title">
+                🍛 Daily Prasadam
+            </h2>
+
+            <div id="daily-prasadam-list" class="prasadam-grid">
+                Loading...
+            </div>
+
+            <div style="text-align:center;margin-top:16px;">
+                <button type="button" class="sponsor-link-button" onclick="openSponsorModal()">
+                    🙏 Sponsor a Daily Prasadam
+                </button>
+            </div>
+
+        </section>
+
+        <div id="sponsor-modal-overlay" class="sponsor-modal-overlay" style="display:none;">
+            <div class="sponsor-modal-content">
+                <button type="button" class="sponsor-modal-close" onclick="closeSponsorModal()">×</button>
+                <h2>🙏 Sponsor a Daily Prasadam</h2>
+                <p class="sponsor-optional-note">Share your details and preferred date - the coordinator will review and add you to the schedule.</p>
+                <form id="sponsor-request-form" onsubmit="return false;">
+                    <input type="tel" id="sponsor-mobile" placeholder="Mobile Number" required>
+                    <input type="text" id="sponsor-name" placeholder="Full Name" required>
+                    <select id="sponsor-block" required>
+                        <option value="">Select Block</option>
+                        <option value="South">South</option>
+                        <option value="North">North</option>
+                        <option value="Terrace">Terrace</option>
+                    </select>
+                    <input type="text" id="sponsor-flat" placeholder="Flat Number" required>
+                    <label style="font-size:13px;color:#555;">Preferred Date</label>
+                    <input type="date" id="sponsor-date" required>
+                    <label style="font-size:13px;color:#555;">Slot</label>
+                    <select id="sponsor-slot" required>
+                        <option value="">Select Slot</option>
+                        <option value="Morning 8:30 AM">Morning - 8:30 AM</option>
+                        <option value="Evening 7:30 PM">Evening - 7:30 PM</option>
+                    </select>
+                    <input type="text" id="sponsor-item" placeholder="Prasadam item (optional, e.g. Modak, Payasam)">
+                    <textarea id="sponsor-notes" placeholder="Any notes for the coordinator (optional)" rows="2"></textarea>
+                    <button type="button" onclick="submitSponsorRequest()" class="sponsor-submit-button">Submit Request</button>
+                    <p id="sponsor-request-status" style="font-size:14px;margin:4px 0 0;"></p>
+                </form>
+            </div>
+        </div>
+
+<!-- T-Shirt Pre-Booking -->
+        <section id="tshirt-section">
+            <div class="container">
+                <button type="button" class="tshirt-link-button" onclick="openTshirtModal()">
+                    👕 LVS Excellency T-Shirt - Click to Order
+                </button>
+            </div>
+        </section>
+
+        <div id="tshirt-modal-overlay" class="tshirt-modal-overlay" style="display:none;">
+            <div class="tshirt-modal-content">
+                <button type="button" class="tshirt-modal-close" onclick="closeTshirtModal()">×</button>
+                <h2>👕 LVS Excellency Festival T-Shirt</h2>
+                <p class="tshirt-optional-note">This is completely optional - only for residents who'd like one. No one is required to book a T-shirt.</p>
+                <img src="/static/images/lvs_excellency_tshirt.jpg" alt="LVS Excellency T-Shirt" class="tshirt-product-image">
+                <p id="tshirt-price-line">Loading price...</p>
+                <form id="tshirt-order-form" onsubmit="return false;">
+                    <input type="tel" id="tshirt-mobile" placeholder="Mobile Number" required>
+                    <input type="text" id="tshirt-name" placeholder="Full Name" required>
+                    <select id="tshirt-block" required>
+                        <option value="">Select Block</option>
+                        <option value="South">South</option>
+                        <option value="North">North</option>
+                        <option value="Terrace">Terrace</option>
+                    </select>
+                    <input type="text" id="tshirt-flat" placeholder="Flat Number" required>
+
+                    <div class="tshirt-size-grid">
+                        <label>Small <input type="number" id="tshirt-small" min="0" value="0"></label>
+                        <label>Medium <input type="number" id="tshirt-medium" min="0" value="0"></label>
+                        <label>Large <input type="number" id="tshirt-large" min="0" value="0"></label>
+                        <label>XL <input type="number" id="tshirt-xl" min="0" value="0"></label>
+                        <label>XXL <input type="number" id="tshirt-xxl" min="0" value="0"></label>
+                    </div>
+
+                    <p id="tshirt-total-line"></p>
+
+                    <button type="button" onclick="submitTshirtOrder()">Reserve T-Shirt</button>
+                    <p id="tshirt-order-status"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Feature Cards -->
+        <section id="features">
+
+            <h2 class="section-title">
+                How can I help you today?
+            </h2>
+
+            <div class="feature-grid">
+
+                <div class="feature-card" id="quick-register-card">
+                    <div class="card-icon">📝</div>
+                    <h3>Quick Register</h3>
+                    <p>Competitions & Events</p>
+                </div>
+
+                <div class="feature-card" id="schedule">
+                    <div class="card-icon">📆</div>
+                    <h3>Schedule</h3>
+                    <p>Today's Events</p>
+                </div>
+
+                <div class="feature-card" id="volunteer">
+                    <div class="card-icon">🙋</div>
+                    <h3>Volunteer</h3>
+                    <p>Join Our Team</p>
+                </div>
+                <div class="feature-card" id="annaprasada">
+                <div class="card-icon">🍛</div>
+             <h3>Annaprasada</h3>
+             <p>Prasada coupons details</p>
+       </div>
+
+<div class="feature-card" id="donation">
+    <div class="card-icon">💰</div>
+    <h3>Donation</h3>
+    <p>Contribute & Support</p>
+</div>
+
+                <div class="feature-card" id="cultural-programs">
+                    <div class="card-icon">🎭</div>
+                    <h3>Cultural Programs</h3>
+                    <p>Dance, Music & Performances</p>
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- Chat Area -->
+        <section id="chat-section">
+
+            <button id="chat-with-ai-btn" class="section-title chat-cta-button" type="button">
+                💬 Chat with AI
+            </button>
+
+            <div id="chat-container">
+
+                <div class="bot-message">
+
+                    <div class="avatar">
+                        <img
+                            src="assets/images/app_logo.png"
+                            alt="AI Assistant">
+                    </div>
+
+                    <div class="message">
+
+                        <strong>LVS GANESHA AI Assistant</strong>
+
+                        <br><br>
+
+                        🙏 Ganapathi Bappa Morya!
+
+                        <br><br>
+
+                        Welcome to the
+                        LVS Excellency Ganesha Festival.
+
+                        <br><br>
+
+                        How may I help you today?
+
+                    </div>
 
                 </div>
 
-                <div class="input-group">
+            </div>
 
-                    <label for="password">
-                        Password
-                    </label>
+            <div id="chat-input-area">
 
-                    <input
-                        type="password"
-                        id="password"
-                        placeholder="Enter password"
-                        autocomplete="current-password"
-                        required
-                    >
-
-                </div>
+                <input
+                    type="text"
+                    id="user-input"
+                    placeholder="Type your message...">
 
                 <button
-                    type="submit"
-                    class="login-btn"
-                    id="login-btn">
-
-                    🔐 Login
-
+                    id="mic-btn"
+                    type="button"
+                    title="Speak your message"
+                    onclick="toggleVoiceInput()"
+                    style="background:#1976d2;color:white;border:none;border-radius:10px;width:52px;font-size:18px;cursor:pointer;">
+                    🎤
                 </button>
 
-            </form>
+                <button id="send-btn">
+                    Send
+                </button>
 
-            <div class="footer">
-                LVS Excellency Ganesha Festival 2026
             </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+
+        
+        <p>Developed by Satish Kumar Ullaganti</p>
+
+        <p>South Block 020</p>
+
+    </footer>
+
+    <!-- ====================================== -->
+    <!-- Quick Registration Modal -->
+    <!-- ====================================== -->
+
+    <div id="registration-modal" class="modal">
+
+        <div class="modal-content">
+
+            <span id="close-modal" class="close">&times;</span>
+
+            <h2>📝 Quick Registration</h2>
+
+            <label>Competition</label>
+
+            <select id="competition">
+                <option>Drawing</option>
+                <option>Chess</option>
+                <option>Carrom</option>
+                <option>Tambola</option>
+                <option>Musical Chairs</option>
+            </select>
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                id="reg-name"
+                placeholder="Enter Name">
+
+            <label>Block</label>
+
+            <select id="reg-block">
+                <option>North</option>
+                <option>South</option>
+                <option>Terrace</option>
+            </select>
+
+            <label>Flat Number</label>
+
+            <input
+                type="text"
+                id="reg-flat"
+                placeholder="Flat Number">
+
+            <label>Mobile</label>
+
+            <input
+                type="text"
+                id="reg-mobile"
+                placeholder="Mobile Number">
+
+            <label>Age</label>
+
+            <input
+                type="number"
+                id="reg-age"
+                placeholder="Age"
+                 min="1"
+                 max="100">
+
+            <button id="register-submit">
+
+                Register
+
+            </button>
 
         </div>
 
     </div>
 
+    <!-- ====================================== -->
+    <!-- Cultural Programs Registration Modal -->
+    <!-- ====================================== -->
 
-    <script>
+    <div id="cultural-registration-modal" class="modal">
 
-        const form =
-            document.getElementById(
-                "login-form"
-            );
+        <div class="modal-content">
 
-        const errorMessage =
-            document.getElementById(
-                "error-message"
-            );
+            <span id="close-cultural-modal" class="close">&times;</span>
 
-        const loginButton =
-            document.getElementById(
-                "login-btn"
-            );
+            <h2>🎭 Cultural Programs Registration</h2>
 
+            <label>Select Categories (choose one or more)</label>
 
-        form.addEventListener(
-            "submit",
-            async function(event) {
+            <div class="cultural-checkbox-group">
 
-                event.preventDefault();
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Solo Singing">
+                    1️⃣ Solo Singing
+                </label>
 
-                errorMessage.style.display =
-                    "none";
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Group Singing">
+                    2️⃣ Group Singing
+                </label>
 
-                loginButton.disabled = true;
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Solo Dance">
+                    3️⃣ Solo Dance
+                </label>
 
-                loginButton.textContent =
-                    "Signing in...";
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Group Dance">
+                    4️⃣ Group Dance
+                </label>
 
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Instrumental">
+                    5️⃣ Instrumental
+                </label>
 
-                const username =
-                    document.getElementById(
-                        "username"
-                    ).value.trim();
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Skit">
+                    6️⃣ Skit
+                </label>
 
-                const password =
-                    document.getElementById(
-                        "password"
-                    ).value;
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Fancy Dress">
+                    7️⃣ Fancy Dress
+                </label>
 
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" class="cultural-category" value="Mimicry">
+                    8️⃣ Mimicry
+                </label>
 
-                try {
+                <label class="cultural-checkbox-item">
+                    <input type="checkbox" id="cultural-other-checkbox" class="cultural-category" value="Other">
+                    9️⃣ Other
+                </label>
 
-                    const response =
-                        await fetch(
-                            "/admin/login",
-                            {
-                                method: "POST",
+            </div>
 
-                                headers: {
-                                    "Content-Type":
-                                        "application/json"
-                                },
+            <label>Performance Details / Song Title (optional)</label>
 
-                                credentials: "include",
+            <input
+                type="text"
+                id="cultural-other-details"
+                placeholder="e.g. song name, or details if 'Other' selected">
 
-                                body: JSON.stringify({
-                                    username:
-                                        username,
+            <label>Name</label>
 
-                                    password:
-                                        password
-                                })
-                            }
-                        );
+            <input
+                type="text"
+                id="cultural-reg-name"
+                placeholder="Enter Name">
 
+            <label>Block</label>
 
-                    const data =
-                        await response.json();
+            <select id="cultural-reg-block">
+                <option>North</option>
+                <option>South</option>
+                <option>Terrace</option>
+            </select>
 
+            <label>Flat Number</label>
 
-                    if (!response.ok) {
+            <input
+                type="text"
+                id="cultural-reg-flat"
+                placeholder="Flat Number">
 
-                        throw new Error(
-                            data.detail ||
-                            "Invalid username or password"
-                        );
+            <label>Mobile</label>
 
-                    }
+            <input
+                type="text"
+                id="cultural-reg-mobile"
+                placeholder="Mobile Number">
 
+            <label>Performance Track (optional, .mp3 or .m4a only)</label>
 
-                    window.location.href =
-                        "/admin/panel/";
+            <input
+                type="file"
+                id="cultural-reg-track"
+                accept=".mp3,.m4a,audio/mpeg,audio/mp4,audio/x-m4a">
 
+            <button id="cultural-register-submit">
 
-                } catch (error) {
+                Register
 
-                    errorMessage.textContent =
-                        "❌ " + error.message;
+            </button>
 
-                    errorMessage.style.display =
-                        "block";
+        </div>
 
-                    loginButton.disabled =
-                        false;
+    </div>
 
-                    loginButton.textContent =
-                        "🔐 Login";
-                }
+    <!-- ====================================== -->
+    <!-- Volunteer Registration Modal -->
+    <!-- ====================================== -->
 
-            }
-        );
+    <div id="volunteer-registration-modal" class="modal">
 
-    </script>
+        <div class="modal-content">
+
+            <span id="close-volunteer-modal" class="close">&times;</span>
+
+            <h2>🙋 Volunteer Registration</h2>
+
+            <label>Select Task(s) You'd Like to Help With</label>
+
+            <div class="checkbox-group">
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Drawing Competition">
+                    Drawing Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Chess Competition">
+                    Chess Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Carrom Competition">
+                    Carrom Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Tambola Competition">
+                    Tambola Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Musical Chairs Competition">
+                    Musical Chairs Competition
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Annaprasada Distribution">
+                    Annaprasada Distribution
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Registration Desk">
+                    Registration Desk
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Decoration & Setup">
+                    Decoration & Setup
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Pooja/Rituals Support">
+                    Pooja/Rituals Support
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Cultural Programs Coordination">
+                    Cultural Programs Coordination
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Donations Desk">
+                    Donations Desk
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Visarjan Support">
+                    Visarjan Support
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Photography/Videography">
+                    Photography/Videography
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" class="volunteer-task" value="Cleanup Crew">
+                    Cleanup Crew
+                </label>
+
+                <label class="checkbox-item">
+                    <input type="checkbox" id="volunteer-other-checkbox" class="volunteer-task" value="Other">
+                    Other
+                </label>
+
+            </div>
+
+            <input
+                type="text"
+                id="volunteer-other-details"
+                placeholder="Please specify (if 'Other' selected)"
+                style="display:none;">
+
+            <label>Name</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-name"
+                placeholder="Enter Name">
+
+            <label>Block</label>
+
+            <select id="volunteer-reg-block">
+                <option>North</option>
+                <option>South</option>
+                <option>Terrace</option>
+            </select>
+
+            <label>Flat Number</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-flat"
+                placeholder="Flat Number">
+
+            <label>Mobile</label>
+
+            <input
+                type="text"
+                id="volunteer-reg-mobile"
+                placeholder="Mobile Number">
+
+            <button id="volunteer-register-submit">
+
+                Register
+
+            </button>
+
+        </div>
+
+    </div>
+<!-- ====================================== -->
+<!-- Quick Registration Choice Modal -->
+<!-- ====================================== -->
+
+<div id="registration-choice-modal" class="modal">
+
+    <div class="modal-content" style="max-width:420px;text-align:center;">
+
+        <span id="close-registration-choice" class="close">&times;</span>
+
+        <h2>📝 Quick Registration</h2>
+
+        <p style="margin:10px 0 24px;">
+            How would you like to register?
+        </p>
+
+        <button
+            id="register-by-form"
+            type="button"
+            style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
+            📝 Register through Form
+        </button>
+
+        <button
+            id="register-by-chat"
+            type="button"
+            style="width:100%;margin:8px 0;padding:13px;border:0;border-radius:10px;cursor:pointer;">
+            🤖 Register through Chat
+        </button>
+
+        <button
+            id="cancel-registration-choice"
+            type="button"
+            style="margin-top:8px;padding:9px 20px;border:1px solid #ccc;border-radius:8px;background:white;color:#555;cursor:pointer;">
+            Cancel
+        </button>
+
+    </div>
+
+</div>
+
+<!-- ====================================== -->
+<!-- Schedule Modal -->
+<!-- ====================================== -->
+
+<div id="schedule-modal" class="modal">
+
+    <div class="modal-content" style="max-width:560px;">
+
+        <span id="close-schedule-modal" class="close">&times;</span>
+
+        <h2>📆 Festival Schedule</h2>
+
+        <div id="schedule-modal-body" class="schedule-modal-body">
+            Loading schedule...
+        </div>
+
+        <button id="ask-ai-schedule-btn" type="button">
+            🤖 Ask AI Assistant
+        </button>
+
+    </div>
+
+</div>
+
+<!-- ====================================== -->
+<!-- Registration Thank You Popup -->
+<!-- ====================================== -->
+
+<div id="thank-you-modal" class="modal">
+
+    <div class="modal-content thank-you-content">
+
+        <span id="close-thank-you-modal" class="close">&times;</span>
+
+        <img
+            src="assets/images/app_logo.png"
+            alt="Ganesha"
+            class="thank-you-logo">
+
+        <h2 id="thank-you-heading">Thank You!</h2>
+
+        <p id="thank-you-message" class="thank-you-message"></p>
+
+        <p class="thank-you-blessing">🙏 Ganapathi Bappa Morya! 🙏</p>
+
+        <button id="thank-you-ok-btn" type="button">
+            Great, thanks!
+        </button>
+
+    </div>
+
+</div>
+
+<!-- Opening Mantra Audio -->
+<!-- Drop your mantra MP3 file at: frontend/assets/audio/mantra.mp3 -->
+<audio id="mantra-audio" preload="auto">
+    <source src="assets/audio/mantra.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Shown only if the browser blocks autoplay (most first-time visitors) -->
+<div id="mantra-tap-prompt" style="display:none;">
+    <button id="mantra-tap-btn" type="button">
+        🔔 Tap to hear the blessing
+    </button>
+</div>
+
+<!-- Floating Top-Right Icon Row -->
+<div id="top-icon-row">
+
+    <button
+        id="install-app-btn"
+        title="Install this app"
+        aria-label="Install app">
+
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 3v12"/>
+            <path d="M7 10l5 5 5-5"/>
+            <path d="M5 19h14"/>
+        </svg>
+
+    </button>
+
+    <button
+        id="bell-notifications-btn"
+        onclick="enableNotifications()"
+        title="Enable festival alerts"
+        aria-label="Enable notifications">
+
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2a6 6 0 0 0-6 6v3.2c0 .5-.2 1-.5 1.4L4 15h16l-1.5-2.4c-.3-.4-.5-.9-.5-1.4V8a6 6 0 0 0-6-6Zm0 20a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Z"/>
+        </svg>
+
+    </button>
+
+    <a
+        href="#"
+        id="whatsapp-share-btn"
+        title="Share this app on WhatsApp"
+        aria-label="Share on WhatsApp">
+
+        <svg viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.005c5.46 0 9.91-4.45 9.91-9.91C21.97 6.45 17.5 2 12.04 2Zm5.83 14.19c-.24.68-1.4 1.33-1.93 1.4-.49.07-1.11.1-1.79-.11-.41-.13-.94-.3-1.62-.6-2.85-1.23-4.71-4.12-4.85-4.31-.14-.19-1.16-1.54-1.16-2.94s.73-2.09.99-2.37c.26-.28.56-.35.75-.35s.37 0 .53.01c.17.01.4-.06.62.48.24.58.81 2 .88 2.15.07.15.12.32.02.51-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.57.16.28.71 1.17 1.52 1.9 1.05.94 1.93 1.23 2.21 1.37.28.14.44.12.61-.07.16-.19.7-.81.88-1.09.19-.28.37-.23.62-.14.26.09 1.63.77 1.91.91.28.14.47.21.53.33.07.12.07.68-.17 1.35Z"/>
+        </svg>
+
+    </a>
+
+</div>
+
+    <!-- Festival countdown timer -->
+    <script src="js/countdown.js"></script>
+
+    <!-- app.js loaded last so all elements above already exist in the DOM -->
+    <script src="js/app.js"></script>
 
 </body>
 
 </html>
-

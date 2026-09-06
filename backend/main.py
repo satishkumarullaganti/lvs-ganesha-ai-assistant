@@ -1924,8 +1924,12 @@ class SponsorRequestBody(BaseModel):
     block: str
     flat: str
     preferred_date: str
+    slot: str = ""
     item: str = ""
     notes: str = ""
+
+
+VALID_PRASADAM_SLOTS = ("Morning 8:30 AM", "Evening 7:30 PM")
 
 
 @app.post("/api/daily-prasadam/sponsor-request")
@@ -1953,12 +1957,19 @@ def api_submit_sponsor_request(data: SponsorRequestBody):
     if not data.preferred_date.strip():
         raise HTTPException(status_code=400, detail="Preferred date is required.")
 
+    if data.slot not in VALID_PRASADAM_SLOTS:
+        raise HTTPException(
+            status_code=400,
+            detail="Please choose a valid slot: Morning 8:30 AM or Evening 7:30 PM."
+        )
+
     new_request = add_sponsor_request(
         name=data.name,
         mobile=data.mobile,
         block=data.block,
         flat_number=data.flat,
         preferred_date=data.preferred_date,
+        slot=data.slot,
         item=data.item,
         notes=data.notes
     )

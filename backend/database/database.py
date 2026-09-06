@@ -1243,6 +1243,20 @@ def _init_admin_tables():
     )
     """)
 
+    # --------------------------------------------
+    # Migration: section-restricted logins. NULL/empty
+    # means a full admin (sees every section, can edit).
+    # A value here (e.g. "registrations") means this
+    # account can only VIEW that one section - never
+    # edit or delete, and never see any other tab.
+    # --------------------------------------------
+
+    cursor.execute("PRAGMA table_info(admin_users)")
+    admin_users_existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "section" not in admin_users_existing_columns:
+        cursor.execute("ALTER TABLE admin_users ADD COLUMN section TEXT")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS admin_activity_log(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1275,7 +1289,7 @@ def _hash_password(password, salt=None):
     return hashed, salt
 
 
-def add_admin_user(name, username, password):
+def add_admin_user(name, username, password, section=None):
 
     password_hash, salt = _hash_password(password)
 
@@ -1283,9 +1297,9 @@ def add_admin_user(name, username, password):
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO admin_users(name, username, password_hash, password_salt)
-        VALUES (?, ?, ?, ?)
-    """, (name, username, password_hash, salt))
+        INSERT INTO admin_users(name, username, password_hash, password_salt, section)
+        VALUES (?, ?, ?, ?, ?)
+    """, (name, username, password_hash, salt, section))
 
     conn.commit()
     conn.close()
@@ -1382,7 +1396,7 @@ def get_admin_user_by_username(username):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT name, username, password_hash, password_salt
+        SELECT name, username, password_hash, password_salt, section
         FROM admin_users
         WHERE LOWER(username) = LOWER(?)
     """, (username,))
@@ -1400,7 +1414,7 @@ def verify_admin_password(username, password):
     if row is None:
         return False
 
-    _, _, stored_hash, salt = row
+    _, _, stored_hash, salt, _ = row
 
     computed_hash, _ = _hash_password(password, salt)
 
@@ -1437,3 +1451,205 @@ def get_recent_activity_log(limit=100):
     conn.close()
 
     return rows 
+
+# ============================================
+# List / Remove Admin Users
+# (for the "Manage Logins" admin panel tab)
+# ============================================
+
+def get_all_admin_users():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT name, username, section, created_at
+        FROM admin_users
+        ORDER BY created_at DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows
+
+
+def delete_admin_user(username):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM admin_users
+        WHERE LOWER(username) = LOWER(?)
+    """, (username,))
+
+    deleted = cursor.rowcount > 0
+
+    conn.commit()
+    conn.close()
+
+    return deleted
+
+
+# ============================================
+# T-Shirt Pre-Booking
+# ============================================
+# "LVS Excellency" Ganesha Festival T-shirt - residents
+# reserve now, pay on pickup (no online payment collected
+# here). One order can include several sizes/quantities at
+# once (e.g. a family ordering different sizes).
+
+def _init_tshirt_table():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tshirt_orders(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        block TEXT NOT NULL,
+        flat_number TEXT NOT NULL,
+        mobile TEXT NOT NULL,
+        size_small INTEGER DEFAULT 0,
+        size_medium INTEGER DEFAULT 0,
+        size_large INTEGER DEFAULT 0,
+        size_xl INTEGER DEFAULT 0,
+        size_xxl INTEGER DEFAULT 0,
+        total_quantity INTEGER NOT NULL,
+        price_per_shirt REAL NOT NULL,
+        total_amount REAL NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+_init_tshirt_table()
+
+
+def save_tshirt_order(name, block, flat_number, mobile, sizes, price_per_shirt):
+    """
+    sizes is a dict like {"small": 1, "medium": 2, "large": 0, "xl": 1, "xxl": 0}
+    """
+
+    total_quantity = sum(sizes.values())
+    total_amount = total_quantity * price_per_shirt
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO tshirt_orders(
+            name, block, flat_number, mobile,
+            size_small, size_medium, size_large, size_xl, size_xxl,
+            total_quantity, price_per_shirt, total_amount
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        name, block, flat_number, mobile,
+        sizes.get("small", 0), sizes.get("medium", 0), sizes.get("large", 0),
+        sizes.get("xl", 0), sizes.get("xxl", 0),
+        total_quantity, price_per_shirt, total_amount
+    ))
+
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+
+    return {
+        "id": new_id,
+        "total_quantity": total_quantity,
+        "total_amount": total_amount
+    }
+
+
+def get_tshirt_orders():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, block, flat_number, mobile,
+               size_small, size_medium, size_large, size_xl, size_xxl,
+               total_quantity, price_per_shirt, total_amount, status, created_at
+        FROM tshirt_orders
+        ORDER BY id DESC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return rows
+
+
+def get_tshirt_order_totals():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            COALESCE(SUM(size_small), 0),
+            COALESCE(SUM(size_medium), 0),
+            COALESCE(SUM(size_large), 0),
+            COALESCE(SUM(size_xl), 0),
+            COALESCE(SUM(size_xxl), 0),
+            COALESCE(SUM(total_quantity), 0),
+            COALESCE(SUM(total_amount), 0)
+        FROM tshirt_orders
+    """)
+
+    row = cursor.fetchone()
+    conn.close()
+
+    return {
+        "small": row[0],
+        "medium": row[1],
+        "large": row[2],
+        "xl": row[3],
+        "xxl": row[4],
+        "total_quantity": row[5],
+        "total_amount": row[6]
+    }
+
+
+def mark_tshirt_order_collected(order_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE tshirt_orders
+        SET status = 'collected'
+        WHERE id = ?
+    """, (order_id,))
+
+    updated = cursor.rowcount > 0
+
+    conn.commit()
+    conn.close()
+
+    return updated
+
+
+def delete_tshirt_order(order_id):
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM tshirt_orders
+        WHERE id = ?
+    """, (order_id,))
+
+    deleted = cursor.rowcount > 0
+
+    conn.commit()
+    conn.close()
+
+    return deleted

@@ -2631,6 +2631,10 @@ async function loadSponsorRequestsAdminList() {
                 ? '<p style="margin:2px 0 0;font-size:13px;color:#555;">🍛 ' + escapeHtml(r.item) + '</p>'
                 : "";
 
+            const slotLine = r.slot
+                ? '<p style="margin:2px 0 0;font-size:13px;color:#555;">🕒 ' + escapeHtml(r.slot) + '</p>'
+                : "";
+
             const notesLine = r.notes
                 ? '<p style="margin:2px 0 0;font-size:13px;color:#777;">📝 ' + escapeHtml(r.notes) + '</p>'
                 : "";
@@ -2653,6 +2657,7 @@ async function loadSponsorRequestsAdminList() {
                         '<span style="background:' + statusColor + ';color:white;font-size:12px;padding:2px 10px;border-radius:10px;text-transform:capitalize;">' + escapeHtml(r.status) + '</span>' +
                         '<p style="margin:6px 0 0;font-weight:600;">' + escapeHtml(r.name) + ' - ' + escapeHtml(r.block) + ' ' + escapeHtml(r.flat_number) + '</p>' +
                         '<p style="margin:2px 0 0;font-size:13px;color:#555;">📅 Preferred: ' + escapeHtml(r.preferred_date) + ' · 📱 ' + escapeHtml(r.mobile) + '</p>' +
+                        slotLine +
                         itemLine +
                         notesLine +
                     '</div>' +
@@ -2679,6 +2684,7 @@ function useSponsorRequestForEntry(id) {
 
     document.getElementById("prasadam-date-input").value = r.preferred_date || "";
     document.getElementById("prasadam-items-input").value = r.item || "";
+    document.getElementById("prasadam-time-input").value = r.slot ? r.slot.replace("Morning ", "").replace("Evening ", "") : "";
     document.getElementById("prasadam-sponsor-input").value = r.name + " (" + r.block + " " + r.flat_number + ")";
 
     document.getElementById("prasadam-panel").scrollIntoView({ behavior: "smooth", block: "start" });
