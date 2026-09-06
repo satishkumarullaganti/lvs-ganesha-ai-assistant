@@ -276,7 +276,7 @@ def register(data: RegistrationRequest):
 # ============================================
 
 CULTURAL_TRACKS_DIR = "static/cultural_tracks"
-ALLOWED_TRACK_EXTENSIONS = {".mp3", ".m4a"}
+ALLOWED_TRACK_EXTENSIONS = {".mp3"}
 MAX_TRACK_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB cap
 
 os.makedirs(CULTURAL_TRACKS_DIR, exist_ok=True)
@@ -426,7 +426,7 @@ async def register_cultural(
 
             raise HTTPException(
                 status_code=400,
-                detail="Only .mp3 or .m4a files are allowed for the performance track."
+                detail="Only .mp3 files are allowed for the performance track."
             )
 
         file_bytes = await track.read()

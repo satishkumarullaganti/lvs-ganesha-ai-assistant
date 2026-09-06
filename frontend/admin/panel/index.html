@@ -1673,9 +1673,11 @@ html += `
 
             html += `
                 <td>
-                    ${escapeHtml(
-                        String(value)
-                    )}
+                    ${
+                        String(column).toLowerCase() === "track_path" && value
+                            ? `<a href="/${escapeHtml(String(value))}" download target="_blank" style="background:#ff9800;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;">⬇️ Download Track</a>`
+                            : escapeHtml(String(value))
+                    }
                 </td>
             `;
 
@@ -1766,9 +1768,11 @@ currentRecordData = record;
                         </div>
 
                         <div class="record-value">
-                            ${escapeHtml(
-                                String(value)
-                            )}
+                            ${
+                                String(key).toLowerCase() === "track_path" && value
+                                    ? `<a href="/${escapeHtml(String(value))}" download target="_blank" style="background:#ff9800;color:white;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;">⬇️ Download Track</a>`
+                                    : escapeHtml(String(value))
+                            }
                         </div>
 
                     </div>

@@ -418,10 +418,10 @@ culturalRegisterSubmitBtn.addEventListener("click", async function () {
     const trackFile = culturalTrackField.files.length > 0 ? culturalTrackField.files[0] : null;
 
     const trackFileName = trackFile ? trackFile.name.toLowerCase() : "";
-    const isValidTrackFormat = trackFileName.endsWith(".mp3") || trackFileName.endsWith(".m4a");
+    const isValidTrackFormat = trackFileName.endsWith(".mp3");
 
     if (trackFile && !isValidTrackFormat) {
-        alert("Please upload only .mp3 or .m4a files for the performance track.");
+        alert("Please upload only .mp3 files for the performance track.");
         return;
     }
 
