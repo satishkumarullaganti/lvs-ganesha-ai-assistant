@@ -338,7 +338,11 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 📱 Or pay manually to this UPI ID:
 
-<p style="font-size:15px;font-weight:bold;margin:4px 0 12px;">{UPI_PAYEE_NAME} : {UPI_ID}</p>
+<p style="font-size:15px;font-weight:bold;margin:4px 0 8px;">{UPI_PAYEE_NAME} : {UPI_ID}</p>
+
+<button type="button" onclick="copyUpiId(this, '{UPI_ID}')" style="background:#eee;color:#333;border:none;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;">📋 Copy UPI ID</button>
+
+<p style="font-size:13px;color:#888;margin-top:10px;">Copy the ID above, open your UPI app, choose "Pay to UPI ID", paste it, and enter ₹{session['donation']['amount']}.</p>
 
 <p style="font-size:13px;color:#888;margin-top:4px;">On some phones, the button below may show a "Dismiss" screen instead of completing the payment - if that happens, please use the QR code or manual UPI ID above instead.</p>
 
