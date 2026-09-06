@@ -15,10 +15,22 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from backend.database.database import get_booking_by_coupon, serve_annaprasada_members, log_admin_activity
 from dotenv import load_dotenv
 load_dotenv()
-from backend.admin.admin_routes import router as admin_router, require_admin, get_current_admin_username
+from backend.admin.admin_routes import router as admin_router, require_admin, get_current_admin_username, require_full_admin, require_section_view
 from backend.rag.rag_service import (
     ask_rag,
     is_festival_question
+)
+from backend.daily_prasadam_service import (
+    get_all_prasadam_entries,
+    add_prasadam_entry,
+    update_prasadam_entry,
+    delete_prasadam_entry
+)
+from backend.daily_prasadam_sponsor_service import (
+    get_all_sponsor_requests,
+    add_sponsor_request,
+    update_sponsor_request_status,
+    delete_sponsor_request
 )
 from backend.announcement_service import (
     get_active_announcements,
@@ -48,6 +60,17 @@ from backend.database.database import (
 )
 import os
 import uuid
+from backend.tshirt_service import (
+    get_price as get_tshirt_price,
+    set_price as set_tshirt_price
+)
+from backend.database.database import (
+    save_tshirt_order,
+    get_tshirt_orders,
+    get_tshirt_order_totals,
+    mark_tshirt_order_collected,
+    delete_tshirt_order
+)
 
 # ============================================
 # FastAPI App
@@ -1717,7 +1740,7 @@ class AnnouncementRequest(BaseModel):
 @app.post("/admin/announcements")
 def admin_add_announcement(data: AnnouncementRequest, request: Request):
 
-    require_admin(request)
+    require_full_admin(request)
 
     if not data.message.strip():
         raise HTTPException(status_code=400, detail="Announcement message cannot be empty.")
@@ -1745,7 +1768,7 @@ def admin_add_announcement(data: AnnouncementRequest, request: Request):
 @app.get("/admin/announcements")
 def admin_list_announcements(request: Request):
 
-    require_admin(request)
+    require_section_view(request, "announcements")
 
     return {"announcements": get_all_announcements()}
 
@@ -1753,7 +1776,7 @@ def admin_list_announcements(request: Request):
 @app.delete("/admin/announcements/{announcement_id}")
 def admin_delete_announcement(announcement_id: str, request: Request):
 
-    require_admin(request)
+    require_full_admin(request)
 
     found = deactivate_announcement(announcement_id)
 
@@ -1772,6 +1795,414 @@ def admin_delete_announcement(announcement_id: str, request: Request):
 # ============================================
 # Web Push Subscriptions
 # ============================================
+
+# ============================================
+# Daily Prasadam
+# ============================================
+# Same JSON-file pattern as announcements (see
+# daily_prasadam_service.py) - admin edits take effect
+# immediately, no restart needed. Unlike announcements,
+# entries support full edit (not just add/deactivate),
+# since the sponsor/time/items for a day can change.
+# ============================================
+
+@app.get("/api/daily-prasadam")
+def api_get_daily_prasadam():
+    """
+    Public endpoint - the frontend fetches this to show the
+    "Daily Prasadam" section on the home page.
+    """
+    return {"entries": get_all_prasadam_entries()}
+
+
+class DailyPrasadamRequest(BaseModel):
+    date: str
+    items: str
+    time_slot: str = ""
+    sponsor: str = ""
+
+
+@app.get("/admin/daily-prasadam")
+def admin_list_daily_prasadam(request: Request):
+
+    require_admin(request)
+
+    return {"entries": get_all_prasadam_entries()}
+
+
+@app.post("/admin/daily-prasadam")
+def admin_add_daily_prasadam(data: DailyPrasadamRequest, request: Request):
+
+    require_admin(request)
+
+    if not data.date.strip():
+        raise HTTPException(status_code=400, detail="Date is required.")
+
+    if not data.items.strip():
+        raise HTTPException(status_code=400, detail="Prasadam item(s) cannot be empty.")
+
+    new_entry = add_prasadam_entry(
+        date=data.date,
+        items=data.items,
+        time_slot=data.time_slot,
+        sponsor=data.sponsor
+    )
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "added_daily_prasadam",
+        f"{data.date}: {data.items[:80]}"
+    )
+
+    return {"entry": new_entry}
+
+
+@app.put("/admin/daily-prasadam/{entry_id}")
+def admin_update_daily_prasadam(entry_id: str, data: DailyPrasadamRequest, request: Request):
+
+    require_admin(request)
+
+    if not data.date.strip():
+        raise HTTPException(status_code=400, detail="Date is required.")
+
+    if not data.items.strip():
+        raise HTTPException(status_code=400, detail="Prasadam item(s) cannot be empty.")
+
+    updated_entry = update_prasadam_entry(
+        entry_id,
+        date=data.date,
+        items=data.items,
+        time_slot=data.time_slot,
+        sponsor=data.sponsor
+    )
+
+    if not updated_entry:
+        raise HTTPException(status_code=404, detail="Entry not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "updated_daily_prasadam",
+        f"{data.date}: {data.items[:80]}"
+    )
+
+    return {"entry": updated_entry}
+
+
+@app.delete("/admin/daily-prasadam/{entry_id}")
+def admin_delete_daily_prasadam(entry_id: str, request: Request):
+
+    require_admin(request)
+
+    found = delete_prasadam_entry(entry_id)
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Entry not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "deleted_daily_prasadam",
+        entry_id
+    )
+
+    return {"status": "deleted", "id": entry_id}
+
+
+# ============================================
+# Daily Prasadam - Sponsor Requests
+# ============================================
+# Lets any resident offer to sponsor a day's prasadam from
+# the home page. Requests land in a pending queue that the
+# coordinator reviews in the admin panel; approving one
+# pre-fills the existing Daily Prasadam entry form so the
+# coordinator keeps full control over exactly what gets
+# published to the schedule.
+# ============================================
+
+class SponsorRequestBody(BaseModel):
+    name: str
+    mobile: str
+    block: str
+    flat: str
+    preferred_date: str
+    item: str = ""
+    notes: str = ""
+
+
+@app.post("/api/daily-prasadam/sponsor-request")
+def api_submit_sponsor_request(data: SponsorRequestBody):
+    """
+    Public endpoint - the "Sponsor a Daily Prasadam" form on
+    the home page submits here.
+    """
+
+    if not validate_flat_number(data.block, data.flat):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
+    if not validate_mobile_number(data.mobile):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.mobile}' is not a valid 10-digit mobile number."
+        )
+
+    if not data.name.strip():
+        raise HTTPException(status_code=400, detail="Name is required.")
+
+    if not data.preferred_date.strip():
+        raise HTTPException(status_code=400, detail="Preferred date is required.")
+
+    new_request = add_sponsor_request(
+        name=data.name,
+        mobile=data.mobile,
+        block=data.block,
+        flat_number=data.flat,
+        preferred_date=data.preferred_date,
+        item=data.item,
+        notes=data.notes
+    )
+
+    return {"request": new_request}
+
+
+@app.get("/admin/daily-prasadam/sponsor-requests")
+def admin_list_sponsor_requests(request: Request):
+
+    require_admin(request)
+
+    return {"requests": get_all_sponsor_requests()}
+
+
+class SponsorRequestStatusBody(BaseModel):
+    status: str
+
+
+@app.put("/admin/daily-prasadam/sponsor-requests/{request_id}/status")
+def admin_update_sponsor_request_status(request_id: str, data: SponsorRequestStatusBody, request: Request):
+
+    require_admin(request)
+
+    if data.status not in ("pending", "handled", "rejected"):
+        raise HTTPException(status_code=400, detail="Invalid status.")
+
+    updated = update_sponsor_request_status(request_id, data.status)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Request not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "updated_sponsor_request_status",
+        f"{request_id}: {data.status}"
+    )
+
+    return {"request": updated}
+
+
+@app.delete("/admin/daily-prasadam/sponsor-requests/{request_id}")
+def admin_delete_sponsor_request(request_id: str, request: Request):
+
+    require_admin(request)
+
+    found = delete_sponsor_request(request_id)
+
+    if not found:
+        raise HTTPException(status_code=404, detail="Request not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "deleted_sponsor_request",
+        request_id
+    )
+
+    return {"status": "deleted", "id": request_id}
+
+
+@app.get("/api/tshirt-price")
+def api_get_tshirt_price():
+    """Public endpoint - the order form fetches the current price to show."""
+    return {"price": get_tshirt_price()}
+
+
+class TshirtOrderRequest(BaseModel):
+    name: str
+    block: str
+    flat: str
+    mobile: str
+    small: int = 0
+    medium: int = 0
+    large: int = 0
+    xl: int = 0
+    xxl: int = 0
+
+
+@app.post("/order-tshirt")
+def order_tshirt(data: TshirtOrderRequest):
+
+    if not validate_flat_number(data.block, data.flat):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid flat number '{data.flat}' for {data.block} block. Please check and re-enter."
+        )
+
+    if not validate_mobile_number(data.mobile):
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{data.mobile}' is not a valid 10-digit mobile number."
+        )
+
+    sizes = {
+        "small": max(0, data.small),
+        "medium": max(0, data.medium),
+        "large": max(0, data.large),
+        "xl": max(0, data.xl),
+        "xxl": max(0, data.xxl)
+    }
+
+    if sum(sizes.values()) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Please choose at least one T-shirt size and quantity."
+        )
+
+    price = get_tshirt_price()
+
+    result = save_tshirt_order(
+        name=data.name,
+        block=data.block,
+        flat_number=data.flat,
+        mobile=data.mobile,
+        sizes=sizes,
+        price_per_shirt=price
+    )
+
+    return {
+        "status": "success",
+        "message": f"T-shirt order confirmed for {data.name}! {result['total_quantity']} shirt(s) reserved, total payable on pickup: ₹{result['total_amount']:.0f}.",
+        "order": result
+    }
+
+
+@app.get("/admin/tshirt-orders")
+def admin_get_tshirt_orders(request: Request):
+
+    require_section_view(request, "tshirt-orders")
+
+    rows = get_tshirt_orders()
+
+    orders = [
+        {
+            "id": row[0],
+            "name": row[1],
+            "block": row[2],
+            "flat_number": row[3],
+            "mobile": row[4],
+            "size_small": row[5],
+            "size_medium": row[6],
+            "size_large": row[7],
+            "size_xl": row[8],
+            "size_xxl": row[9],
+            "total_quantity": row[10],
+            "price_per_shirt": row[11],
+            "total_amount": row[12],
+            "status": row[13],
+            "created_at": row[14]
+        }
+        for row in rows
+    ]
+
+    return {
+        "orders": orders,
+        "totals": get_tshirt_order_totals(),
+        "price": get_tshirt_price()
+    }
+
+
+class TshirtPriceRequest(BaseModel):
+    price: float
+
+
+@app.post("/admin/tshirt-price")
+def admin_set_tshirt_price(data: TshirtPriceRequest, request: Request):
+
+    require_full_admin(request)
+
+    if data.price <= 0:
+        raise HTTPException(status_code=400, detail="Price must be greater than zero.")
+
+    new_price = set_tshirt_price(data.price)
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "changed_tshirt_price",
+        f"New price: ₹{new_price:.0f}"
+    )
+
+    return {"success": True, "price": new_price}
+
+
+@app.put("/admin/tshirt-orders/{order_id}/collected")
+def admin_mark_tshirt_collected(order_id: int, request: Request):
+
+    require_full_admin(request)
+
+    updated = mark_tshirt_order_collected(order_id)
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "marked_tshirt_collected",
+        f"Order #{order_id}"
+    )
+
+    return {"success": True}
+
+
+@app.delete("/admin/tshirt-orders/{order_id}")
+def admin_delete_tshirt_order(order_id: int, request: Request):
+
+    require_full_admin(request)
+
+    deleted = delete_tshirt_order(order_id)
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "deleted_tshirt_order",
+        f"Order #{order_id}"
+    )
+
+    return {"success": True}
+
+
+@app.get("/api/lookup-resident/{mobile}")
+def api_lookup_resident(mobile: str):
+    """
+    Public endpoint - looks up a mobile number across existing
+    registrations/donations/cultural/annaprasada records so a form
+    (like the T-shirt order form) can offer to auto-fill name/block/
+    flat for a returning resident, instead of asking them to retype
+    it every time.
+    """
+    from backend.database.database import find_known_resident
+
+    result = find_known_resident(mobile)
+
+    if result is None:
+        return {"found": False}
+
+    return {
+        "found": True,
+        "name": result["name"],
+        "block": result["block"],
+        "flat_number": result["flat_number"]
+    }
+
 
 @app.get("/api/vapid-public-key")
 def api_vapid_public_key():

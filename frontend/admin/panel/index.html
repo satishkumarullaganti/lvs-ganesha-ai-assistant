@@ -916,9 +916,34 @@
 
             <button
                 class="tab"
+                data-type="prasadam">
+
+                🍛 Daily Prasadam
+
+            </button>
+
+
+            <button
+                class="tab"
                 data-type="register-scan">
 
                 📷 Register Scan
+
+            </button>
+
+            <button
+                class="tab"
+                data-type="manage-logins">
+
+                👥 Manage Logins
+
+            </button>
+
+            <button
+                class="tab"
+                data-type="tshirt-orders">
+
+                👕 T-Shirt Orders
 
             </button>
 
@@ -1021,7 +1046,84 @@
 
 
 
-        <div id="register-scan-panel" style="display:none;">
+        <!-- DAILY PRASADAM PANEL -->
+
+        <div id="prasadam-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 id="prasadam-form-heading" style="margin-top:0;">🍛 Add Daily Prasadam Entry</h3>
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Date</label>
+                <input
+                    type="date"
+                    id="prasadam-date-input"
+                    style="width:100%;box-sizing:border-box;padding:10px;font-size:15px;border-radius:8px;border:1px solid #ccc;margin-bottom:12px;">
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Prasadam Item(s)</label>
+                <input
+                    type="text"
+                    id="prasadam-items-input"
+                    placeholder="e.g. Modak, Payasam"
+                    style="width:100%;box-sizing:border-box;padding:10px;font-size:15px;border-radius:8px;border:1px solid #ccc;margin-bottom:12px;">
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Distribution Time</label>
+                <input
+                    type="text"
+                    id="prasadam-time-input"
+                    placeholder="e.g. 12:30 PM onwards"
+                    style="width:100%;box-sizing:border-box;padding:10px;font-size:15px;border-radius:8px;border:1px solid #ccc;margin-bottom:12px;">
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Sponsor (optional)</label>
+                <input
+                    type="text"
+                    id="prasadam-sponsor-input"
+                    placeholder="e.g. Sharma Family, Flat 204"
+                    style="width:100%;box-sizing:border-box;padding:10px;font-size:15px;border-radius:8px;border:1px solid #ccc;margin-bottom:12px;">
+
+                <div style="display:flex;gap:10px;align-items:center;">
+
+                    <button
+                        id="prasadam-submit-btn"
+                        onclick="submitPrasadamEntry()"
+                        style="background:#ff9800;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                        Add Entry
+                    </button>
+
+                    <button
+                        id="prasadam-cancel-edit-btn"
+                        onclick="cancelPrasadamEdit()"
+                        style="display:none;background:#999;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                        Cancel Edit
+                    </button>
+
+                    <span id="prasadam-post-status" style="font-size:14px;"></span>
+
+                </div>
+
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">🙏 Sponsor Requests</h3>
+                <p style="margin:0 0 12px;font-size:13px;color:#777;">Submitted by residents from the home page. "Use for Entry" fills in the form above with their details - review and click Add Entry to publish.</p>
+
+                <div id="sponsor-requests-list">Loading...</div>
+
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">All Entries</h3>
+
+                <div id="prasadam-list">Loading...</div>
+
+            </div>
+
+        </div>
+
+
+<div id="register-scan-panel" style="display:none;">
 
             <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
 
@@ -1099,6 +1201,88 @@
             </div>
 
         </div>
+
+
+        <div id="manage-logins-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">👥 Add a Section-Restricted Login</h3>
+
+                <p style="color:#777;font-size:14px;margin-top:0;">
+                    Create a login for a volunteer or coordinator who should
+                    only be able to VIEW one section of this dashboard (e.g.
+                    Registrations, for a competition coordinator). They can
+                    never edit, delete, or see any other section.
+                </p>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:6px;">Full name</label>
+                        <input type="text" id="ml-name" placeholder="e.g. Ramesh Kumar" style="padding:10px;border:1px solid #ccc;border-radius:8px;">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:6px;">Username</label>
+                        <input type="text" id="ml-username" placeholder="e.g. ramesh.carrom" style="padding:10px;border:1px solid #ccc;border-radius:8px;">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:6px;">Password</label>
+                        <input type="password" id="ml-password" placeholder="min 8 characters" style="padding:10px;border:1px solid #ccc;border-radius:8px;">
+                    </div>
+
+                    <div>
+                        <label style="display:block;font-weight:600;margin-bottom:6px;">Can view</label>
+                        <select id="ml-section" style="padding:10px;border:1px solid #ccc;border-radius:8px;">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+
+                    <button onclick="submitCreateAdminUser()" style="background:#ff9800;color:white;border:none;border-radius:8px;padding:11px 20px;font-size:15px;cursor:pointer;">
+                        Add Login
+                    </button>
+
+                </div>
+
+                <p id="ml-status" style="margin-top:10px;font-size:14px;"></p>
+
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">Existing Logins</h3>
+
+                <div id="manage-logins-list">Loading...</div>
+
+            </div>
+
+        </div>
+
+
+        <div id="tshirt-orders-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
+
+                <div>
+                    <label style="font-weight:600;margin-right:8px;">Price per shirt (₹)</label>
+                    <input type="number" id="tshirt-admin-price" min="1" style="width:100px;padding:8px;border:1px solid #ccc;border-radius:8px;">
+                    <button onclick="updateTshirtPrice()" style="background:#ff9800;color:white;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;">Update Price</button>
+                    <span id="tshirt-price-status" style="margin-left:8px;font-size:13px;"></span>
+                </div>
+
+                <div id="tshirt-totals-summary" style="font-size:14px;color:#555;"></div>
+
+            </div>
+
+            <div style="background:#fff;border-radius:12px;padding:20px;">
+                <h3 style="margin-top:0;">Orders</h3>
+                <div id="tshirt-orders-list">Loading...</div>
+            </div>
+
+        </div>
+
 
     </section>
 
@@ -1589,10 +1773,12 @@ currentRecordData = record;
 ).innerHTML = details;
 
 
-// Add Edit button to modal footer
+// Add Edit/Delete buttons to modal footer - only for a full
+// admin. A section-restricted (view-only) login only ever
+// gets the Close button.
 document.querySelector(
     ".record-modal-footer"
-).innerHTML = `
+).innerHTML = isFullAdmin ? `
 
     <button
         class="close-btn"
@@ -1618,6 +1804,16 @@ document.querySelector(
     </button>
 
 
+
+` : `
+
+    <button
+        class="close-btn"
+        onclick="closeRecordModal()">
+
+        Close
+
+    </button>
 
 `;
 
@@ -1648,6 +1844,10 @@ function closeRecordModal() {
 ========================================== */
 
 function editCurrentRecord() {
+
+    if (!isFullAdmin) {
+        return;
+    }
 
     if (
         !currentRecordData ||
@@ -1808,6 +2008,10 @@ async function saveCurrentRecord() {
 ========================================== */
 
 async function deleteCurrentRecord() {
+
+    if (!isFullAdmin) {
+        return;
+    }
 
     if (
         !currentRecordData ||
@@ -1970,6 +2174,9 @@ document
                     const toolbar = document.querySelector(".toolbar");
                     const announcementsPanel = document.getElementById("announcements-panel");
                     const registerScanPanel = document.getElementById("register-scan-panel");
+                    const prasadamPanel = document.getElementById("prasadam-panel");
+                    const manageLoginsPanel = document.getElementById("manage-logins-panel");
+                    const tshirtOrdersPanel = document.getElementById("tshirt-orders-panel");
 
                     if (this.dataset.type === "announcements") {
 
@@ -1977,8 +2184,24 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "block";
                         registerScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
 
                         loadAnnouncementsAdminList();
+
+                    } else if (this.dataset.type === "prasadam") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "block";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
+
+                        loadPrasadamAdminList();
+                        loadSponsorRequestsAdminList();
 
                     } else if (this.dataset.type === "register-scan") {
 
@@ -1986,6 +2209,33 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "block";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
+
+                    } else if (this.dataset.type === "manage-logins") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "block";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
+
+                        loadManageLoginsPanel();
+
+                    } else if (this.dataset.type === "tshirt-orders") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "block";
+
+                        loadTshirtOrdersAdmin();
 
                     } else {
 
@@ -1993,6 +2243,9 @@ document
                         if (toolbar) toolbar.style.display = "flex";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
 
                         loadTable(
                             this.dataset.type
@@ -2137,6 +2390,711 @@ async function deactivateAnnouncementAdmin(id) {
         alert("Could not remove this announcement. Please try again.");
     }
 
+}
+
+/* ==========================================
+   DAILY PRASADAM MANAGEMENT
+========================================== */
+
+let currentEditingPrasadamId = null;
+let loadedPrasadamEntries = {};
+
+async function loadPrasadamAdminList() {
+
+    const listEl = document.getElementById("prasadam-list");
+    listEl.innerHTML = "Loading...";
+
+    try {
+
+        const response = await fetch("/admin/daily-prasadam", {
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            listEl.innerHTML = "Could not load entries.";
+            return;
+        }
+
+        const data = await response.json();
+        const entries = data.entries || [];
+
+        loadedPrasadamEntries = {};
+        entries.forEach(function (e) { loadedPrasadamEntries[e.id] = e; });
+
+        if (entries.length === 0) {
+            listEl.innerHTML = "<p style='color:#888;'>No entries yet.</p>";
+            return;
+        }
+
+        listEl.innerHTML = entries.map(function (e) {
+
+            const timeLine = e.time_slot
+                ? '<p style="margin:2px 0 0;font-size:13px;color:#555;">🕒 ' + escapeHtml(e.time_slot) + '</p>'
+                : "";
+
+            const sponsorLine = e.sponsor
+                ? '<p style="margin:2px 0 0;font-size:13px;color:#555;">🙏 Sponsored by ' + escapeHtml(e.sponsor) + '</p>'
+                : "";
+
+            return (
+                '<div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+                    '<div>' +
+                        '<span style="background:#ff9800;color:white;font-size:12px;padding:2px 10px;border-radius:10px;">' + escapeHtml(e.date) + '</span>' +
+                        '<p style="margin:6px 0 0;font-weight:600;">' + escapeHtml(e.items) + '</p>' +
+                        timeLine +
+                        sponsorLine +
+                    '</div>' +
+                    '<div style="display:flex;gap:8px;flex-shrink:0;">' +
+                        '<button onclick="editPrasadamEntry(\'' + e.id + '\')" ' +
+                        'style="background:#1976d2;color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;">Edit</button>' +
+                        '<button onclick="deletePrasadamEntry(\'' + e.id + '\')" ' +
+                        'style="background:#c62828;color:white;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;">Delete</button>' +
+                    '</div>' +
+                '</div>'
+            );
+
+        }).join("");
+
+    } catch (error) {
+        listEl.innerHTML = "Network error loading entries.";
+    }
+
+}
+
+async function submitPrasadamEntry() {
+
+    const dateInput = document.getElementById("prasadam-date-input");
+    const itemsInput = document.getElementById("prasadam-items-input");
+    const timeInput = document.getElementById("prasadam-time-input");
+    const sponsorInput = document.getElementById("prasadam-sponsor-input");
+    const statusEl = document.getElementById("prasadam-post-status");
+
+    const date = dateInput.value.trim();
+    const items = itemsInput.value.trim();
+
+    if (!date) {
+        statusEl.textContent = "Please choose a date.";
+        statusEl.style.color = "#d32f2f";
+        return;
+    }
+
+    if (!items) {
+        statusEl.textContent = "Please enter at least one prasadam item.";
+        statusEl.style.color = "#d32f2f";
+        return;
+    }
+
+    const payload = {
+        date: date,
+        items: items,
+        time_slot: timeInput.value.trim(),
+        sponsor: sponsorInput.value.trim()
+    };
+
+    const isEditing = currentEditingPrasadamId !== null;
+
+    statusEl.textContent = isEditing ? "Updating..." : "Saving...";
+    statusEl.style.color = "#888";
+
+    try {
+
+        const url = isEditing
+            ? "/admin/daily-prasadam/" + currentEditingPrasadamId
+            : "/admin/daily-prasadam";
+
+        const response = await fetch(url, {
+            method: isEditing ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            statusEl.textContent = "❌ " + (data.detail || "Failed to save.");
+            statusEl.style.color = "#d32f2f";
+            return;
+        }
+
+        statusEl.textContent = isEditing ? "✅ Updated." : "✅ Added.";
+        statusEl.style.color = "#4CAF50";
+
+        cancelPrasadamEdit();
+        loadPrasadamAdminList();
+
+    } catch (error) {
+        statusEl.textContent = "Network error - please try again.";
+        statusEl.style.color = "#d32f2f";
+    }
+
+}
+
+function editPrasadamEntry(id) {
+
+    const entry = loadedPrasadamEntries[id];
+
+    if (!entry) return;
+
+    currentEditingPrasadamId = entry.id;
+
+    document.getElementById("prasadam-date-input").value = entry.date || "";
+    document.getElementById("prasadam-items-input").value = entry.items || "";
+    document.getElementById("prasadam-time-input").value = entry.time_slot || "";
+    document.getElementById("prasadam-sponsor-input").value = entry.sponsor || "";
+
+    document.getElementById("prasadam-form-heading").textContent = "✏️ Edit Daily Prasadam Entry";
+    document.getElementById("prasadam-submit-btn").textContent = "Update Entry";
+    document.getElementById("prasadam-cancel-edit-btn").style.display = "inline-block";
+    document.getElementById("prasadam-post-status").textContent = "";
+
+    document.getElementById("prasadam-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+
+}
+
+function cancelPrasadamEdit() {
+
+    currentEditingPrasadamId = null;
+
+    document.getElementById("prasadam-date-input").value = "";
+    document.getElementById("prasadam-items-input").value = "";
+    document.getElementById("prasadam-time-input").value = "";
+    document.getElementById("prasadam-sponsor-input").value = "";
+
+    document.getElementById("prasadam-form-heading").textContent = "🍛 Add Daily Prasadam Entry";
+    document.getElementById("prasadam-submit-btn").textContent = "Add Entry";
+    document.getElementById("prasadam-cancel-edit-btn").style.display = "none";
+
+}
+
+async function deletePrasadamEntry(id) {
+
+    if (!confirm("Delete this prasadam entry?")) {
+        return;
+    }
+
+    try {
+
+        await fetch("/admin/daily-prasadam/" + id, {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        loadPrasadamAdminList();
+
+    } catch (error) {
+        alert("Could not delete this entry. Please try again.");
+    }
+
+}
+
+let loadedSponsorRequests = {};
+
+async function loadSponsorRequestsAdminList() {
+
+    const listEl = document.getElementById("sponsor-requests-list");
+    if (!listEl) return;
+
+    listEl.innerHTML = "Loading...";
+
+    try {
+
+        const response = await fetch("/admin/daily-prasadam/sponsor-requests", {
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            listEl.innerHTML = "Could not load sponsor requests.";
+            return;
+        }
+
+        const data = await response.json();
+        const requests = data.requests || [];
+
+        loadedSponsorRequests = {};
+        requests.forEach(function (r) { loadedSponsorRequests[r.id] = r; });
+
+        const pending = requests.filter(function (r) { return r.status === "pending"; });
+        const others = requests.filter(function (r) { return r.status !== "pending"; });
+
+        if (requests.length === 0) {
+            listEl.innerHTML = "<p style='color:#888;'>No sponsor requests yet.</p>";
+            return;
+        }
+
+        function renderRequest(r) {
+
+            const statusColors = { pending: "#ff9800", handled: "#4CAF50", rejected: "#c62828" };
+            const statusColor = statusColors[r.status] || "#888";
+
+            const itemLine = r.item
+                ? '<p style="margin:2px 0 0;font-size:13px;color:#555;">🍛 ' + escapeHtml(r.item) + '</p>'
+                : "";
+
+            const notesLine = r.notes
+                ? '<p style="margin:2px 0 0;font-size:13px;color:#777;">📝 ' + escapeHtml(r.notes) + '</p>'
+                : "";
+
+            const actionButtons = r.status === "pending"
+                ? (
+                    '<button onclick="useSponsorRequestForEntry(\'' + r.id + '\')" ' +
+                    'style="background:#1976d2;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;">Use for Entry</button>' +
+                    '<button onclick="rejectSponsorRequest(\'' + r.id + '\')" ' +
+                    'style="background:#c62828;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;">Reject</button>'
+                )
+                : (
+                    '<button onclick="deleteSponsorRequestRecord(\'' + r.id + '\')" ' +
+                    'style="background:#999;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;">Remove</button>'
+                );
+
+            return (
+                '<div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">' +
+                    '<div>' +
+                        '<span style="background:' + statusColor + ';color:white;font-size:12px;padding:2px 10px;border-radius:10px;text-transform:capitalize;">' + escapeHtml(r.status) + '</span>' +
+                        '<p style="margin:6px 0 0;font-weight:600;">' + escapeHtml(r.name) + ' - ' + escapeHtml(r.block) + ' ' + escapeHtml(r.flat_number) + '</p>' +
+                        '<p style="margin:2px 0 0;font-size:13px;color:#555;">📅 Preferred: ' + escapeHtml(r.preferred_date) + ' · 📱 ' + escapeHtml(r.mobile) + '</p>' +
+                        itemLine +
+                        notesLine +
+                    '</div>' +
+                    '<div style="display:flex;gap:8px;flex-shrink:0;">' + actionButtons + '</div>' +
+                '</div>'
+            );
+
+        }
+
+        listEl.innerHTML = pending.map(renderRequest).join("") + others.map(renderRequest).join("");
+
+    } catch (error) {
+        listEl.innerHTML = "Network error loading sponsor requests.";
+    }
+
+}
+
+function useSponsorRequestForEntry(id) {
+
+    const r = loadedSponsorRequests[id];
+    if (!r) return;
+
+    cancelPrasadamEdit();
+
+    document.getElementById("prasadam-date-input").value = r.preferred_date || "";
+    document.getElementById("prasadam-items-input").value = r.item || "";
+    document.getElementById("prasadam-sponsor-input").value = r.name + " (" + r.block + " " + r.flat_number + ")";
+
+    document.getElementById("prasadam-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+
+    setSponsorRequestStatus(id, "handled");
+
+}
+
+async function rejectSponsorRequest(id) {
+
+    if (!confirm("Reject this sponsor request?")) return;
+
+    await setSponsorRequestStatus(id, "rejected");
+
+}
+
+async function setSponsorRequestStatus(id, status) {
+
+    try {
+
+        await fetch("/admin/daily-prasadam/sponsor-requests/" + id + "/status", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ status: status })
+        });
+
+        loadSponsorRequestsAdminList();
+
+    } catch (error) {
+        alert("Could not update this request. Please try again.");
+    }
+
+}
+
+async function deleteSponsorRequestRecord(id) {
+
+    if (!confirm("Remove this sponsor request record?")) return;
+
+    try {
+
+        await fetch("/admin/daily-prasadam/sponsor-requests/" + id, {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        loadSponsorRequestsAdminList();
+
+    } catch (error) {
+        alert("Could not remove this record. Please try again.");
+    }
+
+}
+
+/* ==========================================
+   SECTION-RESTRICTED (VIEW-ONLY) LOGINS
+========================================== */
+
+let currentAdminSection = null;   // null = full admin
+let isFullAdmin = true;
+
+async function checkAdminAccessAndInit() {
+
+    try {
+
+        const response = await fetch("/admin/auth/status", {
+            credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!data.authenticated) {
+            window.location.href = "/admin/";
+            return;
+        }
+
+        currentAdminSection = data.section || null;
+        isFullAdmin = !currentAdminSection;
+
+    } catch (error) {
+
+        currentAdminSection = null;
+        isFullAdmin = true;
+    }
+
+    if (isFullAdmin) {
+
+        loadDashboard();
+        loadTable("registrations");
+
+    } else {
+
+        applySectionRestrictions(currentAdminSection);
+    }
+}
+
+function applySectionRestrictions(section) {
+
+    // Hide the summary cards - the dashboard endpoint is
+    // full-admin only, and cards spanning every section
+    // wouldn't make sense for a single-section login anyway.
+    const cardsSection = document.querySelector(".cards");
+    if (cardsSection) cardsSection.style.display = "none";
+
+    // Hide the Export button - exporting stays a full-admin action.
+    const exportBtn = document.querySelector(".export-btn");
+    if (exportBtn) exportBtn.style.display = "none";
+
+    // Hide every tab that isn't this login's assigned section,
+    // and always hide "Manage Logins" (full-admin only).
+    document.querySelectorAll(".tab").forEach(function (tabBtn) {
+
+        if (tabBtn.dataset.type === "manage-logins") {
+            tabBtn.style.display = "none";
+            return;
+        }
+
+        if (tabBtn.dataset.type !== section) {
+            tabBtn.style.display = "none";
+        }
+    });
+
+    // Hide announcement posting - view only.
+    const announceForm = document.querySelector("#announcements-panel > div:first-child");
+    if (announceForm) announceForm.style.display = "none";
+
+    // Open the one tab this login can see.
+    const ownTab = document.querySelector('.tab[data-type="' + section + '"]');
+
+    if (ownTab) {
+        ownTab.click();
+    } else {
+        document.getElementById("table-container").innerHTML =
+            '<div class="empty">Your login is not assigned to a section that exists in this dashboard. Please contact the festival committee.</div>';
+    }
+}
+
+/* ==========================================
+   MANAGE LOGINS (full admin only)
+========================================== */
+
+async function loadManageLoginsPanel() {
+
+    const selectEl = document.getElementById("ml-section");
+    const listEl = document.getElementById("manage-logins-list");
+
+    listEl.innerHTML = "Loading...";
+
+    try {
+
+        const response = await fetch("/admin/users", {
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            listEl.innerHTML = "Could not load logins.";
+            return;
+        }
+
+        const data = await response.json();
+
+        selectEl.innerHTML =
+            '<option value="">Full admin (sees everything)</option>' +
+            data.available_sections.map(function (s) {
+                return '<option value="' + s + '">' + formatColumnName(s.replace("-", " ")) + '</option>';
+            }).join("");
+
+        const users = data.users || [];
+
+        if (users.length === 0) {
+            listEl.innerHTML = "<p style='color:#888;'>No additional logins yet - just the main admin account.</p>";
+            return;
+        }
+
+        listEl.innerHTML = users.map(function (u) {
+
+            const sectionLabel = u.section
+                ? "View only: " + formatColumnName(u.section.replace("-", " "))
+                : "Full admin";
+
+            return (
+                '<div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+                    '<div>' +
+                        '<b>' + escapeHtml(u.name) + '</b> (' + escapeHtml(u.username) + ')' +
+                        '<p style="margin:4px 0 0;font-size:12px;color:#888;">' + sectionLabel + '</p>' +
+                    '</div>' +
+                    '<button onclick="deleteAdminUserRow(\'' + escapeHtml(u.username) + '\')" style="background:#c62828;color:white;border:none;border-radius:6px;padding:7px 14px;cursor:pointer;">Delete</button>' +
+                '</div>'
+            );
+
+        }).join("");
+
+    } catch (error) {
+        listEl.innerHTML = "Network error loading logins.";
+    }
+}
+
+async function submitCreateAdminUser() {
+
+    const name = document.getElementById("ml-name").value.trim();
+    const username = document.getElementById("ml-username").value.trim();
+    const password = document.getElementById("ml-password").value;
+    const section = document.getElementById("ml-section").value;
+    const statusEl = document.getElementById("ml-status");
+
+    if (!name || !username || !password) {
+        statusEl.textContent = "Please fill in name, username, and password.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    statusEl.textContent = "Creating...";
+    statusEl.style.color = "#888";
+
+    try {
+
+        const response = await fetch("/admin/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ name: name, username: username, password: password, section: section })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to create login.");
+        }
+
+        statusEl.textContent = "✅ Login created.";
+        statusEl.style.color = "#2e7d32";
+
+        document.getElementById("ml-name").value = "";
+        document.getElementById("ml-username").value = "";
+        document.getElementById("ml-password").value = "";
+
+        loadManageLoginsPanel();
+
+    } catch (error) {
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+async function deleteAdminUserRow(username) {
+
+    if (!confirm("Remove the login for " + username + "?")) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch("/admin/users/" + encodeURIComponent(username), {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.detail || "Failed to delete login.");
+        }
+
+        loadManageLoginsPanel();
+
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+/* ==========================================
+   T-SHIRT ORDERS (admin)
+========================================== */
+
+async function loadTshirtOrdersAdmin() {
+
+    const listEl = document.getElementById("tshirt-orders-list");
+    const priceInput = document.getElementById("tshirt-admin-price");
+    const totalsEl = document.getElementById("tshirt-totals-summary");
+
+    listEl.innerHTML = "Loading...";
+
+    try {
+
+        const response = await fetch("/admin/tshirt-orders", {
+            credentials: "include"
+        });
+
+        if (!response.ok) {
+            listEl.innerHTML = "Could not load orders.";
+            return;
+        }
+
+        const data = await response.json();
+
+        priceInput.value = data.price;
+
+        const t = data.totals;
+        totalsEl.textContent =
+            "S: " + t.small + " | M: " + t.medium + " | L: " + t.large +
+            " | XL: " + t.xl + " | XXL: " + t.xxl +
+            " | Total shirts: " + t.total_quantity +
+            " | Total payable: ₹" + t.total_amount;
+
+        const orders = data.orders || [];
+
+        if (orders.length === 0) {
+            listEl.innerHTML = "<p style='color:#888;'>No orders yet.</p>";
+            return;
+        }
+
+        listEl.innerHTML = orders.map(function (o) {
+
+            const sizesText = "S:" + o.size_small + " M:" + o.size_medium +
+                " L:" + o.size_large + " XL:" + o.size_xl + " XXL:" + o.size_xxl;
+
+            const statusColor = o.status === "collected" ? "#4CAF50" : "#ff9800";
+
+            const collectBtn = o.status === "collected"
+                ? ""
+                : '<button onclick="markTshirtCollected(' + o.id + ')" style="background:#4CAF50;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;margin-right:6px;">Mark Collected</button>';
+
+            return (
+                '<div style="border-bottom:1px solid #eee;padding:12px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">' +
+                    '<div>' +
+                        '<b>' + escapeHtml(o.name) + '</b> - Block ' + escapeHtml(o.block) + ', Flat ' + escapeHtml(o.flat_number) +
+                        '<p style="margin:4px 0 0;font-size:13px;color:#666;">' + escapeHtml(o.mobile) + ' | ' + sizesText + ' | ₹' + o.total_amount + '</p>' +
+                        '<p style="margin:2px 0 0;font-size:12px;color:' + statusColor + ';">' + o.status + '</p>' +
+                    '</div>' +
+                    '<div>' +
+                        collectBtn +
+                        '<button onclick="deleteTshirtOrderRow(' + o.id + ')" style="background:#c62828;color:white;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;">Delete</button>' +
+                    '</div>' +
+                '</div>'
+            );
+
+        }).join("");
+
+    } catch (error) {
+        listEl.innerHTML = "Network error loading orders.";
+    }
+}
+
+async function updateTshirtPrice() {
+
+    const priceInput = document.getElementById("tshirt-admin-price");
+    const statusEl = document.getElementById("tshirt-price-status");
+    const newPrice = parseFloat(priceInput.value);
+
+    if (!newPrice || newPrice <= 0) {
+        statusEl.textContent = "Enter a valid price.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    try {
+
+        const response = await fetch("/admin/tshirt-price", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ price: newPrice })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Failed to update price.");
+        }
+
+        statusEl.textContent = "✅ Updated.";
+        statusEl.style.color = "#2e7d32";
+
+    } catch (error) {
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+async function markTshirtCollected(orderId) {
+
+    try {
+
+        const response = await fetch("/admin/tshirt-orders/" + orderId + "/collected", {
+            method: "PUT",
+            credentials: "include"
+        });
+
+        if (!response.ok) throw new Error("Failed to update order.");
+
+        loadTshirtOrdersAdmin();
+
+    } catch (error) {
+        alert("Could not update this order.");
+    }
+}
+
+async function deleteTshirtOrderRow(orderId) {
+
+    if (!confirm("Delete this T-shirt order?")) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch("/admin/tshirt-orders/" + orderId, {
+            method: "DELETE",
+            credentials: "include"
+        });
+
+        if (!response.ok) throw new Error("Failed to delete order.");
+
+        loadTshirtOrdersAdmin();
+
+    } catch (error) {
+        alert("Could not delete this order.");
+    }
 }
 
 /* ==========================================
@@ -2664,11 +3622,7 @@ async function submitChangePassword() {
    INITIAL LOAD
 ========================================== */
 
-loadDashboard();
-
-loadTable(
-    "registrations"
-);
+checkAdminAccessAndInit();
 
 
 </script>

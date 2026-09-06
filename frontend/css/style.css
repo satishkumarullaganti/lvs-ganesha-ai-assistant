@@ -787,3 +787,239 @@ footer p {
     from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* =========================================================
+   Daily Prasadam Section
+   ========================================================= */
+
+#daily-prasadam-section {
+    padding: 10px 0 20px;
+}
+
+.prasadam-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 16px;
+}
+
+.prasadam-card {
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: #fffdf8;
+    border: 1px solid #f2dfbd;
+    box-shadow: 0 6px 16px rgba(72, 55, 25, 0.08);
+}
+
+.prasadam-card.prasadam-today {
+    border: 2px solid #ff9800;
+    background: #fff3e0;
+    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.2);
+}
+
+.prasadam-date {
+    margin: 0 0 6px;
+    color: #d85b00;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.prasadam-items {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #222;
+}
+
+.prasadam-time,
+.prasadam-sponsor {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: #666;
+}
+
+
+/* ===== T-Shirt Pre-Booking ===== */
+#tshirt-section {
+    padding: 40px 0;
+}
+#tshirt-order-form {
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#tshirt-order-form input,
+#tshirt-order-form select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 15px;
+}
+.tshirt-size-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+    gap: 10px;
+}
+.tshirt-size-grid label {
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+    gap: 4px;
+}
+.tshirt-size-grid input {
+    width: 100%;
+}
+#tshirt-total-line {
+    font-weight: 700;
+}
+.tshirt-product-image {
+    display: block;
+    max-width: 280px;
+    width: 100%;
+    border-radius: 12px;
+    margin: 10px 0 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
+
+
+/* ===== T-Shirt Order Modal ===== */
+.tshirt-link-button {
+    display: inline-block;
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 22px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.tshirt-link-button:hover {
+    background: #f57c00;
+}
+.tshirt-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.tshirt-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 26px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+.tshirt-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #777;
+}
+
+
+.tshirt-optional-note {
+    background: #fff3e0;
+    color: #8a5a00;
+    border: 1px solid #ffcc80;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin: 6px 0 14px;
+}
+
+
+/* ===== Sponsor a Daily Prasadam Modal ===== */
+.sponsor-link-button {
+    display: inline-block;
+    background: #6d4c1f;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.sponsor-link-button:hover {
+    background: #543a17;
+}
+.sponsor-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.sponsor-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 26px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+.sponsor-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: transparent;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    color: #777;
+}
+.sponsor-optional-note {
+    background: #fff3e0;
+    color: #8a5a00;
+    border: 1px solid #ffcc80;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin: 6px 0 14px;
+}
+#sponsor-request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+#sponsor-request-form input,
+#sponsor-request-form select,
+#sponsor-request-form textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+}
+.sponsor-submit-button {
+    background: #ff9800;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.sponsor-submit-button:hover {
+    background: #f57c00;
+}

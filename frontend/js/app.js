@@ -1748,3 +1748,356 @@ function speakText(buttonElement, text) {
 
     window.speechSynthesis.speak(utterance);
 }
+
+// ======================================
+// Daily Prasadam Section
+// ======================================
+// Same polling pattern as the announcements banner above -
+// keeps the home page's Daily Prasadam section current
+// without needing a page reload.
+
+function loadDailyPrasadam() {
+
+    fetch("/api/daily-prasadam")
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+
+            const container = document.getElementById("daily-prasadam-list");
+
+            if (!container) return;
+
+            const entries = data.entries || [];
+
+            if (entries.length === 0) {
+                container.innerHTML = "<p style='color:#888;text-align:center;'>No prasadam schedule posted yet.</p>";
+                return;
+            }
+
+            const todayString = new Date().toISOString().slice(0, 10);
+
+            container.innerHTML = entries.map(function (entry) {
+
+                const isToday = entry.date === todayString;
+
+                const timeLine = entry.time_slot
+                    ? '<p class="prasadam-time">🕒 ' + entry.time_slot + '</p>'
+                    : "";
+
+                const sponsorLine = entry.sponsor
+                    ? '<p class="prasadam-sponsor">🙏 Sponsored by ' + entry.sponsor + '</p>'
+                    : "";
+
+                const dateLabel = new Date(entry.date + "T00:00:00").toLocaleDateString("en-IN", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short"
+                });
+
+                return (
+                    '<div class="prasadam-card' + (isToday ? ' prasadam-today' : '') + '">' +
+                        '<p class="prasadam-date">' + (isToday ? "🌟 Today · " : "") + dateLabel + '</p>' +
+                        '<p class="prasadam-items">' + entry.items + '</p>' +
+                        timeLine +
+                        sponsorLine +
+                    '</div>'
+                );
+
+            }).join("");
+
+        })
+        .catch(function () {
+            // Silently ignore - same as announcements, this is
+            // a nice-to-have, not critical to the app working.
+        });
+
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    loadDailyPrasadam();
+
+    setInterval(loadDailyPrasadam, 60000);
+
+});
+
+
+// ===== Sponsor a Daily Prasadam =====
+// Same modal + submit pattern as the T-shirt order form below,
+// posting to the public sponsor-request endpoint. The
+// coordinator reviews these in the admin panel before they
+// become a published Daily Prasadam entry.
+
+function openSponsorModal() {
+    const overlay = document.getElementById("sponsor-modal-overlay");
+    if (!overlay) return;
+    overlay.style.display = "flex";
+}
+
+function closeSponsorModal() {
+    const overlay = document.getElementById("sponsor-modal-overlay");
+    if (!overlay) return;
+    overlay.style.display = "none";
+}
+
+async function submitSponsorRequest() {
+
+    const statusEl = document.getElementById("sponsor-request-status");
+    const name = document.getElementById("sponsor-name").value.trim();
+    const block = document.getElementById("sponsor-block").value;
+    const flat = document.getElementById("sponsor-flat").value.trim();
+    const mobile = document.getElementById("sponsor-mobile").value.trim();
+    const preferredDate = document.getElementById("sponsor-date").value;
+    const item = document.getElementById("sponsor-item").value.trim();
+    const notes = document.getElementById("sponsor-notes").value.trim();
+
+    if (!name || !block || !flat || !mobile || !preferredDate) {
+        statusEl.textContent = "Please fill in all your details.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    const payload = {
+        name: name,
+        mobile: mobile,
+        block: block,
+        flat: flat,
+        preferred_date: preferredDate,
+        item: item,
+        notes: notes
+    };
+
+    statusEl.textContent = "Submitting...";
+    statusEl.style.color = "#888";
+
+    try {
+
+        const res = await fetch("/api/daily-prasadam/sponsor-request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.detail || "Could not submit your request.");
+        }
+
+        statusEl.textContent = "";
+
+        closeSponsorModal();
+
+        if (typeof showThankYouPopup === "function") {
+            showThankYouPopup(name, "offering to sponsor Daily Prasadam");
+        }
+
+        document.getElementById("sponsor-request-form").reset();
+
+    } catch (err) {
+        statusEl.textContent = "❌ " + err.message;
+        statusEl.style.color = "#c62828";
+    }
+
+}
+
+
+// ===== Sponsor Request: auto-fill for a returning resident =====
+let sponsorLastLookedUpMobile = "";
+
+async function lookupSponsorResident() {
+    const mobileInput = document.getElementById("sponsor-mobile");
+    if (!mobileInput) return;
+
+    const mobile = mobileInput.value.trim();
+
+    if (!/^\d{10}$/.test(mobile) || mobile === sponsorLastLookedUpMobile) {
+        return;
+    }
+
+    sponsorLastLookedUpMobile = mobile;
+
+    try {
+        const res = await fetch("/api/lookup-resident/" + encodeURIComponent(mobile));
+        const data = await res.json();
+
+        if (data.found) {
+            const nameEl = document.getElementById("sponsor-name");
+            const blockEl = document.getElementById("sponsor-block");
+            const flatEl = document.getElementById("sponsor-flat");
+
+            if (nameEl && !nameEl.value) nameEl.value = data.name;
+            if (blockEl && !blockEl.value) blockEl.value = data.block;
+            if (flatEl && !flatEl.value) flatEl.value = data.flat_number;
+        }
+    } catch (err) {
+        // Silent failure - this is a convenience, not a required step.
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const mobileEl = document.getElementById("sponsor-mobile");
+    if (mobileEl) {
+        mobileEl.addEventListener("input", lookupSponsorResident);
+        mobileEl.addEventListener("blur", lookupSponsorResident);
+    }
+});
+
+
+// ===== T-Shirt Pre-Booking =====
+let tshirtCurrentPrice = 300;
+
+async function loadTshirtPrice() {
+    const priceLine = document.getElementById("tshirt-price-line");
+    if (!priceLine) return;
+    try {
+        const res = await fetch("/api/tshirt-price");
+        const data = await res.json();
+        tshirtCurrentPrice = data.price;
+        priceLine.textContent = "₹" + tshirtCurrentPrice + " per shirt. Reserve now, pay on pickup.";
+        updateTshirtTotal();
+    } catch (err) {
+        priceLine.textContent = "Could not load price right now.";
+    }
+}
+
+function updateTshirtTotal() {
+    const totalLine = document.getElementById("tshirt-total-line");
+    if (!totalLine) return;
+    const qty = tshirtOrderQuantity();
+    const amount = qty * tshirtCurrentPrice;
+    totalLine.textContent = qty > 0 ? ("Total: " + qty + " shirt(s) - ₹" + amount) : "";
+}
+
+function tshirtOrderQuantity() {
+    const ids = ["tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl"];
+    return ids.reduce((sum, id) => {
+        const el = document.getElementById(id);
+        const val = el ? parseInt(el.value, 10) || 0 : 0;
+        return sum + val;
+    }, 0);
+}
+
+async function submitTshirtOrder() {
+    const statusEl = document.getElementById("tshirt-order-status");
+    const name = document.getElementById("tshirt-name").value.trim();
+    const block = document.getElementById("tshirt-block").value;
+    const flat = document.getElementById("tshirt-flat").value.trim();
+    const mobile = document.getElementById("tshirt-mobile").value.trim();
+
+    const payload = {
+        name: name,
+        block: block,
+        flat: flat,
+        mobile: mobile,
+        small: parseInt(document.getElementById("tshirt-small").value, 10) || 0,
+        medium: parseInt(document.getElementById("tshirt-medium").value, 10) || 0,
+        large: parseInt(document.getElementById("tshirt-large").value, 10) || 0,
+        xl: parseInt(document.getElementById("tshirt-xl").value, 10) || 0,
+        xxl: parseInt(document.getElementById("tshirt-xxl").value, 10) || 0
+    };
+
+    if (!name || !block || !flat || !mobile) {
+        statusEl.textContent = "Please fill in all your details.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    statusEl.textContent = "Submitting...";
+    statusEl.style.color = "#888";
+
+    try {
+        const res = await fetch("/order-tshirt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.detail || "Order failed.");
+        }
+
+        statusEl.textContent = "";
+
+        if (typeof closeTshirtModal === "function") {
+            closeTshirtModal();
+        }
+
+        if (typeof showThankYouPopup === "function") {
+            showThankYouPopup(name, "reserving your T-shirt");
+        }
+
+        document.getElementById("tshirt-order-form").reset();
+        updateTshirtTotal();
+
+    } catch (err) {
+        statusEl.textContent = "❌ " + err.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadTshirtPrice();
+    ["tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", updateTshirtTotal);
+    });
+});
+
+
+// ===== T-Shirt Order Modal open/close =====
+function openTshirtModal() {
+    const overlay = document.getElementById("tshirt-modal-overlay");
+    if (!overlay) return;
+    overlay.style.display = "flex";
+    loadTshirtPrice();
+}
+
+function closeTshirtModal() {
+    const overlay = document.getElementById("tshirt-modal-overlay");
+    if (!overlay) return;
+    overlay.style.display = "none";
+}
+
+
+// ===== T-Shirt Order: auto-fill for a returning resident =====
+let tshirtLastLookedUpMobile = "";
+
+async function lookupTshirtResident() {
+    const mobileInput = document.getElementById("tshirt-mobile");
+    if (!mobileInput) return;
+
+    const mobile = mobileInput.value.trim();
+
+    if (!/^\d{10}$/.test(mobile) || mobile === tshirtLastLookedUpMobile) {
+        return;
+    }
+
+    tshirtLastLookedUpMobile = mobile;
+
+    try {
+        const res = await fetch("/api/lookup-resident/" + encodeURIComponent(mobile));
+        const data = await res.json();
+
+        if (data.found) {
+            const nameEl = document.getElementById("tshirt-name");
+            const blockEl = document.getElementById("tshirt-block");
+            const flatEl = document.getElementById("tshirt-flat");
+
+            if (nameEl && !nameEl.value) nameEl.value = data.name;
+            if (blockEl && !blockEl.value) blockEl.value = data.block;
+            if (flatEl && !flatEl.value) flatEl.value = data.flat_number;
+        }
+    } catch (err) {
+        // Silent failure - this is a convenience, not a required step.
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const mobileEl = document.getElementById("tshirt-mobile");
+    if (mobileEl) {
+        mobileEl.addEventListener("input", lookupTshirtResident);
+        mobileEl.addEventListener("blur", lookupTshirtResident);
+    }
+});

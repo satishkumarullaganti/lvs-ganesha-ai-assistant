@@ -132,7 +132,94 @@
 
 </section>
 
-<!-- Feature Cards -->
+<!-- Daily Prasadam Section -->
+        <section id="daily-prasadam-section">
+
+            <h2 class="section-title">
+                🍛 Daily Prasadam
+            </h2>
+
+            <div id="daily-prasadam-list" class="prasadam-grid">
+                Loading...
+            </div>
+
+            <div style="text-align:center;margin-top:16px;">
+                <button type="button" class="sponsor-link-button" onclick="openSponsorModal()">
+                    🙏 Sponsor a Daily Prasadam
+                </button>
+            </div>
+
+        </section>
+
+        <div id="sponsor-modal-overlay" class="sponsor-modal-overlay" style="display:none;">
+            <div class="sponsor-modal-content">
+                <button type="button" class="sponsor-modal-close" onclick="closeSponsorModal()">×</button>
+                <h2>🙏 Sponsor a Daily Prasadam</h2>
+                <p class="sponsor-optional-note">Share your details and preferred date - the coordinator will review and add you to the schedule.</p>
+                <form id="sponsor-request-form" onsubmit="return false;">
+                    <input type="tel" id="sponsor-mobile" placeholder="Mobile Number" required>
+                    <input type="text" id="sponsor-name" placeholder="Full Name" required>
+                    <select id="sponsor-block" required>
+                        <option value="">Select Block</option>
+                        <option value="South">South</option>
+                        <option value="North">North</option>
+                        <option value="Terrace">Terrace</option>
+                    </select>
+                    <input type="text" id="sponsor-flat" placeholder="Flat Number" required>
+                    <label style="font-size:13px;color:#555;">Preferred Date</label>
+                    <input type="date" id="sponsor-date" required>
+                    <input type="text" id="sponsor-item" placeholder="Prasadam item (optional, e.g. Modak, Payasam)">
+                    <textarea id="sponsor-notes" placeholder="Any notes for the coordinator (optional)" rows="2"></textarea>
+                    <button type="button" onclick="submitSponsorRequest()" class="sponsor-submit-button">Submit Request</button>
+                    <p id="sponsor-request-status" style="font-size:14px;margin:4px 0 0;"></p>
+                </form>
+            </div>
+        </div>
+
+<!-- T-Shirt Pre-Booking -->
+        <section id="tshirt-section">
+            <div class="container">
+                <button type="button" class="tshirt-link-button" onclick="openTshirtModal()">
+                    👕 LVS Excellency T-Shirt - Click to Order
+                </button>
+            </div>
+        </section>
+
+        <div id="tshirt-modal-overlay" class="tshirt-modal-overlay" style="display:none;">
+            <div class="tshirt-modal-content">
+                <button type="button" class="tshirt-modal-close" onclick="closeTshirtModal()">×</button>
+                <h2>👕 LVS Excellency Festival T-Shirt</h2>
+                <p class="tshirt-optional-note">This is completely optional - only for residents who'd like one. No one is required to book a T-shirt.</p>
+                <img src="/static/images/lvs_excellency_tshirt.jpg" alt="LVS Excellency T-Shirt" class="tshirt-product-image">
+                <p id="tshirt-price-line">Loading price...</p>
+                <form id="tshirt-order-form" onsubmit="return false;">
+                    <input type="tel" id="tshirt-mobile" placeholder="Mobile Number" required>
+                    <input type="text" id="tshirt-name" placeholder="Full Name" required>
+                    <select id="tshirt-block" required>
+                        <option value="">Select Block</option>
+                        <option value="South">South</option>
+                        <option value="North">North</option>
+                        <option value="Terrace">Terrace</option>
+                    </select>
+                    <input type="text" id="tshirt-flat" placeholder="Flat Number" required>
+
+                    <div class="tshirt-size-grid">
+                        <label>Small <input type="number" id="tshirt-small" min="0" value="0"></label>
+                        <label>Medium <input type="number" id="tshirt-medium" min="0" value="0"></label>
+                        <label>Large <input type="number" id="tshirt-large" min="0" value="0"></label>
+                        <label>XL <input type="number" id="tshirt-xl" min="0" value="0"></label>
+                        <label>XXL <input type="number" id="tshirt-xxl" min="0" value="0"></label>
+                    </div>
+
+                    <p id="tshirt-total-line"></p>
+
+                    <button type="button" onclick="submitTshirtOrder()">Reserve T-Shirt</button>
+                    <p id="tshirt-order-status"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Feature Cards -->
         <section id="features">
 
             <h2 class="section-title">
