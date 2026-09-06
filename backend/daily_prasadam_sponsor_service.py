@@ -59,7 +59,7 @@ def get_all_sponsor_requests():
     return requests
 
 
-def add_sponsor_request(name, mobile, block, flat_number, preferred_date, item="", notes=""):
+def add_sponsor_request(name, mobile, block, flat_number, preferred_date, slot="", item="", notes=""):
 
     requests = _read_all()
 
@@ -70,6 +70,7 @@ def add_sponsor_request(name, mobile, block, flat_number, preferred_date, item="
         "block": block.strip(),
         "flat_number": str(flat_number).strip(),
         "preferred_date": preferred_date.strip(),
+        "slot": slot.strip() if slot else "",
         "item": item.strip() if item else "",
         "notes": notes.strip() if notes else "",
         "status": "pending",

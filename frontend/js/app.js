@@ -1847,10 +1847,11 @@ async function submitSponsorRequest() {
     const flat = document.getElementById("sponsor-flat").value.trim();
     const mobile = document.getElementById("sponsor-mobile").value.trim();
     const preferredDate = document.getElementById("sponsor-date").value;
+    const slot = document.getElementById("sponsor-slot").value;
     const item = document.getElementById("sponsor-item").value.trim();
     const notes = document.getElementById("sponsor-notes").value.trim();
 
-    if (!name || !block || !flat || !mobile || !preferredDate) {
+    if (!name || !block || !flat || !mobile || !preferredDate || !slot) {
         statusEl.textContent = "Please fill in all your details.";
         statusEl.style.color = "#c62828";
         return;
@@ -1862,6 +1863,7 @@ async function submitSponsorRequest() {
         block: block,
         flat: flat,
         preferred_date: preferredDate,
+        slot: slot,
         item: item,
         notes: notes
     };
