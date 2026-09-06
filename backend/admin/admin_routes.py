@@ -36,10 +36,11 @@ from backend.database.database import (
     change_admin_password,
     add_admin_user,
     get_all_admin_users,
-    delete_admin_user
+    delete_admin_user,
+    save_cultural_registration
 )
 
-from backend.register_ocr_service import extract_register_rows
+from backend.register_ocr_service import extract_register_rows, extract_cultural_signup_rows
 from backend.validators import validate_flat_number
 from backend.donation_service import donation_service
 
@@ -565,31 +566,43 @@ async def admin_confirm_register_donations(
         flat_number = (row.get("flat_number") or "").strip()
         amount = row.get("amount")
         mobile = row.get("mobile")
+        override_validation = bool(row.get("override_validation"))
 
-        if not name or not block or not flat_number or not amount:
-
-            results.append({
-                "row": row,
-                "success": False,
-                "error": "Missing required field (name, block, flat_number, or amount)."
-            })
-            continue
-
-        if not validate_flat_number(block, flat_number):
+        if not name or not amount:
 
             results.append({
                 "row": row,
                 "success": False,
-                "error": f"Invalid flat number '{flat_number}' for {block} block."
+                "error": "Missing required field (name or amount)."
             })
             continue
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
 
         try:
 
             result = donation_service.save_register_donation(
                 name=name,
-                block=block,
-                flat_number=flat_number,
+                block=block or "",
+                flat_number=flat_number or (row.get("raw_flat_text") or "Other").strip(),
                 amount=amount,
                 mobile=mobile
             )
@@ -615,6 +628,155 @@ async def admin_confirm_register_donations(
         get_current_admin_username(request),
         "register_scan_confirmed",
         f"Saved {saved_count}/{len(rows)} register-scanned donations"
+    )
+
+    return {
+        "results": results,
+        "saved_count": saved_count,
+        "total_count": len(rows)
+    }
+
+
+# ============================================
+# Cultural Program Sign-up Notebook Scan
+# ============================================
+# Separate from the donation register scan above - this reads
+# the physical sign-up notebook for cultural performances and
+# saves entries into the same cultural_registrations table a
+# normal app registration uses, so they show up identically in
+# this admin panel. track_path is always left empty (None) -
+# no performance track was collected on paper, same as a normal
+# registration where the track upload is optional. Category is
+# not captured on paper, so the admin picks it per row here.
+# ============================================
+
+CULTURAL_SIGNUP_SCANS_DIR = "static/register_scans"
+
+
+@router.post("/cultural-register/scan")
+async def admin_scan_cultural_signups(
+    request: Request,
+    file: UploadFile = File(...)
+):
+
+    require_full_admin(request)
+
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.join(CULTURAL_SIGNUP_SCANS_DIR, unique_filename)
+
+    contents = await file.read()
+
+    with open(save_path, "wb") as f:
+        f.write(contents)
+
+    extracted_rows = extract_cultural_signup_rows(save_path)
+
+    for row in extracted_rows:
+
+        block = row.get("block")
+        flat_number = row.get("flat_number")
+
+        if block and flat_number:
+            row["flat_valid"] = validate_flat_number(block, flat_number)
+        else:
+            row["flat_valid"] = False
+
+    return {
+        "extracted_rows": extracted_rows,
+        "row_count": len(extracted_rows)
+    }
+
+
+@router.post("/cultural-register/confirm")
+async def admin_confirm_cultural_signups(
+    request: Request,
+    rows: list[dict]
+):
+
+    require_full_admin(request)
+
+    results = []
+
+    for row in rows:
+
+        name = (row.get("name") or "").strip()
+        mobile = (row.get("mobile") or "").strip() or None
+        age = (row.get("age") or "").strip() or None
+        block = row.get("block")
+        flat_number = (row.get("flat_number") or "").strip()
+        categories = (row.get("categories") or "").strip()
+        override_validation = bool(row.get("override_validation"))
+
+        if not name:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Missing name."
+            })
+            continue
+
+        if not categories:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Please select at least one category for this entry."
+            })
+            continue
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
+
+        try:
+
+            save_cultural_registration(
+                name=name,
+                block=block or "",
+                flat_number=flat_number or (row.get("raw_flat_text") or "Other").strip(),
+                mobile=mobile,
+                categories=categories,
+                other_details=None,
+                track_path=None,
+                age=age
+            )
+
+            results.append({
+                "row": row,
+                "success": True
+            })
+
+        except Exception as error:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": str(error)
+            })
+
+    saved_count = sum(1 for r in results if r["success"])
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "cultural_signup_scan_confirmed",
+        f"Saved {saved_count}/{len(rows)} cultural sign-up entries"
     )
 
     return {

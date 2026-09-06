@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 from openpyxl import Workbook
+from openpyxl.styles import Font
+from backend.config import PUBLIC_BASE_URL
 
 
 # ============================================
@@ -116,11 +118,28 @@ def get_table_data(table_name):
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Cultural Programs get a special sort - the committee sets a
+    # performance_order to plan the running order for the day, so
+    # the admin list (and Excel export) should reflect that
+    # sequence instead of just newest-registration-first.
+    if table_name == "cultural":
+
+        order_clause = """
+        ORDER BY
+            CASE WHEN performance_order IS NULL THEN 1 ELSE 0 END,
+            performance_order ASC,
+            id DESC
+        """
+
+    else:
+
+        order_clause = "ORDER BY id DESC"
+
     cursor.execute(
         f"""
         SELECT *
         FROM {actual_table}
-        ORDER BY id DESC
+        {order_clause}
         """
     )
 
@@ -477,10 +496,27 @@ def create_excel_file(only_table=None):
                 start=1
             ):
 
-                worksheet.cell(
+                cell = worksheet.cell(
                     row=row_index,
                     column=column_index
-                ).value = value
+                )
+
+                column_name = columns[column_index - 1]
+
+                # The performance track is stored as a server file
+                # path (e.g. "static/cultural_tracks/xxx.mp3") - the
+                # actual audio can't be embedded in an Excel cell, so
+                # this makes the cell a clickable link to download it
+                # directly from the site instead of showing a raw path.
+                if column_name == "track_path" and value:
+
+                    cell.value = "Download Track"
+                    cell.hyperlink = f"{PUBLIC_BASE_URL}/{value}"
+                    cell.font = Font(color="0563C1", underline="single")
+
+                else:
+
+                    cell.value = value
 
 
     return workbook

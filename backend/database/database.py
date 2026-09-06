@@ -224,6 +224,35 @@ def create_tables():
 
     """)
 
+    # --------------------------------------------
+    # Migration: performance_order lets the committee
+    # plan and adjust the running order of performances
+    # on the day, without changing anything else about
+    # the registration itself. NULL means "not yet
+    # sequenced".
+    # --------------------------------------------
+
+    cursor.execute("PRAGMA table_info(cultural_registrations)")
+    cultural_existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "performance_order" not in cultural_existing_columns:
+        cursor.execute(
+            "ALTER TABLE cultural_registrations ADD COLUMN performance_order INTEGER"
+        )
+
+    # --------------------------------------------
+    # Migration: age - the physical cultural sign-up
+    # notebook records each participant's age (relevant
+    # for kids' categories), which the digital form never
+    # asked for. Stored as text since ages are sometimes
+    # written as "2.5" or with a "yrs" suffix.
+    # --------------------------------------------
+
+    if "age" not in cultural_existing_columns:
+        cursor.execute(
+            "ALTER TABLE cultural_registrations ADD COLUMN age TEXT"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS volunteers(
@@ -720,7 +749,8 @@ def save_cultural_registration(
         mobile,
         categories,
         other_details,
-        track_path
+        track_path,
+        age=None
 ):
 
     conn = get_connection()
@@ -743,11 +773,13 @@ def save_cultural_registration(
 
         other_details,
 
-        track_path
+        track_path,
+
+        age
 
     )
 
-    VALUES(?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -763,7 +795,9 @@ def save_cultural_registration(
 
         other_details,
 
-        track_path
+        track_path,
+
+        age
 
     ))
 
@@ -788,7 +822,10 @@ def get_cultural_registrations():
 
     FROM cultural_registrations
 
-    ORDER BY id DESC
+    ORDER BY
+        CASE WHEN performance_order IS NULL THEN 1 ELSE 0 END,
+        performance_order ASC,
+        id DESC
 
     """)
 

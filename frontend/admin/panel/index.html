@@ -933,6 +933,14 @@
 
             <button
                 class="tab"
+                data-type="cultural-scan">
+
+                🎭 Cultural Sign-up Scan
+
+            </button>
+
+            <button
+                class="tab"
                 data-type="manage-logins">
 
                 👥 Manage Logins
@@ -1162,6 +1170,10 @@
                 <p style="color:#777;font-size:14px;">
                     Rows highlighted in red have an invalid flat number or
                     missing data - please check and correct them before saving.
+                    "Raw Text" shows exactly what was read from the flat
+                    column, for reference. Check "Non-resident / Other" for
+                    entries like Security or a vendor that aren't a resident
+                    flat, so they can still be saved.
                 </p>
 
                 <div style="overflow-x:auto;">
@@ -1171,10 +1183,12 @@
                         <thead>
                             <tr style="background:#fdf3e7;text-align:left;">
                                 <th style="padding:10px;border:1px solid #eee;">Name</th>
+                                <th style="padding:10px;border:1px solid #eee;">Raw Text</th>
                                 <th style="padding:10px;border:1px solid #eee;">Block</th>
                                 <th style="padding:10px;border:1px solid #eee;">Flat No</th>
                                 <th style="padding:10px;border:1px solid #eee;">Mobile</th>
                                 <th style="padding:10px;border:1px solid #eee;">Amount (₹)</th>
+                                <th style="padding:10px;border:1px solid #eee;">Non-resident / Other</th>
                                 <th style="padding:10px;border:1px solid #eee;">Remove</th>
                             </tr>
                         </thead>
@@ -1195,6 +1209,93 @@
                     </button>
 
                     <span id="register-scan-confirm-status" style="margin-left:14px;font-size:14px;"></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+<div id="cultural-scan-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">🎭 Scan Cultural Sign-up Notebook</h3>
+
+                <p style="color:#777;font-size:14px;margin-top:0;">
+                    Upload a photo of a page from the cultural program
+                    sign-up notebook. Extracted entries will appear below -
+                    since the notebook doesn't record which category each
+                    person wants, pick that here before saving. No
+                    performance track is attached for these entries.
+                </p>
+
+                <input
+                    type="file"
+                    id="cultural-scan-file-input"
+                    accept="image/*"
+                    style="margin-bottom:12px;"
+                >
+
+                <br>
+
+                <button
+                    id="cultural-scan-upload-btn"
+                    onclick="scanCulturalSignupImage()"
+                    style="background:#ff9800;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                    🔍 Scan Notebook Page
+                </button>
+
+                <span id="cultural-scan-status" style="margin-left:12px;font-size:14px;"></span>
+
+            </div>
+
+            <div id="cultural-scan-review-container" style="display:none;background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">Review Extracted Entries</h3>
+
+                <p style="color:#777;font-size:14px;">
+                    Rows highlighted in red are missing a category, or have
+                    an invalid flat number. "Raw Text" shows exactly what
+                    was read from the flat column. Check "Non-resident /
+                    Other" for entries with no resident flat.
+                </p>
+
+                <div style="overflow-x:auto;">
+
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+
+                        <thead>
+                            <tr style="background:#fdf3e7;text-align:left;">
+                                <th style="padding:10px;border:1px solid #eee;">Name</th>
+                                <th style="padding:10px;border:1px solid #eee;">Mobile</th>
+                                <th style="padding:10px;border:1px solid #eee;">Age</th>
+                                <th style="padding:10px;border:1px solid #eee;">Raw Text</th>
+                                <th style="padding:10px;border:1px solid #eee;">Block</th>
+                                <th style="padding:10px;border:1px solid #eee;">Flat No</th>
+                                <th style="padding:10px;border:1px solid #eee;">Category</th>
+                                <th style="padding:10px;border:1px solid #eee;">Non-resident / Other</th>
+                                <th style="padding:10px;border:1px solid #eee;">Remove</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="cultural-scan-rows-body">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div style="margin-top:16px;">
+
+                    <button
+                        onclick="confirmCulturalSignups()"
+                        style="background:#4caf50;color:white;border:none;border-radius:8px;padding:12px 26px;font-size:15px;font-weight:bold;cursor:pointer;">
+                        ✅ Confirm &amp; Save All
+                    </button>
+
+                    <span id="cultural-scan-confirm-status" style="margin-left:14px;font-size:14px;"></span>
 
                 </div>
 
@@ -2188,6 +2289,7 @@ document
                     const toolbar = document.querySelector(".toolbar");
                     const announcementsPanel = document.getElementById("announcements-panel");
                     const registerScanPanel = document.getElementById("register-scan-panel");
+                    const culturalScanPanel = document.getElementById("cultural-scan-panel");
                     const prasadamPanel = document.getElementById("prasadam-panel");
                     const manageLoginsPanel = document.getElementById("manage-logins-panel");
                     const tshirtOrdersPanel = document.getElementById("tshirt-orders-panel");
@@ -2198,6 +2300,7 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "block";
                         registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2210,6 +2313,7 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "block";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2223,6 +2327,18 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "block";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
+
+                    } else if (this.dataset.type === "cultural-scan") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "block";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2233,6 +2349,7 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "block";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2245,6 +2362,7 @@ document
                         if (toolbar) toolbar.style.display = "none";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "block";
@@ -2257,6 +2375,7 @@ document
                         if (toolbar) toolbar.style.display = "flex";
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -3447,8 +3566,8 @@ function renderRegisterScanRows(rows) {
         const tr = document.createElement("tr");
         tr.dataset.rowIndex = index;
 
-        const isInvalid = row.flat_valid === false
-            || !row.name || !row.block || !row.flat_number || !row.amount;
+        const isInvalid = !row.override_validation && (row.flat_valid === false
+            || !row.name || !row.block || !row.flat_number || !row.amount);
 
         if (isInvalid) {
             tr.style.background = "#ffebee";
@@ -3462,6 +3581,9 @@ function renderRegisterScanRows(rows) {
             <td style="padding:6px;border:1px solid #eee;">
                 <input type="text" value="${row.name || ""}" data-field="name"
                     style="width:130px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;color:#888;font-size:13px;">
+                ${escapeHtml(row.raw_flat_text || "")}
             </td>
             <td style="padding:6px;border:1px solid #eee;">
                 <select data-field="block" style="padding:6px;border:1px solid #ccc;border-radius:6px;">
@@ -3482,6 +3604,9 @@ function renderRegisterScanRows(rows) {
                     style="width:90px;padding:6px;border:1px solid #ccc;border-radius:6px;">
             </td>
             <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <input type="checkbox" data-field="override_validation" onchange="renderRegisterScanRows(collectRegisterScanRows())">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
                 <button onclick="this.closest('tr').remove()"
                     style="background:#e57373;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
                     ✕
@@ -3489,8 +3614,40 @@ function renderRegisterScanRows(rows) {
             </td>
         `;
 
+        const overrideCheckbox = tr.querySelector('[data-field="override_validation"]');
+        if (overrideCheckbox) overrideCheckbox.checked = !!row.override_validation;
+
         tbody.appendChild(tr);
     });
+}
+
+function collectRegisterScanRows() {
+
+    const tbody = document.getElementById("register-scan-rows-body");
+    const rowElements = tbody.querySelectorAll("tr");
+    const rows = [];
+
+    rowElements.forEach(tr => {
+
+        const getVal = (field) => {
+            const el = tr.querySelector(`[data-field="${field}"]`);
+            return el ? el.value.trim() : "";
+        };
+
+        const overrideEl = tr.querySelector('[data-field="override_validation"]');
+
+        rows.push({
+            name: getVal("name"),
+            block: getVal("block"),
+            flat_number: getVal("flat_number"),
+            raw_flat_text: tr.children[1] ? tr.children[1].textContent.trim() : "",
+            mobile: getVal("mobile") || null,
+            amount: getVal("amount"),
+            override_validation: overrideEl ? overrideEl.checked : false
+        });
+    });
+
+    return rows;
 }
 
 async function confirmRegisterDonations() {
@@ -3505,21 +3662,7 @@ async function confirmRegisterDonations() {
         return;
     }
 
-    const rows = [];
-
-    rowElements.forEach(tr => {
-
-        const getVal = (field) =>
-            tr.querySelector(`[data-field="${field}"]`).value.trim();
-
-        rows.push({
-            name: getVal("name"),
-            block: getVal("block"),
-            flat_number: getVal("flat_number"),
-            mobile: getVal("mobile") || null,
-            amount: getVal("amount")
-        });
-    });
+    const rows = collectRegisterScanRows();
 
     confirmStatusEl.textContent = "⏳ Saving...";
     confirmStatusEl.style.color = "#777";
@@ -3562,6 +3705,248 @@ async function confirmRegisterDonations() {
             document.getElementById("register-scan-review-container").style.display = "none";
             document.getElementById("register-scan-file-input").value = "";
             document.getElementById("register-scan-status").textContent = "";
+        }
+
+    } catch (error) {
+
+        confirmStatusEl.textContent = "❌ " + error.message;
+        confirmStatusEl.style.color = "#c62828";
+    }
+}
+
+
+// ============================================
+// Cultural Sign-up Notebook Scan
+// ============================================
+
+const CULTURAL_CATEGORY_OPTIONS = [
+    "Solo Singing", "Group Singing", "Solo Dance", "Group Dance",
+    "Instrumental", "Skit", "Fancy Dress", "Mimicry", "Other"
+];
+
+async function scanCulturalSignupImage() {
+
+    const fileInput = document.getElementById("cultural-scan-file-input");
+    const statusEl = document.getElementById("cultural-scan-status");
+    const reviewContainer = document.getElementById("cultural-scan-review-container");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        statusEl.textContent = "❌ Please choose a photo first.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    statusEl.textContent = "⏳ Scanning... this may take a few seconds.";
+    statusEl.style.color = "#777";
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+
+        const response = await fetch("/admin/cultural-register/scan", {
+            method: "POST",
+            credentials: "include",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Scan failed.");
+        }
+
+        if (!data.extracted_rows || data.extracted_rows.length === 0) {
+            statusEl.textContent = "⚠️ No entries could be read from this photo. Try a clearer image.";
+            statusEl.style.color = "#c62828";
+            reviewContainer.style.display = "none";
+            return;
+        }
+
+        statusEl.textContent = `✅ Extracted ${data.row_count} entr${data.row_count === 1 ? "y" : "ies"}. Review below.`;
+        statusEl.style.color = "#2e7d32";
+
+        renderCulturalScanRows(data.extracted_rows);
+        reviewContainer.style.display = "block";
+
+    } catch (error) {
+
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+function renderCulturalScanRows(rows) {
+
+    const tbody = document.getElementById("cultural-scan-rows-body");
+    tbody.innerHTML = "";
+
+    rows.forEach((row, index) => {
+
+        const tr = document.createElement("tr");
+        tr.dataset.rowIndex = index;
+
+        const isInvalid = !row.override_validation && (
+            !row.categories
+            || (row.flat_valid === false && !row.override_validation)
+            || !row.name
+        );
+
+        if (isInvalid) {
+            tr.style.background = "#ffebee";
+        }
+
+        const blockOptionsHtml = BLOCK_OPTIONS.map(b =>
+            `<option value="${b}" ${row.block === b ? "selected" : ""}>${b}</option>`
+        ).join("");
+
+        const categoryCheckboxesHtml = CULTURAL_CATEGORY_OPTIONS.map(cat => {
+            const selected = (row.categories || "").split(",").map(c => c.trim()).includes(cat);
+            return `
+                <label style="display:block;font-size:12px;white-space:nowrap;">
+                    <input type="checkbox" data-category="${cat}" ${selected ? "checked" : ""}> ${cat}
+                </label>
+            `;
+        }).join("");
+
+        tr.innerHTML = `
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.name || ""}" data-field="name"
+                    style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.mobile || ""}" data-field="mobile"
+                    style="width:110px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.age || ""}" data-field="age"
+                    style="width:60px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;color:#888;font-size:13px;">
+                ${escapeHtml(row.raw_flat_text || "")}
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <select data-field="block" style="padding:6px;border:1px solid #ccc;border-radius:6px;">
+                    <option value="">--</option>
+                    ${blockOptionsHtml}
+                </select>
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.flat_number || ""}" data-field="flat_number"
+                    style="width:70px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;" data-field-container="categories">
+                ${categoryCheckboxesHtml}
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <input type="checkbox" data-field="override_validation" onchange="renderCulturalScanRows(collectCulturalScanRows())">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <button onclick="this.closest('tr').remove()"
+                    style="background:#e57373;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
+                    ✕
+                </button>
+            </td>
+        `;
+
+        const overrideCheckbox = tr.querySelector('[data-field="override_validation"]');
+        if (overrideCheckbox) overrideCheckbox.checked = !!row.override_validation;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function collectCulturalScanRows() {
+
+    const tbody = document.getElementById("cultural-scan-rows-body");
+    const rowElements = tbody.querySelectorAll("tr");
+    const rows = [];
+
+    rowElements.forEach(tr => {
+
+        const getVal = (field) => {
+            const el = tr.querySelector(`[data-field="${field}"]`);
+            return el ? el.value.trim() : "";
+        };
+
+        const overrideEl = tr.querySelector('[data-field="override_validation"]');
+
+        const categoryContainer = tr.querySelector('[data-field-container="categories"]');
+        const selectedCategories = categoryContainer
+            ? Array.from(categoryContainer.querySelectorAll("input[data-category]:checked"))
+                .map(cb => cb.dataset.category)
+            : [];
+
+        rows.push({
+            name: getVal("name"),
+            mobile: getVal("mobile") || null,
+            age: getVal("age") || null,
+            block: getVal("block"),
+            flat_number: getVal("flat_number"),
+            raw_flat_text: tr.children[3] ? tr.children[3].textContent.trim() : "",
+            categories: selectedCategories.join(", "),
+            override_validation: overrideEl ? overrideEl.checked : false
+        });
+    });
+
+    return rows;
+}
+
+async function confirmCulturalSignups() {
+
+    const tbody = document.getElementById("cultural-scan-rows-body");
+    const confirmStatusEl = document.getElementById("cultural-scan-confirm-status");
+    const rowElements = tbody.querySelectorAll("tr");
+
+    if (rowElements.length === 0) {
+        confirmStatusEl.textContent = "❌ No rows to save.";
+        confirmStatusEl.style.color = "#c62828";
+        return;
+    }
+
+    const rows = collectCulturalScanRows();
+
+    confirmStatusEl.textContent = "⏳ Saving...";
+    confirmStatusEl.style.color = "#777";
+
+    try {
+
+        const response = await fetch("/admin/cultural-register/confirm", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rows)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Save failed.");
+        }
+
+        confirmStatusEl.textContent =
+            `✅ Saved ${data.saved_count} of ${data.total_count} entries.`;
+        confirmStatusEl.style.color = "#2e7d32";
+
+        data.results.forEach((result, index) => {
+
+            const tr = tbody.querySelector(`tr[data-row-index="${index}"]`);
+
+            if (result.success) {
+                if (tr) tr.remove();
+            } else {
+                if (tr) {
+                    tr.style.background = "#ffebee";
+                    tr.title = result.error;
+                }
+            }
+        });
+
+        if (data.saved_count === data.total_count) {
+
+            document.getElementById("cultural-scan-review-container").style.display = "none";
+            document.getElementById("cultural-scan-file-input").value = "";
+            document.getElementById("cultural-scan-status").textContent = "";
         }
 
     } catch (error) {
