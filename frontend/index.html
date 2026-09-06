@@ -182,11 +182,11 @@
             </div>
         </div>
 
-<!-- T-Shirt Pre-Booking -->
+<!-- T-Shirt & Kurti Pre-Booking -->
         <section id="tshirt-section">
             <div class="container">
                 <button type="button" class="tshirt-link-button" onclick="openTshirtModal()">
-                    👕 LVS Excellency T-Shirt - Click to Order
+                    👕 LVS Ganesha T-Shirt &amp; Kurti - Click to Order
                 </button>
             </div>
         </section>
@@ -194,10 +194,17 @@
         <div id="tshirt-modal-overlay" class="tshirt-modal-overlay" style="display:none;">
             <div class="tshirt-modal-content">
                 <button type="button" class="tshirt-modal-close" onclick="closeTshirtModal()">×</button>
-                <h2>👕 LVS Excellency Festival T-Shirt</h2>
-                <p class="tshirt-optional-note">This is completely optional - only for residents who'd like one. No one is required to book a T-shirt.</p>
-                <img src="/static/images/lvs_excellency_tshirt.jpg" alt="LVS Excellency T-Shirt" class="tshirt-product-image">
+                <h2>👕 LVS Ganesha Festival Wear</h2>
+                <p class="tshirt-optional-note">This is a voluntary purchase - only for residents who'd like one. No one is required to book a T-shirt or Kurti.</p>
+
+                <h3 style="margin-bottom:6px;">T-Shirt</h3>
+                <img src="/static/images/lvs_ganesha_tshirt_design.jpg" alt="LVS Ganesha T-Shirt" class="tshirt-product-image">
                 <p id="tshirt-price-line">Loading price...</p>
+
+                <h3 style="margin-bottom:6px;">Kurti</h3>
+                <img src="/static/images/lvs_ganesha_kurta_design.jpg" alt="LVS Ganesha Kurti" class="tshirt-product-image">
+                <p id="kurti-price-line">Loading price...</p>
+
                 <form id="tshirt-order-form" onsubmit="return false;">
                     <input type="tel" id="tshirt-mobile" placeholder="Mobile Number" required>
                     <input type="text" id="tshirt-name" placeholder="Full Name" required>
@@ -209,7 +216,9 @@
                     </select>
                     <input type="text" id="tshirt-flat" placeholder="Flat Number" required>
 
+                    <p style="font-weight:600;margin:14px 0 4px;">T-Shirt Sizes</p>
                     <div class="tshirt-size-grid">
+                        <label>XS <input type="number" id="tshirt-xs" min="0" value="0"></label>
                         <label>Small <input type="number" id="tshirt-small" min="0" value="0"></label>
                         <label>Medium <input type="number" id="tshirt-medium" min="0" value="0"></label>
                         <label>Large <input type="number" id="tshirt-large" min="0" value="0"></label>
@@ -217,9 +226,19 @@
                         <label>XXL <input type="number" id="tshirt-xxl" min="0" value="0"></label>
                     </div>
 
+                    <p style="font-weight:600;margin:14px 0 4px;">Kurti Sizes</p>
+                    <div class="tshirt-size-grid">
+                        <label>XS <input type="number" id="kurti-xs" min="0" value="0"></label>
+                        <label>Small <input type="number" id="kurti-small" min="0" value="0"></label>
+                        <label>Medium <input type="number" id="kurti-medium" min="0" value="0"></label>
+                        <label>Large <input type="number" id="kurti-large" min="0" value="0"></label>
+                        <label>XL <input type="number" id="kurti-xl" min="0" value="0"></label>
+                        <label>XXL <input type="number" id="kurti-xxl" min="0" value="0"></label>
+                    </div>
+
                     <p id="tshirt-total-line"></p>
 
-                    <button type="button" onclick="submitTshirtOrder()">Reserve T-Shirt</button>
+                    <button type="button" onclick="submitTshirtOrder()">Reserve</button>
                     <p id="tshirt-order-status"></p>
                 </form>
             </div>

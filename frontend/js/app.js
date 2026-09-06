@@ -1945,17 +1945,28 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// ===== T-Shirt Pre-Booking =====
-let tshirtCurrentPrice = 300;
+// ===== T-Shirt & Kurti Pre-Booking =====
+let tshirtCurrentPrice = 380;
+let kurtiCurrentPrice = null;
 
 async function loadTshirtPrice() {
     const priceLine = document.getElementById("tshirt-price-line");
+    const kurtiPriceLine = document.getElementById("kurti-price-line");
     if (!priceLine) return;
     try {
         const res = await fetch("/api/tshirt-price");
         const data = await res.json();
-        tshirtCurrentPrice = data.price;
+        tshirtCurrentPrice = data.tshirt_price;
+        kurtiCurrentPrice = data.kurti_price;
+
         priceLine.textContent = "₹" + tshirtCurrentPrice + " per shirt. Reserve now, pay on pickup.";
+
+        if (kurtiPriceLine) {
+            kurtiPriceLine.textContent = kurtiCurrentPrice
+                ? "₹" + kurtiCurrentPrice + " per Kurti. Reserve now, pay on pickup."
+                : "Price to be announced. Reserve now - amount will be confirmed later.";
+        }
+
         updateTshirtTotal();
     } catch (err) {
         priceLine.textContent = "Could not load price right now.";
@@ -1965,13 +1976,36 @@ async function loadTshirtPrice() {
 function updateTshirtTotal() {
     const totalLine = document.getElementById("tshirt-total-line");
     if (!totalLine) return;
-    const qty = tshirtOrderQuantity();
-    const amount = qty * tshirtCurrentPrice;
-    totalLine.textContent = qty > 0 ? ("Total: " + qty + " shirt(s) - ₹" + amount) : "";
+
+    const tshirtQty = tshirtOrderQuantity();
+    const kurtiQty = kurtiOrderQuantity();
+
+    const parts = [];
+
+    if (tshirtQty > 0) {
+        parts.push(tshirtQty + " T-shirt(s) - ₹" + (tshirtQty * tshirtCurrentPrice));
+    }
+
+    if (kurtiQty > 0) {
+        parts.push(
+            kurtiQty + " Kurti(s) - " + (kurtiCurrentPrice ? ("₹" + (kurtiQty * kurtiCurrentPrice)) : "price TBD")
+        );
+    }
+
+    totalLine.textContent = parts.length ? ("Total: " + parts.join(" | ")) : "";
 }
 
 function tshirtOrderQuantity() {
-    const ids = ["tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl"];
+    const ids = ["tshirt-xs", "tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl"];
+    return ids.reduce((sum, id) => {
+        const el = document.getElementById(id);
+        const val = el ? parseInt(el.value, 10) || 0 : 0;
+        return sum + val;
+    }, 0);
+}
+
+function kurtiOrderQuantity() {
+    const ids = ["kurti-xs", "kurti-small", "kurti-medium", "kurti-large", "kurti-xl", "kurti-xxl"];
     return ids.reduce((sum, id) => {
         const el = document.getElementById(id);
         const val = el ? parseInt(el.value, 10) || 0 : 0;
@@ -1991,15 +2025,28 @@ async function submitTshirtOrder() {
         block: block,
         flat: flat,
         mobile: mobile,
+        xs: parseInt(document.getElementById("tshirt-xs").value, 10) || 0,
         small: parseInt(document.getElementById("tshirt-small").value, 10) || 0,
         medium: parseInt(document.getElementById("tshirt-medium").value, 10) || 0,
         large: parseInt(document.getElementById("tshirt-large").value, 10) || 0,
         xl: parseInt(document.getElementById("tshirt-xl").value, 10) || 0,
-        xxl: parseInt(document.getElementById("tshirt-xxl").value, 10) || 0
+        xxl: parseInt(document.getElementById("tshirt-xxl").value, 10) || 0,
+        kurti_xs: parseInt(document.getElementById("kurti-xs").value, 10) || 0,
+        kurti_small: parseInt(document.getElementById("kurti-small").value, 10) || 0,
+        kurti_medium: parseInt(document.getElementById("kurti-medium").value, 10) || 0,
+        kurti_large: parseInt(document.getElementById("kurti-large").value, 10) || 0,
+        kurti_xl: parseInt(document.getElementById("kurti-xl").value, 10) || 0,
+        kurti_xxl: parseInt(document.getElementById("kurti-xxl").value, 10) || 0
     };
 
     if (!name || !block || !flat || !mobile) {
         statusEl.textContent = "Please fill in all your details.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    if (tshirtOrderQuantity() < 1 && kurtiOrderQuantity() < 1) {
+        statusEl.textContent = "Please choose at least one size and quantity for a T-shirt or Kurti.";
         statusEl.style.color = "#c62828";
         return;
     }
@@ -2027,7 +2074,7 @@ async function submitTshirtOrder() {
         }
 
         if (typeof showThankYouPopup === "function") {
-            showThankYouPopup(name, "reserving your T-shirt");
+            showThankYouPopup(name, "reserving your T-shirt / Kurti");
         }
 
         document.getElementById("tshirt-order-form").reset();
@@ -2041,7 +2088,10 @@ async function submitTshirtOrder() {
 
 document.addEventListener("DOMContentLoaded", () => {
     loadTshirtPrice();
-    ["tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl"].forEach(id => {
+    [
+        "tshirt-xs", "tshirt-small", "tshirt-medium", "tshirt-large", "tshirt-xl", "tshirt-xxl",
+        "kurti-xs", "kurti-small", "kurti-medium", "kurti-large", "kurti-xl", "kurti-xxl"
+    ].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("input", updateTshirtTotal);
     });
