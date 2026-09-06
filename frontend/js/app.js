@@ -2153,3 +2153,38 @@ document.addEventListener("DOMContentLoaded", () => {
         mobileEl.addEventListener("blur", lookupTshirtResident);
     }
 });
+
+
+// ===== Copy UPI ID to clipboard (donation flow) =====
+async function copyUpiId(buttonEl, upiId) {
+    const originalText = buttonEl.textContent;
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(upiId);
+        } else {
+            // Fallback for older/in-app browsers without Clipboard API
+            const tempInput = document.createElement("textarea");
+            tempInput.value = upiId;
+            tempInput.style.position = "fixed";
+            tempInput.style.opacity = "0";
+            document.body.appendChild(tempInput);
+            tempInput.focus();
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+        }
+
+        buttonEl.textContent = "✅ Copied!";
+        buttonEl.style.background = "#c8e6c9";
+
+    } catch (err) {
+        buttonEl.textContent = "❌ Could not copy - select manually";
+        buttonEl.style.background = "#ffcdd2";
+    }
+
+    setTimeout(() => {
+        buttonEl.textContent = originalText;
+        buttonEl.style.background = "#eee";
+    }, 2500);
+}
