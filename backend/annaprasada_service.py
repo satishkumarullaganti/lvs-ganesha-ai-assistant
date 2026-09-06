@@ -5,6 +5,7 @@ import random
 from backend.config import (
     ANNAPRASADA_DATE,
     BOOKING_OPEN_DATE,
+    BOOKING_CLOSE_DATE,
     PUBLIC_BASE_URL
 )
 from backend.qr_service import generate_qr_code
@@ -112,7 +113,7 @@ Please visit again on or after the booking opening date.
 """
             }
 
-        elif today <= ANNAPRASADA_DATE:
+        elif today <= BOOKING_CLOSE_DATE:
 
             return {
                 "status": BookingStatus.OPEN,
@@ -125,8 +126,6 @@ Please visit again on or after the booking opening date.
                 "status": BookingStatus.CLOSED,
                 "response": """
 🍛 Annaprasada Coupon Booking
-
-The Annaprasada event has been completed.
 
 Coupon booking is now closed.
 
