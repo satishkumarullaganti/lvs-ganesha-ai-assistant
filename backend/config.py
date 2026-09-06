@@ -36,7 +36,12 @@ load_dotenv(_ENV_PATH)
 ANNAPRASADA_DATE = date(2026, 9, 6)
 
 # Booking opens 2 days before the event
-BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)    
+BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)
+
+# Coupon booking stays open through this date, independent of
+# the Annaprasada event date above (committee asked to keep
+# booking enabled up to 19th September).
+BOOKING_CLOSE_DATE = date(2026, 9, 19)
 
 # ==========================================
 # Donation UPI Details
