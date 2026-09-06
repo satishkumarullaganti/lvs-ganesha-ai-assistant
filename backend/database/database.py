@@ -1532,9 +1532,41 @@ def _init_tshirt_table():
 _init_tshirt_table()
 
 
-def save_tshirt_order(name, block, flat_number, mobile, sizes, price_per_shirt):
+def _migrate_tshirt_table():
     """
-    sizes is a dict like {"small": 1, "medium": 2, "large": 0, "xl": 1, "xxl": 0}
+    Migration: added XS size (residents wanted a smaller option
+    than Small) and product_type, so the same table can hold both
+    T-shirt and Kurti orders instead of a separate table per
+    product.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(tshirt_orders)")
+    tshirt_existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "size_xs" not in tshirt_existing_columns:
+        cursor.execute(
+            "ALTER TABLE tshirt_orders ADD COLUMN size_xs INTEGER DEFAULT 0"
+        )
+
+    if "product_type" not in tshirt_existing_columns:
+        cursor.execute(
+            "ALTER TABLE tshirt_orders ADD COLUMN product_type TEXT DEFAULT 'tshirt'"
+        )
+
+    conn.commit()
+    conn.close()
+
+
+_migrate_tshirt_table()
+
+
+def save_tshirt_order(name, block, flat_number, mobile, sizes, price_per_shirt, product_type="tshirt"):
+    """
+    sizes is a dict like {"xs": 0, "small": 1, "medium": 2, "large": 0, "xl": 1, "xxl": 0}
+    product_type is "tshirt" or "kurti" - same table, one row per product per order.
     """
 
     total_quantity = sum(sizes.values())
@@ -1546,15 +1578,15 @@ def save_tshirt_order(name, block, flat_number, mobile, sizes, price_per_shirt):
     cursor.execute("""
         INSERT INTO tshirt_orders(
             name, block, flat_number, mobile,
-            size_small, size_medium, size_large, size_xl, size_xxl,
-            total_quantity, price_per_shirt, total_amount
+            size_xs, size_small, size_medium, size_large, size_xl, size_xxl,
+            total_quantity, price_per_shirt, total_amount, product_type
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         name, block, flat_number, mobile,
-        sizes.get("small", 0), sizes.get("medium", 0), sizes.get("large", 0),
+        sizes.get("xs", 0), sizes.get("small", 0), sizes.get("medium", 0), sizes.get("large", 0),
         sizes.get("xl", 0), sizes.get("xxl", 0),
-        total_quantity, price_per_shirt, total_amount
+        total_quantity, price_per_shirt, total_amount, product_type
     ))
 
     conn.commit()
@@ -1576,7 +1608,8 @@ def get_tshirt_orders():
     cursor.execute("""
         SELECT id, name, block, flat_number, mobile,
                size_small, size_medium, size_large, size_xl, size_xxl,
-               total_quantity, price_per_shirt, total_amount, status, created_at
+               total_quantity, price_per_shirt, total_amount, status, created_at,
+               size_xs, product_type
         FROM tshirt_orders
         ORDER BY id DESC
     """)
@@ -1587,13 +1620,14 @@ def get_tshirt_orders():
     return rows
 
 
-def get_tshirt_order_totals():
+def get_tshirt_order_totals(product_type="tshirt"):
 
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT
+            COALESCE(SUM(size_xs), 0),
             COALESCE(SUM(size_small), 0),
             COALESCE(SUM(size_medium), 0),
             COALESCE(SUM(size_large), 0),
@@ -1602,19 +1636,21 @@ def get_tshirt_order_totals():
             COALESCE(SUM(total_quantity), 0),
             COALESCE(SUM(total_amount), 0)
         FROM tshirt_orders
-    """)
+        WHERE product_type = ?
+    """, (product_type,))
 
     row = cursor.fetchone()
     conn.close()
 
     return {
-        "small": row[0],
-        "medium": row[1],
-        "large": row[2],
-        "xl": row[3],
-        "xxl": row[4],
-        "total_quantity": row[5],
-        "total_amount": row[6]
+        "xs": row[0],
+        "small": row[1],
+        "medium": row[2],
+        "large": row[3],
+        "xl": row[4],
+        "xxl": row[5],
+        "total_quantity": row[6],
+        "total_amount": row[7]
     }
 
 

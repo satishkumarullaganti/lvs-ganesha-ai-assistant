@@ -62,7 +62,9 @@ import os
 import uuid
 from backend.tshirt_service import (
     get_price as get_tshirt_price,
-    set_price as set_tshirt_price
+    set_price as set_tshirt_price,
+    get_kurti_price,
+    set_kurti_price
 )
 from backend.database.database import (
     save_tshirt_order,
@@ -2032,8 +2034,11 @@ def admin_delete_sponsor_request(request_id: str, request: Request):
 
 @app.get("/api/tshirt-price")
 def api_get_tshirt_price():
-    """Public endpoint - the order form fetches the current price to show."""
-    return {"price": get_tshirt_price()}
+    """Public endpoint - the order form fetches current prices to show."""
+    return {
+        "tshirt_price": get_tshirt_price(),
+        "kurti_price": get_kurti_price()
+    }
 
 
 class TshirtOrderRequest(BaseModel):
@@ -2041,11 +2046,18 @@ class TshirtOrderRequest(BaseModel):
     block: str
     flat: str
     mobile: str
+    xs: int = 0
     small: int = 0
     medium: int = 0
     large: int = 0
     xl: int = 0
     xxl: int = 0
+    kurti_xs: int = 0
+    kurti_small: int = 0
+    kurti_medium: int = 0
+    kurti_large: int = 0
+    kurti_xl: int = 0
+    kurti_xxl: int = 0
 
 
 @app.post("/order-tshirt")
@@ -2063,7 +2075,8 @@ def order_tshirt(data: TshirtOrderRequest):
             detail=f"'{data.mobile}' is not a valid 10-digit mobile number."
         )
 
-    sizes = {
+    tshirt_sizes = {
+        "xs": max(0, data.xs),
         "small": max(0, data.small),
         "medium": max(0, data.medium),
         "large": max(0, data.large),
@@ -2071,27 +2084,67 @@ def order_tshirt(data: TshirtOrderRequest):
         "xxl": max(0, data.xxl)
     }
 
-    if sum(sizes.values()) < 1:
+    kurti_sizes = {
+        "xs": max(0, data.kurti_xs),
+        "small": max(0, data.kurti_small),
+        "medium": max(0, data.kurti_medium),
+        "large": max(0, data.kurti_large),
+        "xl": max(0, data.kurti_xl),
+        "xxl": max(0, data.kurti_xxl)
+    }
+
+    if sum(tshirt_sizes.values()) < 1 and sum(kurti_sizes.values()) < 1:
         raise HTTPException(
             status_code=400,
-            detail="Please choose at least one T-shirt size and quantity."
+            detail="Please choose at least one size and quantity for a T-shirt or Kurti."
         )
 
-    price = get_tshirt_price()
+    message_parts = []
 
-    result = save_tshirt_order(
-        name=data.name,
-        block=data.block,
-        flat_number=data.flat,
-        mobile=data.mobile,
-        sizes=sizes,
-        price_per_shirt=price
-    )
+    if sum(tshirt_sizes.values()) >= 1:
+
+        tshirt_price = get_tshirt_price()
+
+        tshirt_result = save_tshirt_order(
+            name=data.name,
+            block=data.block,
+            flat_number=data.flat,
+            mobile=data.mobile,
+            sizes=tshirt_sizes,
+            price_per_shirt=tshirt_price,
+            product_type="tshirt"
+        )
+
+        message_parts.append(
+            f"{tshirt_result['total_quantity']} T-shirt(s) reserved, total payable on pickup: ₹{tshirt_result['total_amount']:.0f}."
+        )
+
+    if sum(kurti_sizes.values()) >= 1:
+
+        kurti_price = get_kurti_price()
+
+        kurti_result = save_tshirt_order(
+            name=data.name,
+            block=data.block,
+            flat_number=data.flat,
+            mobile=data.mobile,
+            sizes=kurti_sizes,
+            price_per_shirt=kurti_price if kurti_price else 0,
+            product_type="kurti"
+        )
+
+        if kurti_price:
+            message_parts.append(
+                f"{kurti_result['total_quantity']} Kurti(s) reserved, total payable on pickup: ₹{kurti_result['total_amount']:.0f}."
+            )
+        else:
+            message_parts.append(
+                f"{kurti_result['total_quantity']} Kurti(s) reserved - price to be announced, amount will be confirmed separately."
+            )
 
     return {
         "status": "success",
-        "message": f"T-shirt order confirmed for {data.name}! {result['total_quantity']} shirt(s) reserved, total payable on pickup: ₹{result['total_amount']:.0f}.",
-        "order": result
+        "message": f"Order confirmed for {data.name}! " + " ".join(message_parts)
     }
 
 
@@ -2118,20 +2171,27 @@ def admin_get_tshirt_orders(request: Request):
             "price_per_shirt": row[11],
             "total_amount": row[12],
             "status": row[13],
-            "created_at": row[14]
+            "created_at": row[14],
+            "size_xs": row[15],
+            "product_type": row[16]
         }
         for row in rows
     ]
 
     return {
         "orders": orders,
-        "totals": get_tshirt_order_totals(),
-        "price": get_tshirt_price()
+        "totals": {
+            "tshirt": get_tshirt_order_totals("tshirt"),
+            "kurti": get_tshirt_order_totals("kurti")
+        },
+        "tshirt_price": get_tshirt_price(),
+        "kurti_price": get_kurti_price()
     }
 
 
 class TshirtPriceRequest(BaseModel):
     price: float
+    product: str = "tshirt"
 
 
 @app.post("/admin/tshirt-price")
@@ -2142,15 +2202,20 @@ def admin_set_tshirt_price(data: TshirtPriceRequest, request: Request):
     if data.price <= 0:
         raise HTTPException(status_code=400, detail="Price must be greater than zero.")
 
-    new_price = set_tshirt_price(data.price)
+    if data.product == "kurti":
+        new_price = set_kurti_price(data.price)
+        activity_label = "changed_kurti_price"
+    else:
+        new_price = set_tshirt_price(data.price)
+        activity_label = "changed_tshirt_price"
 
     log_admin_activity(
         get_current_admin_username(request),
-        "changed_tshirt_price",
+        activity_label,
         f"New price: ₹{new_price:.0f}"
     )
 
-    return {"success": True, "price": new_price}
+    return {"success": True, "price": new_price, "product": data.product}
 
 
 @app.put("/admin/tshirt-orders/{order_id}/collected")
