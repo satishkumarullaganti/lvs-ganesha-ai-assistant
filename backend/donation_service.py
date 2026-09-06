@@ -301,7 +301,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
             session["step"] = 6
 
-            payee_name = "LVS Excellency Ganesha Festival"
+            payee_name = UPI_PAYEE_NAME
             flat_number = session["donation"]["flat_number"]
 
             amount_clean = session["donation"]["amount"]
@@ -310,7 +310,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
                 "pa": UPI_ID,
                 "pn": payee_name,
                 "cu": "INR",
-                "tn": f"Ganesh Utsav Donation - Flat {flat_number}",
+                "tn": f"Ganesh Utsav Donation Flat {flat_number}",
             }
 
             if amount_clean:
