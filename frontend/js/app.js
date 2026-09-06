@@ -66,6 +66,39 @@ const culturalNameField = document.getElementById("cultural-reg-name");
 const culturalBlockField = document.getElementById("cultural-reg-block");
 const culturalFlatField = document.getElementById("cultural-reg-flat");
 const culturalMobileField = document.getElementById("cultural-reg-mobile");
+
+// ===== Cultural Registration: auto-fill for a returning resident =====
+let culturalLastLookedUpMobile = "";
+
+async function lookupCulturalResident() {
+    if (!culturalMobileField) return;
+
+    const mobile = culturalMobileField.value.trim();
+
+    if (!/^\d{10}$/.test(mobile) || mobile === culturalLastLookedUpMobile) {
+        return;
+    }
+
+    culturalLastLookedUpMobile = mobile;
+
+    try {
+        const res = await fetch("/api/lookup-resident/" + encodeURIComponent(mobile));
+        const data = await res.json();
+
+        if (data.found) {
+            if (culturalNameField && !culturalNameField.value) culturalNameField.value = data.name;
+            if (culturalBlockField && !culturalBlockField.value) culturalBlockField.value = data.block;
+            if (culturalFlatField && !culturalFlatField.value) culturalFlatField.value = data.flat_number;
+        }
+    } catch (err) {
+        // Silent failure - this is a convenience, not a required step.
+    }
+}
+
+if (culturalMobileField) {
+    culturalMobileField.addEventListener("input", lookupCulturalResident);
+    culturalMobileField.addEventListener("blur", lookupCulturalResident);
+}
 const culturalOtherCheckbox = document.getElementById("cultural-other-checkbox");
 const culturalOtherDetailsField = document.getElementById("cultural-other-details");
 const culturalTrackField = document.getElementById("cultural-reg-track");
