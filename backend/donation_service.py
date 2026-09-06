@@ -3,7 +3,7 @@ import random
 import re
 import urllib.parse
 
-from backend.config import UPI_ID_GPAY, UPI_ID_PHONEPE
+from backend.config import UPI_ID, UPI_PAYEE_NAME
 from backend.qr_service import generate_qr_code
 from backend.database.database import save_donation, find_known_resident
 from backend.receipt_service import generate_receipt_pdf
@@ -307,7 +307,7 @@ Every contribution helps make this Ganesh festival memorable for our community.
             amount_clean = session["donation"]["amount"]
 
             upi_params = {
-                "pa": UPI_ID_PHONEPE,
+                "pa": UPI_ID,
                 "pn": payee_name,
                 "cu": "INR",
                 "tn": f"Ganesh Utsav Donation - Flat {flat_number}",
@@ -332,12 +332,15 @@ Every contribution helps make this Ganesh festival memorable for our community.
 
 <br>
 
-📱 GPay UPI ID : {UPI_ID_GPAY}
-📱 PhonePe UPI ID : {UPI_ID_PHONEPE}
+📱 UPI ID ({UPI_PAYEE_NAME}) : {UPI_ID}
 
 <p style="font-size:13px;color:#888;margin-top:16px;">On a computer? Scan this QR code with your phone's UPI app instead:</p>
 
 <img src="/{upi_qr_path}" style="width:160px;margin-top:6px;border-radius:12px;">
+
+<br><br>
+
+<a href="{upi_link}" style="display:inline-block;background:#ff9800;color:white;padding:14px 28px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:bold;">💳 Pay ₹{session['donation']['amount']} Now</a>
 
 <br><br>
 
