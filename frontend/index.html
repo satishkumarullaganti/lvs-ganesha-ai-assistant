@@ -168,6 +168,12 @@
                     <input type="text" id="sponsor-flat" placeholder="Flat Number" required>
                     <label style="font-size:13px;color:#555;">Preferred Date</label>
                     <input type="date" id="sponsor-date" required>
+                    <label style="font-size:13px;color:#555;">Slot</label>
+                    <select id="sponsor-slot" required>
+                        <option value="">Select Slot</option>
+                        <option value="Morning 8:30 AM">Morning - 8:30 AM</option>
+                        <option value="Evening 7:30 PM">Evening - 7:30 PM</option>
+                    </select>
                     <input type="text" id="sponsor-item" placeholder="Prasadam item (optional, e.g. Modak, Payasam)">
                     <textarea id="sponsor-notes" placeholder="Any notes for the coordinator (optional)" rows="2"></textarea>
                     <button type="button" onclick="submitSponsorRequest()" class="sponsor-submit-button">Submit Request</button>
