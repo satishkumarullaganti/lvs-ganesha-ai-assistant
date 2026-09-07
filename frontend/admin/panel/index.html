@@ -2922,13 +2922,26 @@ function applySectionRestrictions(section) {
     const cardsSection = document.querySelector(".cards");
     if (cardsSection) cardsSection.style.display = "none";
 
-    // Exporting stays a full-admin action for every section except
-    // Volunteers - the volunteer coordinator login is allowed to
-    // export its own (and only its own) data to Excel, matching the
-    // /admin/export/volunteers endpoint's access rules.
+    // A coordinator login can export their own section's data to
+    // Excel - e.g. the Cultural coordinator exports Cultural, the
+    // Volunteers coordinator exports Volunteers - matching the
+    // /admin/export/<section> endpoints, which now accept a login
+    // scoped to that same section (see admin_routes.py). Sections
+    // that don't have their own export endpoint (Announcements,
+    // Manage Logins, T-Shirt Orders, and the scan/upload panels)
+    // never show this toolbar in the first place, so no extra check
+    // is needed for those here.
+    const EXPORTABLE_SECTIONS = [
+        "registrations",
+        "cultural",
+        "volunteers",
+        "donations",
+        "annaprasada"
+    ];
     const exportBtn = document.querySelector(".export-btn");
     if (exportBtn) {
-        exportBtn.style.display = (section === "volunteers") ? "" : "none";
+        exportBtn.style.display =
+            EXPORTABLE_SECTIONS.includes(section) ? "" : "none";
     }
 
     // Hide every tab that isn't this login's assigned section,
