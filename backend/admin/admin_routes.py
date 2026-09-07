@@ -848,7 +848,7 @@ def export_registrations(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "registrations")
 
     workbook = create_excel_file(
         only_table="registrations"
@@ -883,7 +883,7 @@ def export_cultural(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "cultural")
 
     workbook = create_excel_file(
         only_table="cultural"
@@ -912,13 +912,15 @@ def export_cultural(
 # ============================================
 # Export Volunteers
 # ============================================
-# Unlike the other exports, a volunteers-section-restricted
-# login is also allowed here (not just a full admin) - the
-# volunteer coordinator's whole job is pulling this list into
-# Excel, so require_section_view is used instead of
-# require_full_admin. It still only ever returns the
-# volunteers sheet, and a login restricted to any other
-# section is rejected the same as before.
+# Every per-section export below (registrations, cultural,
+# volunteers, donations, annaprasada) uses require_section_view
+# rather than require_full_admin: a coordinator login scoped to
+# one section (e.g. Cultural, Volunteers) needs to pull their
+# own list into Excel for their own reference. Each route still
+# only ever returns its own single sheet, and a login scoped to
+# a different section is rejected exactly like the matching GET
+# view route. Only /export/all (every section combined) stays
+# full-admin only.
 
 @router.get("/export/volunteers")
 def export_volunteers(
@@ -960,7 +962,7 @@ def export_donations(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "donations")
 
     workbook = create_excel_file(
         only_table="donations"
@@ -995,7 +997,7 @@ def export_annaprasada(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "annaprasada")
 
     workbook = create_excel_file(
         only_table="annaprasada"
