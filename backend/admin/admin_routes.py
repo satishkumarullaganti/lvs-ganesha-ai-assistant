@@ -912,13 +912,20 @@ def export_cultural(
 # ============================================
 # Export Volunteers
 # ============================================
+# Unlike the other exports, a volunteers-section-restricted
+# login is also allowed here (not just a full admin) - the
+# volunteer coordinator's whole job is pulling this list into
+# Excel, so require_section_view is used instead of
+# require_full_admin. It still only ever returns the
+# volunteers sheet, and a login restricted to any other
+# section is rejected the same as before.
 
 @router.get("/export/volunteers")
 def export_volunteers(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "volunteers")
 
     workbook = create_excel_file(
         only_table="volunteers"
