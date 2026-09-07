@@ -111,7 +111,8 @@ def get_or_create_session_id(request: Request, response: Response) -> str:
         value=session_id,
         max_age=60 * 60 * 24 * 7,  # 7 days
         httponly=True,
-        samesite="lax"
+        samesite="lax",
+        secure=True
     )
 
     return session_id
@@ -129,7 +130,9 @@ create_tables()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://lvsganesha.duckdns.org",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -462,7 +465,8 @@ async def register_cultural(
     }
 
 
-@app.get("/cultural-registrations")
+# DISABLED 2026-09-07: unauthenticated PII leak, unused dead code
+# @app.get("/cultural-registrations")
 def cultural_registrations():
 
     rows = get_cultural_registrations()
@@ -577,7 +581,8 @@ def register_volunteer(data: VolunteerRequest):
     }
 
 
-@app.get("/volunteer-registrations")
+# DISABLED 2026-09-07: unauthenticated PII leak, unused dead code
+# @app.get("/volunteer-registrations")
 def volunteer_registrations():
 
     rows = get_volunteer_registrations()
@@ -1690,7 +1695,8 @@ document.addEventListener("DOMContentLoaded", function () {
 # View Registrations
 # ============================================
 
-@app.get("/registrations")
+# DISABLED 2026-09-07: unauthenticated PII leak, unused dead code
+# @app.get("/registrations")
 def registrations():    
 
     rows = get_registrations()
