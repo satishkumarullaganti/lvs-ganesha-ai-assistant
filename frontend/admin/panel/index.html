@@ -2922,9 +2922,14 @@ function applySectionRestrictions(section) {
     const cardsSection = document.querySelector(".cards");
     if (cardsSection) cardsSection.style.display = "none";
 
-    // Hide the Export button - exporting stays a full-admin action.
+    // Exporting stays a full-admin action for every section except
+    // Volunteers - the volunteer coordinator login is allowed to
+    // export its own (and only its own) data to Excel, matching the
+    // /admin/export/volunteers endpoint's access rules.
     const exportBtn = document.querySelector(".export-btn");
-    if (exportBtn) exportBtn.style.display = "none";
+    if (exportBtn) {
+        exportBtn.style.display = (section === "volunteers") ? "" : "none";
+    }
 
     // Hide every tab that isn't this login's assigned section,
     // and always hide "Manage Logins" (full-admin only).
