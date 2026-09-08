@@ -24,6 +24,63 @@ from backend.whatsapp_service import send_registration_confirmation
 from backend.validators import validate_flat_number
 
 
+# ============================================
+# Valid Competitions
+# ============================================
+# The competition step used to accept ANY free text and store it
+# verbatim (e.g. someone typing "Carrom Chess Tambola" saved that
+# whole phrase as one value on one registration row, instead of
+# three separate, countable registrations). This list is the single
+# source of truth for what a valid answer looks like - matched by
+# name (case/spacing-insensitive) or by its position in the menu
+# below (1-5), and always normalized to the exact display name so
+# duplicate-checking and the Excel export stay consistent.
+VALID_COMPETITIONS = [
+    "Drawing",
+    "Chess",
+    "Carrom",
+    "Tambola",
+    "Musical Chairs",
+]
+
+
+def _match_competition(message):
+    """
+    Returns the canonical competition name if the message names
+    exactly one valid competition (by number or by name), otherwise
+    None. None covers both "matched nothing" and "matched more than
+    one" - either way the caller should re-ask rather than guess.
+    """
+
+    cleaned = message.strip().lower()
+
+    if not cleaned:
+        return None
+
+    # Numeric shortcut - "1".."5", matching the menu order.
+    if cleaned.isdigit():
+
+        index = int(cleaned) - 1
+
+        if 0 <= index < len(VALID_COMPETITIONS):
+            return VALID_COMPETITIONS[index]
+
+        return None
+
+    # Name match - tolerate a trailing "s" (e.g. "carroms") and
+    # extra surrounding whitespace, but require the whole message
+    # to be just that one competition's name, not a substring of a
+    # longer message that could hide a second name in it.
+    for competition in VALID_COMPETITIONS:
+
+        canonical = competition.lower()
+
+        if cleaned in (canonical, canonical + "s"):
+            return competition
+
+    return None
+
+
 class RegistrationService:
 
     def __init__(self):
@@ -96,7 +153,23 @@ class RegistrationService:
         # Competition
         if step == "competition":
 
-            data["competition"] = message.title()
+            matched_competition = _match_competition(message)
+
+            if not matched_competition:
+
+                return (
+                    "❌ Please choose just ONE competition from the "
+                    "list below (type the name or its number):\n\n"
+                    "1. 🎨 Drawing\n"
+                    "2. ♟ Chess\n"
+                    "3. 🎲 Carrom\n"
+                    "4. 🎵 Tambola\n"
+                    "5. 🪑 Musical Chairs\n\n"
+                    "(Want more than one? Register again separately "
+                    "for each competition after this one is done.)"
+                )
+
+            data["competition"] = matched_competition
             session["step"] = "mobile"
 
             return "📱 Please enter your Mobile Number."
