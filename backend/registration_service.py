@@ -45,6 +45,7 @@ VALID_COMPETITIONS = [
     "Carrom",
     "Tambola",
     "Musical Chairs",
+    "Tug Of War",
 ]
 def _match_competition(message):
     """
@@ -116,7 +117,8 @@ class RegistrationService:
             "♟ Chess\n"
             "🎲 Carrom\n"
             "🎵 Tambola\n"
-            "🪑 Musical Chairs\n\n"
+            "🪑 Musical Chairs\n"
+            "🪢 Tug Of War\n\n"
             "(Type 'cancel' anytime to stop.)"
         )
     # ========================================
@@ -137,7 +139,8 @@ class RegistrationService:
                     "2. ♟ Chess\n"
                     "3. 🎲 Carrom\n"
                     "4. 🎵 Tambola\n"
-                    "5. 🪑 Musical Chairs\n\n"
+                    "5. 🪑 Musical Chairs\n"
+                    "6. 🪢 Tug Of War\n\n"
                     "(Want more than one? Register again separately "
                     "for each competition after this one is done.)"
                 )
