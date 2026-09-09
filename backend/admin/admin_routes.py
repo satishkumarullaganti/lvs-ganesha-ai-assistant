@@ -37,12 +37,21 @@ from backend.database.database import (
     add_admin_user,
     get_all_admin_users,
     delete_admin_user,
-    save_cultural_registration
+    save_cultural_registration,
+    save_annaprasada_booking
 )
 
-from backend.register_ocr_service import extract_register_rows, extract_cultural_signup_rows
+from backend.register_ocr_service import (
+    extract_register_rows,
+    extract_cultural_signup_rows,
+    extract_annaprasada_rows
+)
 from backend.validators import validate_flat_number
 from backend.donation_service import donation_service
+from backend.annaprasada_service import generate_coupon_id
+from backend.coupon_image_service import generate_annaprasada_coupon
+from backend.whatsapp_service import send_annaprasada_confirmation
+from backend.config import PUBLIC_BASE_URL
 
 # ============================================
 # Admin Router
@@ -804,6 +813,203 @@ def annaprasada(
     return {
         "columns": columns,
         "data": rows
+    }
+
+
+# ============================================
+# Annaprasada Coupon Register Scan
+# ============================================
+# Same pattern as the donation register scan and cultural
+# sign-up scan above: admin uploads a photo of the offline
+# coupon-handout register, Gemini extracts rows, the admin
+# reviews/corrects them, then confirmed rows are saved through
+# the exact same coupon generation + WhatsApp path as an online
+# booking (generate_coupon_id, save_annaprasada_booking,
+# generate_annaprasada_coupon, send_annaprasada_confirmation) -
+# just without a mobile number in most cases, in which case the
+# WhatsApp send is silently skipped (same as any booking with no
+# reachable number). Every row - online or from this scan - draws
+# its serial number from the same single auto-incrementing
+# counter, so scanned entries simply continue on from whatever
+# the last saved booking's number was; there's no separate
+# "offline" numbering.
+# ============================================
+
+ANNAPRASADA_SCANS_DIR = "static/register_scans"
+
+
+@router.post("/annaprasada-register/scan")
+async def admin_scan_annaprasada_register(
+    request: Request,
+    file: UploadFile = File(...)
+):
+
+    require_full_admin(request)
+
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.join(ANNAPRASADA_SCANS_DIR, unique_filename)
+
+    contents = await file.read()
+
+    with open(save_path, "wb") as f:
+        f.write(contents)
+
+    extracted_rows = extract_annaprasada_rows(save_path)
+
+    for row in extracted_rows:
+
+        block = row.get("block")
+        flat_number = row.get("flat_number")
+
+        if block and flat_number:
+            row["flat_valid"] = validate_flat_number(block, flat_number)
+        else:
+            row["flat_valid"] = False
+
+    return {
+        "extracted_rows": extracted_rows,
+        "row_count": len(extracted_rows)
+    }
+
+
+@router.post("/annaprasada-register/confirm")
+async def admin_confirm_annaprasada_register(
+    request: Request,
+    rows: list[dict]
+):
+
+    require_full_admin(request)
+
+    results = []
+
+    for row in rows:
+
+        name = (row.get("name") or "").strip()
+        block = row.get("block")
+        flat_number = (row.get("flat_number") or "").strip()
+        mobile = (row.get("mobile") or "").strip() or None
+        override_validation = bool(row.get("override_validation"))
+
+        members_raw = str(row.get("members") or "").strip()
+
+        if not name or not members_raw or not members_raw.isdigit() or int(members_raw) < 1:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Missing name, or members must be a whole number of 1 or more."
+            })
+            continue
+
+        members = members_raw
+
+        # Adults/children are rarely on paper - default to
+        # "everyone's an adult" (children 0) when not given,
+        # same assumption the review table pre-fills so the
+        # admin can see and correct it before confirming rather
+        # than it being silently guessed here.
+        adults_raw = str(row.get("adults") or "").strip()
+        children_raw = str(row.get("children") or "").strip()
+
+        if not adults_raw.isdigit() or not children_raw.isdigit() or (int(adults_raw) + int(children_raw)) != int(members):
+
+            adults = members
+            children = "0"
+
+        else:
+
+            adults = adults_raw
+            children = children_raw
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
+
+        try:
+
+            resolved_flat_number = flat_number or (row.get("raw_flat_text") or "Other").strip()
+
+            coupon_id = generate_coupon_id()
+
+            serial_number = save_annaprasada_booking(
+                coupon_id=coupon_id,
+                name=name,
+                block=block or "",
+                flat_number=resolved_flat_number,
+                members=members,
+                mobile=mobile,
+                adults=adults,
+                children=children
+            )
+
+            verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
+
+            coupon_path = generate_annaprasada_coupon(
+                coupon_id=coupon_id,
+                serial_number=serial_number,
+                name=name,
+                members=members,
+                verify_url=verify_url
+            )
+
+            whatsapp_sent = False
+
+            if mobile:
+
+                whatsapp_sent = send_annaprasada_confirmation(
+                    name=name,
+                    members=members,
+                    block=block or "",
+                    flat=resolved_flat_number,
+                    coupon_id=coupon_id,
+                    coupon_image_path=coupon_path,
+                    mobile_number=mobile
+                )
+
+            results.append({
+                "row": row,
+                "success": True,
+                "coupon_id": coupon_id,
+                "serial_number": serial_number,
+                "whatsapp_sent": whatsapp_sent
+            })
+
+        except Exception as error:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": str(error)
+            })
+
+    saved_count = sum(1 for r in results if r["success"])
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "annaprasada_register_scan_confirmed",
+        f"Saved {saved_count}/{len(rows)} register-scanned Annaprasada coupons"
+    )
+
+    return {
+        "results": results,
+        "saved_count": saved_count,
+        "total_count": len(rows)
     }
 
 
