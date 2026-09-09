@@ -141,6 +141,23 @@ def create_tables():
             "ALTER TABLE annaprasada_bookings ADD COLUMN children TEXT"
         )
 
+    # --------------------------------------------
+    # Migration: source distinguishes bookings made
+    # directly by residents through the chatbot
+    # ("online") from ones the admin entered from the
+    # physical paper register via the Annaprasada
+    # Register Scan ("offline") - defaults to "online"
+    # for every row that already existed before this
+    # column was added, since all bookings were
+    # online-only until the register scan feature
+    # shipped.
+    # --------------------------------------------
+
+    if "source" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN source TEXT DEFAULT 'online'"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS donations(
@@ -392,7 +409,7 @@ def check_duplicate_competition_registration(name, block, flat_number, competiti
 # Save Annaprasada Booking
 # ============================================
 
-def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None, adults=None, children=None):
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None, adults=None, children=None, source="online"):
 
     conn = get_connection()
 
@@ -418,11 +435,13 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         adults,
 
-        children
+        children,
+
+        source
 
     )
 
-    VALUES(?,?,?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -442,7 +461,9 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         adults,
 
-        children
+        children,
+
+        source
 
     ))
 
