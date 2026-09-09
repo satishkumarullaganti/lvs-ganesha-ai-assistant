@@ -941,6 +941,14 @@
 
             <button
                 class="tab"
+                data-type="annaprasada-scan">
+
+                🍛 Annaprasada Scan
+
+            </button>
+
+            <button
+                class="tab"
                 data-type="manage-logins">
 
                 👥 Manage Logins
@@ -1296,6 +1304,97 @@
                     </button>
 
                     <span id="cultural-scan-confirm-status" style="margin-left:14px;font-size:14px;"></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+<div id="annaprasada-scan-panel" style="display:none;">
+
+            <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:20px;">
+
+                <h3 style="margin-top:0;">🍛 Scan Annaprasada Coupon Register</h3>
+
+                <p style="color:#777;font-size:14px;margin-top:0;">
+                    Upload a photo of the offline register used when handing
+                    out Annaprasada coupons in person. Extracted entries will
+                    appear below for you to review and correct - Adults and
+                    Children usually aren't recorded on paper, so those
+                    default to "all adults" until you edit them. Each
+                    confirmed row generates a real coupon (with QR code) and
+                    sends it over WhatsApp if a mobile number is given.
+                </p>
+
+                <input
+                    type="file"
+                    id="annaprasada-scan-file-input"
+                    accept="image/*"
+                    style="margin-bottom:12px;"
+                >
+
+                <br>
+
+                <button
+                    id="annaprasada-scan-upload-btn"
+                    onclick="scanAnnaprasadaImage()"
+                    style="background:#ff9800;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:15px;cursor:pointer;">
+                    🔍 Scan Register
+                </button>
+
+                <span id="annaprasada-scan-status" style="margin-left:12px;font-size:14px;"></span>
+
+            </div>
+
+            <div id="annaprasada-scan-review-container" style="display:none;background:#fff;border-radius:12px;padding:20px;">
+
+                <h3 style="margin-top:0;">Review Extracted Entries</h3>
+
+                <p style="color:#777;font-size:14px;">
+                    Rows highlighted in red have an invalid flat number or
+                    missing data - please check and correct them before
+                    saving. "Raw Text" shows exactly what was read from the
+                    flat column. Check "Non-resident / Other" for entries
+                    like Security that aren't a resident flat.
+                </p>
+
+                <div style="overflow-x:auto;">
+
+                    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+
+                        <thead>
+                            <tr style="background:#fdf3e7;text-align:left;">
+                                <th style="padding:10px;border:1px solid #eee;">Name</th>
+                                <th style="padding:10px;border:1px solid #eee;">Raw Text</th>
+                                <th style="padding:10px;border:1px solid #eee;">Block</th>
+                                <th style="padding:10px;border:1px solid #eee;">Flat No</th>
+                                <th style="padding:10px;border:1px solid #eee;">Mobile</th>
+                                <th style="padding:10px;border:1px solid #eee;">Members</th>
+                                <th style="padding:10px;border:1px solid #eee;">Adults</th>
+                                <th style="padding:10px;border:1px solid #eee;">Children</th>
+                                <th style="padding:10px;border:1px solid #eee;">Non-resident / Other</th>
+                                <th style="padding:10px;border:1px solid #eee;">Remove</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="annaprasada-scan-rows-body">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div style="margin-top:16px;">
+
+                    <button
+                        onclick="confirmAnnaprasadaRegister()"
+                        style="background:#4caf50;color:white;border:none;border-radius:8px;padding:12px 26px;font-size:15px;font-weight:bold;cursor:pointer;">
+                        ✅ Confirm &amp; Save All
+                    </button>
+
+                    <span id="annaprasada-scan-confirm-status" style="margin-left:14px;font-size:14px;"></span>
 
                 </div>
 
@@ -2290,6 +2389,7 @@ document
                     const announcementsPanel = document.getElementById("announcements-panel");
                     const registerScanPanel = document.getElementById("register-scan-panel");
                     const culturalScanPanel = document.getElementById("cultural-scan-panel");
+                    const annaprasadaScanPanel = document.getElementById("annaprasada-scan-panel");
                     const prasadamPanel = document.getElementById("prasadam-panel");
                     const manageLoginsPanel = document.getElementById("manage-logins-panel");
                     const tshirtOrdersPanel = document.getElementById("tshirt-orders-panel");
@@ -2301,6 +2401,7 @@ document
                         announcementsPanel.style.display = "block";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2314,6 +2415,7 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "block";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2328,6 +2430,7 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "block";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2339,6 +2442,19 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "block";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
+                        if (prasadamPanel) prasadamPanel.style.display = "none";
+                        if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
+                        if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
+
+                    } else if (this.dataset.type === "annaprasada-scan") {
+
+                        tableContainer.style.display = "none";
+                        if (toolbar) toolbar.style.display = "none";
+                        announcementsPanel.style.display = "none";
+                        registerScanPanel.style.display = "none";
+                        if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "block";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2350,6 +2466,7 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "block";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -2363,6 +2480,7 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "block";
@@ -2376,6 +2494,7 @@ document
                         announcementsPanel.style.display = "none";
                         registerScanPanel.style.display = "none";
                         if (culturalScanPanel) culturalScanPanel.style.display = "none";
+                        if (annaprasadaScanPanel) annaprasadaScanPanel.style.display = "none";
                         if (prasadamPanel) prasadamPanel.style.display = "none";
                         if (manageLoginsPanel) manageLoginsPanel.style.display = "none";
                         if (tshirtOrdersPanel) tshirtOrdersPanel.style.display = "none";
@@ -3965,6 +4084,245 @@ async function confirmCulturalSignups() {
             document.getElementById("cultural-scan-review-container").style.display = "none";
             document.getElementById("cultural-scan-file-input").value = "";
             document.getElementById("cultural-scan-status").textContent = "";
+        }
+
+    } catch (error) {
+
+        confirmStatusEl.textContent = "❌ " + error.message;
+        confirmStatusEl.style.color = "#c62828";
+    }
+}
+
+
+// ============================================
+// Annaprasada Coupon Register Scan
+// ============================================
+
+async function scanAnnaprasadaImage() {
+
+    const fileInput = document.getElementById("annaprasada-scan-file-input");
+    const statusEl = document.getElementById("annaprasada-scan-status");
+    const reviewContainer = document.getElementById("annaprasada-scan-review-container");
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        statusEl.textContent = "❌ Please choose a photo first.";
+        statusEl.style.color = "#c62828";
+        return;
+    }
+
+    statusEl.textContent = "⏳ Scanning... this may take a few seconds.";
+    statusEl.style.color = "#777";
+
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    try {
+
+        const response = await fetch("/admin/annaprasada-register/scan", {
+            method: "POST",
+            credentials: "include",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Scan failed.");
+        }
+
+        if (!data.extracted_rows || data.extracted_rows.length === 0) {
+            statusEl.textContent = "⚠️ No entries could be read from this photo. Try a clearer image.";
+            statusEl.style.color = "#c62828";
+            reviewContainer.style.display = "none";
+            return;
+        }
+
+        statusEl.textContent = `✅ Extracted ${data.row_count} entr${data.row_count === 1 ? "y" : "ies"}. Review below.`;
+        statusEl.style.color = "#2e7d32";
+
+        renderAnnaprasadaScanRows(data.extracted_rows);
+        reviewContainer.style.display = "block";
+
+    } catch (error) {
+
+        statusEl.textContent = "❌ " + error.message;
+        statusEl.style.color = "#c62828";
+    }
+}
+
+function renderAnnaprasadaScanRows(rows) {
+
+    const tbody = document.getElementById("annaprasada-scan-rows-body");
+    tbody.innerHTML = "";
+
+    rows.forEach((row, index) => {
+
+        const tr = document.createElement("tr");
+        tr.dataset.rowIndex = index;
+
+        const isInvalid = !row.override_validation && (row.flat_valid === false
+            || !row.name || !row.members);
+
+        if (isInvalid) {
+            tr.style.background = "#ffebee";
+        }
+
+        const blockOptionsHtml = BLOCK_OPTIONS.map(b =>
+            `<option value="${b}" ${row.block === b ? "selected" : ""}>${b}</option>`
+        ).join("");
+
+        // Adults/Children are rarely on paper - if not both given
+        // (and don't already add up to Members), pre-fill Adults
+        // with the full Members count and Children with 0, same
+        // default the backend falls back to, so what's shown here
+        // matches what would actually be saved if left untouched.
+        const membersVal = row.members || "";
+        const adultsGiven = row.adults !== null && row.adults !== undefined && row.adults !== "";
+        const childrenGiven = row.children !== null && row.children !== undefined && row.children !== "";
+        const splitIsValid = adultsGiven && childrenGiven
+            && (parseInt(row.adults, 10) + parseInt(row.children, 10)) === parseInt(membersVal, 10);
+
+        const adultsVal = splitIsValid ? row.adults : membersVal;
+        const childrenVal = splitIsValid ? row.children : "0";
+
+        tr.innerHTML = `
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.name || ""}" data-field="name"
+                    style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;color:#888;font-size:13px;">
+                ${escapeHtml(row.raw_flat_text || "")}
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <select data-field="block" style="padding:6px;border:1px solid #ccc;border-radius:6px;">
+                    <option value="">--</option>
+                    ${blockOptionsHtml}
+                </select>
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.flat_number || ""}" data-field="flat_number"
+                    style="width:70px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="text" value="${row.mobile || ""}" data-field="mobile"
+                    style="width:110px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="number" min="1" value="${membersVal}" data-field="members"
+                    style="width:60px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="number" min="0" value="${adultsVal}" data-field="adults"
+                    style="width:60px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;">
+                <input type="number" min="0" value="${childrenVal}" data-field="children"
+                    style="width:60px;padding:6px;border:1px solid #ccc;border-radius:6px;">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <input type="checkbox" data-field="override_validation" onchange="renderAnnaprasadaScanRows(collectAnnaprasadaScanRows())">
+            </td>
+            <td style="padding:6px;border:1px solid #eee;text-align:center;">
+                <button onclick="this.closest('tr').remove()"
+                    style="background:#e57373;color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">
+                    ✕
+                </button>
+            </td>
+        `;
+
+        const overrideCheckbox = tr.querySelector('[data-field="override_validation"]');
+        if (overrideCheckbox) overrideCheckbox.checked = !!row.override_validation;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function collectAnnaprasadaScanRows() {
+
+    const tbody = document.getElementById("annaprasada-scan-rows-body");
+    const rowElements = tbody.querySelectorAll("tr");
+    const rows = [];
+
+    rowElements.forEach(tr => {
+
+        const getVal = (field) => {
+            const el = tr.querySelector(`[data-field="${field}"]`);
+            return el ? el.value.trim() : "";
+        };
+
+        const overrideEl = tr.querySelector('[data-field="override_validation"]');
+
+        rows.push({
+            name: getVal("name"),
+            block: getVal("block"),
+            flat_number: getVal("flat_number"),
+            raw_flat_text: tr.children[1] ? tr.children[1].textContent.trim() : "",
+            mobile: getVal("mobile") || null,
+            members: getVal("members"),
+            adults: getVal("adults"),
+            children: getVal("children"),
+            override_validation: overrideEl ? overrideEl.checked : false
+        });
+    });
+
+    return rows;
+}
+
+async function confirmAnnaprasadaRegister() {
+
+    const tbody = document.getElementById("annaprasada-scan-rows-body");
+    const confirmStatusEl = document.getElementById("annaprasada-scan-confirm-status");
+    const rowElements = tbody.querySelectorAll("tr");
+
+    if (rowElements.length === 0) {
+        confirmStatusEl.textContent = "❌ No rows to save.";
+        confirmStatusEl.style.color = "#c62828";
+        return;
+    }
+
+    const rows = collectAnnaprasadaScanRows();
+
+    confirmStatusEl.textContent = "⏳ Saving and generating coupons...";
+    confirmStatusEl.style.color = "#777";
+
+    try {
+
+        const response = await fetch("/admin/annaprasada-register/confirm", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(rows)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || "Save failed.");
+        }
+
+        confirmStatusEl.textContent =
+            `✅ Saved ${data.saved_count} of ${data.total_count} coupon(s).`;
+        confirmStatusEl.style.color = "#2e7d32";
+
+        data.results.forEach((result, index) => {
+
+            const tr = tbody.querySelector(`tr[data-row-index="${index}"]`);
+
+            if (result.success) {
+                if (tr) tr.remove();
+            } else {
+                if (tr) {
+                    tr.style.background = "#ffebee";
+                    tr.title = result.error;
+                }
+            }
+        });
+
+        if (data.saved_count === data.total_count) {
+
+            document.getElementById("annaprasada-scan-review-container").style.display = "none";
+            document.getElementById("annaprasada-scan-file-input").value = "";
+            document.getElementById("annaprasada-scan-status").textContent = "";
         }
 
     } catch (error) {
