@@ -977,6 +977,12 @@
         Loading...
     </div>
 
+    <div
+        id="members-count"
+        class="record-count"
+        style="display:none;">
+    </div>
+
     <div class="toolbar-right">
 
         <input
@@ -1702,6 +1708,49 @@ async function loadTable(type) {
 
         count.textContent =
             `${rows.length} record(s)`;
+
+
+        const membersCount =
+            document.getElementById(
+                "members-count"
+            );
+
+        if (type === "annaprasada") {
+
+            const membersIndex =
+                columns.indexOf("members");
+
+            let totalMembers = 0;
+
+            if (membersIndex !== -1) {
+
+                rows.forEach(row => {
+
+                    const raw =
+                        Array.isArray(row)
+                            ? row[membersIndex]
+                            : row["members"];
+
+                    const n = parseInt(raw, 10);
+
+                    if (!isNaN(n)) {
+                        totalMembers += n;
+                    }
+
+                });
+
+            }
+
+            membersCount.textContent =
+                `🍛 ${totalMembers} people coming`;
+
+            membersCount.style.display = "";
+
+        } else {
+
+            membersCount.style.display = "none";
+
+        }
 
 
         renderTable(
@@ -3443,6 +3492,61 @@ function filterTable() {
         "record-count"
     ).textContent =
         `${visibleCount} record(s)`;
+
+    if (currentType === "annaprasada") {
+
+        const headerCells =
+            table.querySelectorAll("thead th");
+
+        let membersColIndex = -1;
+
+        headerCells.forEach((th, idx) => {
+
+            if (
+                th.textContent.trim().toLowerCase() ===
+                "members"
+            ) {
+                membersColIndex = idx;
+            }
+
+        });
+
+        let totalMembers = 0;
+
+        if (membersColIndex !== -1) {
+
+            rows.forEach(row => {
+
+                if (row.style.display !== "none") {
+
+                    const cell =
+                        row.children[membersColIndex];
+
+                    if (cell) {
+
+                        const n = parseInt(
+                            cell.textContent.trim(),
+                            10
+                        );
+
+                        if (!isNaN(n)) {
+                            totalMembers += n;
+                        }
+
+                    }
+
+                }
+
+            });
+
+        }
+
+        document.getElementById(
+            "members-count"
+        ).textContent =
+            `🍛 ${totalMembers} people coming`;
+
+    }
 }
 /* ==========================================
    EXPORT Excel
