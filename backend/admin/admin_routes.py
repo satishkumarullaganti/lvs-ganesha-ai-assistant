@@ -945,7 +945,7 @@ async def admin_confirm_annaprasada_register(
 
             resolved_flat_number = flat_number or (row.get("raw_flat_text") or "Other").strip()
 
-            coupon_id = generate_coupon_id()
+            coupon_id = generate_coupon_id(source="offline")
 
             serial_number = save_annaprasada_booking(
                 coupon_id=coupon_id,
@@ -955,7 +955,8 @@ async def admin_confirm_annaprasada_register(
                 members=members,
                 mobile=mobile,
                 adults=adults,
-                children=children
+                children=children,
+                source="offline"
             )
 
             verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
