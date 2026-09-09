@@ -31,8 +31,23 @@ class BookingStatus(Enum):
 # Coupon ID Generator
 # ==========================================
 
-def generate_coupon_id(suffix_index=None):
-    base = "AP" + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
+def generate_coupon_id(suffix_index=None, source="online"):
+    """
+    source="online" (default) is used for coupons booked
+    through the chatbot itself - unchanged "AP..." prefix,
+    exactly as before.
+
+    source="offline" is used for coupons created from the
+    Admin Panel's Annaprasada Register Scan (OCR of the
+    physical paper register) - "APR..." prefix (R = Register),
+    so offline/paper entries are visually distinguishable
+    from online chatbot bookings just by looking at the
+    Coupon ID, without needing a separate DB column.
+    """
+
+    prefix = "AP" if source == "online" else "APR"
+
+    base = prefix + date.today().strftime("%Y%m%d") + str(random.randint(1000, 9999))
 
     if suffix_index is not None:
         base += f"-{suffix_index}"
@@ -344,7 +359,8 @@ Booking is now OPEN.
             members=booking["members"],
             mobile=booking["mobile"],
             adults=booking["adults"],
-            children=booking["children"]
+            children=booking["children"],
+            source="online"
         )
 
         verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
