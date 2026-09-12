@@ -51,6 +51,25 @@ const mobileField = document.getElementById("reg-mobile");
 const ageField = document.getElementById("reg-age");
 
 // ======================================
+// Competition/Game Registration status
+// ======================================
+// Mirrors backend/config.py's COMPETITION_REGISTRATIONS_OPEN.
+// Defaults to true so the card isn't wrongly blocked while the
+// status fetch below is still in flight; the server is the real
+// gatekeeper regardless (see /register in main.py).
+
+let competitionRegistrationsOpen = true;
+
+fetch("/registration-status")
+    .then(function (response) { return response.json(); })
+    .then(function (data) {
+        competitionRegistrationsOpen = data.competition_registrations_open;
+    })
+    .catch(function (error) {
+        console.log("Could not load registration status:", error);
+    });
+
+// ======================================
 // Cultural Programs Registration Modal
 // ======================================
 
@@ -191,9 +210,20 @@ userInput.addEventListener("keydown", function (event) {
 
 quickRegisterCard.addEventListener("click", function () {
 
+    if (!competitionRegistrationsOpen) {
+
+        alert(
+            "🚫 Competition/game registrations are now closed for " +
+            "this festival. If this is a mistake, please contact a volunteer."
+        );
+
+        return;
+
+    }
+
     registrationChoiceModal.style.display = "block";
 
-}); 
+});
 
 registerByForm.addEventListener("click", function () {
 

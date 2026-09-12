@@ -22,6 +22,7 @@ from backend.database.database import (
 )
 from backend.whatsapp_service import send_registration_confirmation
 from backend.validators import validate_flat_number
+from backend.config import COMPETITION_REGISTRATIONS_OPEN
 
 
 class RegistrationService:
@@ -67,6 +68,14 @@ class RegistrationService:
     # ========================================
 
     def start(self, session_id):
+
+        if not COMPETITION_REGISTRATIONS_OPEN:
+            return (
+                "🚫 Competition/game registrations are now closed "
+                "for this festival.\n\n"
+                "If this is a mistake, please contact a volunteer."
+            )
+
         session = self._get_session(session_id)
         session["active"] = True
         session["step"] = "competition"
@@ -79,7 +88,8 @@ class RegistrationService:
             "♟ Chess\n"
             "🎲 Carrom\n"
             "🎵 Tambola\n"
-            "🪑 Musical Chairs\n\n"
+            "🪑 Musical Chairs\n"
+            "🪢 Tug of War\n\n"
             "(Type 'cancel' anytime to stop.)"
         )
 

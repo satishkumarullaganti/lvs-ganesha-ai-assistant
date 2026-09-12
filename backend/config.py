@@ -44,6 +44,20 @@ BOOKING_OPEN_DATE = ANNAPRASADA_DATE - timedelta(days=2)
 BOOKING_CLOSE_DATE = date(2026, 9, 19)
 
 # ==========================================
+# Competition / Game Registrations
+# ==========================================
+# Master switch for competition (game) registrations - covers
+# both the web-form "/register" endpoint and the chatbot
+# registration flow (backend/registration_service.py).
+#
+# Set to False to freeze/close all new game/competition sign-ups
+# (existing registrations already saved are untouched). Set back
+# to True to reopen. Takes effect immediately after the server
+# restarts/reloads - no other code changes needed.
+
+COMPETITION_REGISTRATIONS_OPEN = False
+
+# ==========================================
 # Donation UPI Details
 # ==========================================
 

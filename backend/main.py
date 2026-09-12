@@ -43,7 +43,7 @@ from backend.push_service import (
     remove_subscription,
     send_push_to_all
 )
-from backend.config import VAPID_PUBLIC_KEY
+from backend.config import VAPID_PUBLIC_KEY, COMPETITION_REGISTRATIONS_OPEN
 from backend.database.database import (
     create_tables,
     get_registrations,
@@ -183,8 +183,26 @@ class RegistrationRequest(BaseModel):
 # Register API               
 # ============================================
 
+@app.get("/registration-status")
+def registration_status():
+
+    return {
+        "competition_registrations_open": COMPETITION_REGISTRATIONS_OPEN
+    }
+
+
 @app.post("/register")
 def register(data: RegistrationRequest):
+
+    if not COMPETITION_REGISTRATIONS_OPEN:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "🚫 Competition/game registrations are now closed "
+                "for this festival. If this is a mistake, please "
+                "contact a volunteer."
+            )
+        )
 
     if not validate_flat_number(data.block, data.flat):
 
