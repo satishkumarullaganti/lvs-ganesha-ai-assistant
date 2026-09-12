@@ -11,6 +11,7 @@ The competitions currently available through the festival application include:
 - Carrom Competition
 - Tambola Competition
 - Musical Chairs Competition
+- Tug Of War Competition
 
 The generic rules below are provided as general guidance. The festival committee may modify these rules based on the actual event arrangements.
 
@@ -179,6 +180,48 @@ The festival committee will confirm:
 - Reporting time
 - Number of rounds
 - Participation format
+- Safety arrangements
+- Prizes
+
+---
+
+# Tug Of War Competition
+
+## General Rules
+
+- Teams should be formed according to the format and team size announced by the organizers.
+- Team members should hold the rope only in the manner instructed by the organizers.
+- Participants should not wrap the rope around their hands, wrists, or body.
+- Teams should pull only after the start signal is given by the event coordinator.
+- A team should stop pulling immediately when the stop signal is given, even mid-pull.
+- Participants should not sit down, lie down, or drop suddenly while pulling.
+- Disputes about a pull or the marked center-line result should be referred to the event coordinator.
+- Participants should maintain good sportsmanship.
+
+## Basic Objective
+
+The objective is to pull the opposing team, and the marker on the rope, across the center line by the required distance.
+
+The winner will be determined according to the format and scoring announced by the organizers (for example, best of a set number of pulls).
+
+## Safety
+
+- Suitable footwear is recommended; participants should avoid slippery footwear.
+- The pulling area should be clear of obstacles, with adequate space behind each team.
+- Participants should release the rope immediately if instructed to do so for safety reasons.
+- Age and health should be considered before participating - this is a physically strenuous activity.
+- The event coordinator may stop or modify the activity if there is a safety concern.
+
+## Final Details
+
+The festival committee will confirm:
+
+- Team size
+- Age categories
+- Number of pulls / match format
+- Rope and marking arrangements
+- Venue
+- Reporting time
 - Safety arrangements
 - Prizes
 

@@ -260,6 +260,7 @@ The current volunteer sections include:
 - Carrom Competition
 - Tambola Competition
 - Musical Chairs Competition
+- Tug Of War Competition
 - Annaprasada Distribution
 - Registration Desk
 - Decoration & Setup
@@ -314,6 +315,7 @@ The current competition and activity categories include:
 - Carrom Competition
 - Tambola Competition
 - Musical Chairs Competition
+- Tug Of War Competition
 
 The festival schedule may contain additional competition activities.
 
@@ -364,6 +366,18 @@ When the music stops, participants try to sit on an available chair.
 A participant who does not get a chair may be eliminated according to the event format.
 
 Participants should not push, pull, or intentionally hurt another participant.
+
+---
+
+### What are the basic Tug Of War rules?
+
+Teams pull the rope only after the organizer's start signal, and stop immediately when the stop signal is given.
+
+Participants should not wrap the rope around their hands, wrists, or body, and should not sit or drop suddenly while pulling.
+
+The winning team is the one that pulls the rope's center marker across the line, according to the format announced by the organizers.
+
+This is a physically strenuous activity, so participants should consider their age and health before joining.
 
 ---
 

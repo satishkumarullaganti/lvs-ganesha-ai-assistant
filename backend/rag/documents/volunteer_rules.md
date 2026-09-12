@@ -24,6 +24,9 @@ Assist with participant coordination, distribution of materials, and event arran
 ### Musical Chairs Competition
 Assist with participant coordination, arranging the activity area, and general event support.
 
+### Tug Of War Competition
+Assist with participant/team coordination, rope and marking-line arrangements, and general event support.
+
 ### Annaprasada Distribution
 Assist with food distribution, queue management, coupon verification, cleanliness, and guiding residents.
 
@@ -62,6 +65,7 @@ Residents can volunteer for one or more of the following areas:
 - Carrom Competition
 - Tambola Competition
 - Musical Chairs Competition
+- Tug Of War Competition
 - Annaprasada Distribution
 - Registration Desk
 - Decoration & Setup

@@ -141,6 +141,23 @@ def create_tables():
             "ALTER TABLE annaprasada_bookings ADD COLUMN children TEXT"
         )
 
+    # --------------------------------------------
+    # Migration: source distinguishes bookings made
+    # directly by residents through the chatbot
+    # ("online") from ones the admin entered from the
+    # physical paper register via the Annaprasada
+    # Register Scan ("offline") - defaults to "online"
+    # for every row that already existed before this
+    # column was added, since all bookings were
+    # online-only until the register scan feature
+    # shipped.
+    # --------------------------------------------
+
+    if "source" not in annaprasada_existing_columns:
+        cursor.execute(
+            "ALTER TABLE annaprasada_bookings ADD COLUMN source TEXT DEFAULT 'online'"
+        )
+
     cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS donations(
@@ -223,6 +240,35 @@ def create_tables():
     )
 
     """)
+
+    # --------------------------------------------
+    # Migration: performance_order lets the committee
+    # plan and adjust the running order of performances
+    # on the day, without changing anything else about
+    # the registration itself. NULL means "not yet
+    # sequenced".
+    # --------------------------------------------
+
+    cursor.execute("PRAGMA table_info(cultural_registrations)")
+    cultural_existing_columns = [row[1] for row in cursor.fetchall()]
+
+    if "performance_order" not in cultural_existing_columns:
+        cursor.execute(
+            "ALTER TABLE cultural_registrations ADD COLUMN performance_order INTEGER"
+        )
+
+    # --------------------------------------------
+    # Migration: age - the physical cultural sign-up
+    # notebook records each participant's age (relevant
+    # for kids' categories), which the digital form never
+    # asked for. Stored as text since ages are sometimes
+    # written as "2.5" or with a "yrs" suffix.
+    # --------------------------------------------
+
+    if "age" not in cultural_existing_columns:
+        cursor.execute(
+            "ALTER TABLE cultural_registrations ADD COLUMN age TEXT"
+        )
 
     cursor.execute("""
 
@@ -363,7 +409,7 @@ def check_duplicate_competition_registration(name, block, flat_number, competiti
 # Save Annaprasada Booking
 # ============================================
 
-def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None, adults=None, children=None):
+def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booking_group_id=None, mobile=None, adults=None, children=None, source="online"):
 
     conn = get_connection()
 
@@ -389,11 +435,13 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         adults,
 
-        children
+        children,
+
+        source
 
     )
 
-    VALUES(?,?,?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -413,7 +461,9 @@ def save_annaprasada_booking(coupon_id, name, block, flat_number, members, booki
 
         adults,
 
-        children
+        children,
+
+        source
 
     ))
 
@@ -720,7 +770,8 @@ def save_cultural_registration(
         mobile,
         categories,
         other_details,
-        track_path
+        track_path,
+        age=None
 ):
 
     conn = get_connection()
@@ -743,11 +794,13 @@ def save_cultural_registration(
 
         other_details,
 
-        track_path
+        track_path,
+
+        age
 
     )
 
-    VALUES(?,?,?,?,?,?,?)
+    VALUES(?,?,?,?,?,?,?,?)
 
     """, (
 
@@ -763,7 +816,9 @@ def save_cultural_registration(
 
         other_details,
 
-        track_path
+        track_path,
+
+        age
 
     ))
 
@@ -788,7 +843,10 @@ def get_cultural_registrations():
 
     FROM cultural_registrations
 
-    ORDER BY id DESC
+    ORDER BY
+        CASE WHEN performance_order IS NULL THEN 1 ELSE 0 END,
+        performance_order ASC,
+        id DESC
 
     """)
 

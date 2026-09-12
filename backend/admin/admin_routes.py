@@ -36,12 +36,22 @@ from backend.database.database import (
     change_admin_password,
     add_admin_user,
     get_all_admin_users,
-    delete_admin_user
+    delete_admin_user,
+    save_cultural_registration,
+    save_annaprasada_booking
 )
 
-from backend.register_ocr_service import extract_register_rows
+from backend.register_ocr_service import (
+    extract_register_rows,
+    extract_cultural_signup_rows,
+    extract_annaprasada_rows
+)
 from backend.validators import validate_flat_number
 from backend.donation_service import donation_service
+from backend.annaprasada_service import generate_coupon_id
+from backend.coupon_image_service import generate_annaprasada_coupon
+from backend.whatsapp_service import send_annaprasada_confirmation
+from backend.config import PUBLIC_BASE_URL
 
 # ============================================
 # Admin Router
@@ -565,31 +575,43 @@ async def admin_confirm_register_donations(
         flat_number = (row.get("flat_number") or "").strip()
         amount = row.get("amount")
         mobile = row.get("mobile")
+        override_validation = bool(row.get("override_validation"))
 
-        if not name or not block or not flat_number or not amount:
-
-            results.append({
-                "row": row,
-                "success": False,
-                "error": "Missing required field (name, block, flat_number, or amount)."
-            })
-            continue
-
-        if not validate_flat_number(block, flat_number):
+        if not name or not amount:
 
             results.append({
                 "row": row,
                 "success": False,
-                "error": f"Invalid flat number '{flat_number}' for {block} block."
+                "error": "Missing required field (name or amount)."
             })
             continue
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
 
         try:
 
             result = donation_service.save_register_donation(
                 name=name,
-                block=block,
-                flat_number=flat_number,
+                block=block or "",
+                flat_number=flat_number or (row.get("raw_flat_text") or "Other").strip(),
                 amount=amount,
                 mobile=mobile
             )
@@ -625,6 +647,155 @@ async def admin_confirm_register_donations(
 
 
 # ============================================
+# Cultural Program Sign-up Notebook Scan
+# ============================================
+# Separate from the donation register scan above - this reads
+# the physical sign-up notebook for cultural performances and
+# saves entries into the same cultural_registrations table a
+# normal app registration uses, so they show up identically in
+# this admin panel. track_path is always left empty (None) -
+# no performance track was collected on paper, same as a normal
+# registration where the track upload is optional. Category is
+# not captured on paper, so the admin picks it per row here.
+# ============================================
+
+CULTURAL_SIGNUP_SCANS_DIR = "static/register_scans"
+
+
+@router.post("/cultural-register/scan")
+async def admin_scan_cultural_signups(
+    request: Request,
+    file: UploadFile = File(...)
+):
+
+    require_full_admin(request)
+
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.join(CULTURAL_SIGNUP_SCANS_DIR, unique_filename)
+
+    contents = await file.read()
+
+    with open(save_path, "wb") as f:
+        f.write(contents)
+
+    extracted_rows = extract_cultural_signup_rows(save_path)
+
+    for row in extracted_rows:
+
+        block = row.get("block")
+        flat_number = row.get("flat_number")
+
+        if block and flat_number:
+            row["flat_valid"] = validate_flat_number(block, flat_number)
+        else:
+            row["flat_valid"] = False
+
+    return {
+        "extracted_rows": extracted_rows,
+        "row_count": len(extracted_rows)
+    }
+
+
+@router.post("/cultural-register/confirm")
+async def admin_confirm_cultural_signups(
+    request: Request,
+    rows: list[dict]
+):
+
+    require_full_admin(request)
+
+    results = []
+
+    for row in rows:
+
+        name = (row.get("name") or "").strip()
+        mobile = (row.get("mobile") or "").strip() or None
+        age = (row.get("age") or "").strip() or None
+        block = row.get("block")
+        flat_number = (row.get("flat_number") or "").strip()
+        categories = (row.get("categories") or "").strip()
+        override_validation = bool(row.get("override_validation"))
+
+        if not name:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Missing name."
+            })
+            continue
+
+        if not categories:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Please select at least one category for this entry."
+            })
+            continue
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
+
+        try:
+
+            save_cultural_registration(
+                name=name,
+                block=block or "",
+                flat_number=flat_number or (row.get("raw_flat_text") or "Other").strip(),
+                mobile=mobile,
+                categories=categories,
+                other_details=None,
+                track_path=None,
+                age=age
+            )
+
+            results.append({
+                "row": row,
+                "success": True
+            })
+
+        except Exception as error:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": str(error)
+            })
+
+    saved_count = sum(1 for r in results if r["success"])
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "cultural_signup_scan_confirmed",
+        f"Saved {saved_count}/{len(rows)} cultural sign-up entries"
+    )
+
+    return {
+        "results": results,
+        "saved_count": saved_count,
+        "total_count": len(rows)
+    }
+
+
+# ============================================
 # Annaprasada
 # ============================================
 
@@ -642,6 +813,204 @@ def annaprasada(
     return {
         "columns": columns,
         "data": rows
+    }
+
+
+# ============================================
+# Annaprasada Coupon Register Scan
+# ============================================
+# Same pattern as the donation register scan and cultural
+# sign-up scan above: admin uploads a photo of the offline
+# coupon-handout register, Gemini extracts rows, the admin
+# reviews/corrects them, then confirmed rows are saved through
+# the exact same coupon generation + WhatsApp path as an online
+# booking (generate_coupon_id, save_annaprasada_booking,
+# generate_annaprasada_coupon, send_annaprasada_confirmation) -
+# just without a mobile number in most cases, in which case the
+# WhatsApp send is silently skipped (same as any booking with no
+# reachable number). Every row - online or from this scan - draws
+# its serial number from the same single auto-incrementing
+# counter, so scanned entries simply continue on from whatever
+# the last saved booking's number was; there's no separate
+# "offline" numbering.
+# ============================================
+
+ANNAPRASADA_SCANS_DIR = "static/register_scans"
+
+
+@router.post("/annaprasada-register/scan")
+async def admin_scan_annaprasada_register(
+    request: Request,
+    file: UploadFile = File(...)
+):
+
+    require_full_admin(request)
+
+    unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
+    save_path = os.path.join(ANNAPRASADA_SCANS_DIR, unique_filename)
+
+    contents = await file.read()
+
+    with open(save_path, "wb") as f:
+        f.write(contents)
+
+    extracted_rows = extract_annaprasada_rows(save_path)
+
+    for row in extracted_rows:
+
+        block = row.get("block")
+        flat_number = row.get("flat_number")
+
+        if block and flat_number:
+            row["flat_valid"] = validate_flat_number(block, flat_number)
+        else:
+            row["flat_valid"] = False
+
+    return {
+        "extracted_rows": extracted_rows,
+        "row_count": len(extracted_rows)
+    }
+
+
+@router.post("/annaprasada-register/confirm")
+async def admin_confirm_annaprasada_register(
+    request: Request,
+    rows: list[dict]
+):
+
+    require_full_admin(request)
+
+    results = []
+
+    for row in rows:
+
+        name = (row.get("name") or "").strip()
+        block = row.get("block")
+        flat_number = (row.get("flat_number") or "").strip()
+        mobile = (row.get("mobile") or "").strip() or None
+        override_validation = bool(row.get("override_validation"))
+
+        members_raw = str(row.get("members") or "").strip()
+
+        if not name or not members_raw or not members_raw.isdigit() or int(members_raw) < 1:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": "Missing name, or members must be a whole number of 1 or more."
+            })
+            continue
+
+        members = members_raw
+
+        # Adults/children are rarely on paper - default to
+        # "everyone's an adult" (children 0) when not given,
+        # same assumption the review table pre-fills so the
+        # admin can see and correct it before confirming rather
+        # than it being silently guessed here.
+        adults_raw = str(row.get("adults") or "").strip()
+        children_raw = str(row.get("children") or "").strip()
+
+        if not adults_raw.isdigit() or not children_raw.isdigit() or (int(adults_raw) + int(children_raw)) != int(members):
+
+            adults = members
+            children = "0"
+
+        else:
+
+            adults = adults_raw
+            children = children_raw
+
+        if not override_validation:
+
+            if not block or not flat_number:
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": "Missing block or flat number. Check the 'Non-resident / Other' box if this isn't a resident flat."
+                })
+                continue
+
+            if not validate_flat_number(block, flat_number):
+
+                results.append({
+                    "row": row,
+                    "success": False,
+                    "error": f"Invalid flat number '{flat_number}' for {block} block."
+                })
+                continue
+
+        try:
+
+            resolved_flat_number = flat_number or (row.get("raw_flat_text") or "Other").strip()
+
+            coupon_id = generate_coupon_id(source="offline")
+
+            serial_number = save_annaprasada_booking(
+                coupon_id=coupon_id,
+                name=name,
+                block=block or "",
+                flat_number=resolved_flat_number,
+                members=members,
+                mobile=mobile,
+                adults=adults,
+                children=children,
+                source="offline"
+            )
+
+            verify_url = f"{PUBLIC_BASE_URL}/verify/{coupon_id}"
+
+            coupon_path = generate_annaprasada_coupon(
+                coupon_id=coupon_id,
+                serial_number=serial_number,
+                name=name,
+                members=members,
+                verify_url=verify_url
+            )
+
+            whatsapp_sent = False
+
+            if mobile:
+
+                whatsapp_sent = send_annaprasada_confirmation(
+                    name=name,
+                    members=members,
+                    block=block or "",
+                    flat=resolved_flat_number,
+                    coupon_id=coupon_id,
+                    coupon_image_path=coupon_path,
+                    mobile_number=mobile
+                )
+
+            results.append({
+                "row": row,
+                "success": True,
+                "coupon_id": coupon_id,
+                "serial_number": serial_number,
+                "whatsapp_sent": whatsapp_sent
+            })
+
+        except Exception as error:
+
+            results.append({
+                "row": row,
+                "success": False,
+                "error": str(error)
+            })
+
+    saved_count = sum(1 for r in results if r["success"])
+
+    log_admin_activity(
+        get_current_admin_username(request),
+        "annaprasada_register_scan_confirmed",
+        f"Saved {saved_count}/{len(rows)} register-scanned Annaprasada coupons"
+    )
+
+    return {
+        "results": results,
+        "saved_count": saved_count,
+        "total_count": len(rows)
     }
 
 
@@ -686,7 +1055,7 @@ def export_registrations(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "registrations")
 
     workbook = create_excel_file(
         only_table="registrations"
@@ -721,7 +1090,7 @@ def export_cultural(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "cultural")
 
     workbook = create_excel_file(
         only_table="cultural"
@@ -750,13 +1119,22 @@ def export_cultural(
 # ============================================
 # Export Volunteers
 # ============================================
+# Every per-section export below (registrations, cultural,
+# volunteers, donations, annaprasada) uses require_section_view
+# rather than require_full_admin: a coordinator login scoped to
+# one section (e.g. Cultural, Volunteers) needs to pull their
+# own list into Excel for their own reference. Each route still
+# only ever returns its own single sheet, and a login scoped to
+# a different section is rejected exactly like the matching GET
+# view route. Only /export/all (every section combined) stays
+# full-admin only.
 
 @router.get("/export/volunteers")
 def export_volunteers(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "volunteers")
 
     workbook = create_excel_file(
         only_table="volunteers"
@@ -791,7 +1169,7 @@ def export_donations(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "donations")
 
     workbook = create_excel_file(
         only_table="donations"
@@ -826,7 +1204,7 @@ def export_annaprasada(
     request: Request
 ):
 
-    require_full_admin(request)
+    require_section_view(request, "annaprasada")
 
     workbook = create_excel_file(
         only_table="annaprasada"
