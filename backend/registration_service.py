@@ -313,6 +313,27 @@ Type **yes** to confirm and submit, or **edit** to re-enter your name/block/flat
         if step == "confirm_details":
             answer = message.strip().lower()
             if answer in ["yes", "y", "confirm", "correct", "ok", "okay"]:
+                # Re-check for a duplicate right before saving. The
+                # first check (at the Age step) happens before this
+                # confirmation screen is shown, so nothing is saved
+                # to the DB yet at that point - if the same person
+                # restarts the flow, or "yes" gets sent/processed
+                # twice, that first check alone won't catch it. This
+                # second check, right at the actual save, closes
+                # that gap.
+                if check_duplicate_competition_registration(
+                    name=data["name"],
+                    block=data["block"],
+                    flat_number=data["flat_number"],
+                    competition=data["competition"]
+                ):
+                    session["active"] = False
+                    session["step"] = None
+                    session["data"] = {}
+                    return (
+                        f"❌ You've already registered for {data['competition']}.\n\n"
+                        "If this is a mistake, please contact a volunteer."
+                    )
                 save_registration(
                     data["name"],
                     data["block"],

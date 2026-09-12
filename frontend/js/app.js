@@ -1830,6 +1830,39 @@ function speakText(buttonElement, text) {
 // keeps the home page's Daily Prasadam section current
 // without needing a page reload.
 
+// How long (in minutes) after the last time mentioned in an
+// entry's "Distribution Time" text it should keep showing on
+// the home page before disappearing on its own. A date in the
+// past (before today) is always hidden regardless of this.
+const PRASADAM_HIDE_BUFFER_MINUTES = 60;
+
+// Pulls the LAST "H:MM AM/PM" occurrence out of a distribution
+// time string (handles both a single time like "8:30 AM
+// onwards" and a range like "8:30 AM - 9:30 AM", using the end
+// of the range in the range case). Returns null if nothing
+// parseable is found, so callers can fall back to showing the
+// entry for the whole day rather than guessing wrong.
+function parseLastTimeFromText(text) {
+
+    if (!text) return null;
+
+    const matches = Array.from(text.matchAll(/(\d{1,2}):(\d{2})\s*([APap][Mm])/g));
+
+    if (matches.length === 0) return null;
+
+    const last = matches[matches.length - 1];
+
+    let hour = parseInt(last[1], 10);
+    const minute = parseInt(last[2], 10);
+    const meridiem = last[3].toUpperCase();
+
+    if (meridiem === "PM" && hour !== 12) hour += 12;
+    if (meridiem === "AM" && hour === 12) hour = 0;
+
+    return { hour: hour, minute: minute };
+
+}
+
 function loadDailyPrasadam() {
 
     fetch("/api/daily-prasadam")
@@ -1840,14 +1873,39 @@ function loadDailyPrasadam() {
 
             if (!container) return;
 
-            const entries = data.entries || [];
+            const now = new Date();
+            const todayString = now.toISOString().slice(0, 10);
+
+            // Only keep entries that are still relevant: a future
+            // date always shows, a past date never shows, and
+            // today's entry disappears once its listed time (plus
+            // the buffer above) has passed - if no time could be
+            // parsed from the free-text field, it stays visible
+            // for the rest of the day rather than guessing wrong.
+            const entries = (data.entries || []).filter(function (entry) {
+
+                if (!entry.date) return true;
+
+                if (entry.date > todayString) return true;
+
+                if (entry.date < todayString) return false;
+
+                const parsedTime = parseLastTimeFromText(entry.time_slot);
+
+                if (!parsedTime) return true;
+
+                const hideAt = new Date(entry.date + "T00:00:00");
+                hideAt.setHours(parsedTime.hour, parsedTime.minute, 0, 0);
+                hideAt.setMinutes(hideAt.getMinutes() + PRASADAM_HIDE_BUFFER_MINUTES);
+
+                return now < hideAt;
+
+            });
 
             if (entries.length === 0) {
                 container.innerHTML = "<p style='color:#888;text-align:center;'>No prasadam schedule posted yet.</p>";
                 return;
             }
-
-            const todayString = new Date().toISOString().slice(0, 10);
 
             container.innerHTML = entries.map(function (entry) {
 

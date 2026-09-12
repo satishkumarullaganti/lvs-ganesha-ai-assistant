@@ -12,6 +12,8 @@
 
     <title>LVS Admin Dashboard</title>
 
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
     <style>
 
         * {
@@ -2698,6 +2700,7 @@ async function deactivateAnnouncementAdmin(id) {
 ========================================== */
 
 let currentEditingPrasadamId = null;
+let currentPrefillSponsorRequestId = null;
 let loadedPrasadamEntries = {};
 
 async function loadPrasadamAdminList() {
@@ -2821,6 +2824,11 @@ async function submitPrasadamEntry() {
         statusEl.textContent = isEditing ? "✅ Updated." : "✅ Added.";
         statusEl.style.color = "#4CAF50";
 
+        if (currentPrefillSponsorRequestId !== null) {
+            setSponsorRequestStatus(currentPrefillSponsorRequestId, "handled");
+            currentPrefillSponsorRequestId = null;
+        }
+
         cancelPrasadamEdit();
         loadPrasadamAdminList();
 
@@ -2838,6 +2846,7 @@ function editPrasadamEntry(id) {
     if (!entry) return;
 
     currentEditingPrasadamId = entry.id;
+    currentPrefillSponsorRequestId = null;
 
     document.getElementById("prasadam-date-input").value = entry.date || "";
     document.getElementById("prasadam-items-input").value = entry.items || "";
@@ -2856,6 +2865,7 @@ function editPrasadamEntry(id) {
 function cancelPrasadamEdit() {
 
     currentEditingPrasadamId = null;
+    currentPrefillSponsorRequestId = null;
 
     document.getElementById("prasadam-date-input").value = "";
     document.getElementById("prasadam-items-input").value = "";
@@ -2988,9 +2998,12 @@ function useSponsorRequestForEntry(id) {
     document.getElementById("prasadam-time-input").value = r.slot ? r.slot.replace("Morning ", "").replace("Evening ", "") : "";
     document.getElementById("prasadam-sponsor-input").value = r.name + " (" + r.block + " " + r.flat_number + ")";
 
+    document.getElementById("prasadam-form-heading").textContent = "🍛 Add Daily Prasadam Entry (from sponsor request)";
+    document.getElementById("prasadam-cancel-edit-btn").style.display = "inline-block";
+
     document.getElementById("prasadam-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 
-    setSponsorRequestStatus(id, "handled");
+    currentPrefillSponsorRequestId = id;
 
 }
 
@@ -3552,89 +3565,92 @@ function filterTable() {
    EXPORT Excel
 ========================================== */
 
-async function exportExcel() {
+function exportExcel() {
 
     try {
 
-        const exportEndpoints = {
+        const table =
+            document.querySelector(
+                "#table-container table"
+            );
 
-            registrations:
-                "/admin/export/registrations",
-
-            cultural:
-                "/admin/export/cultural",
-
-            volunteers:
-                "/admin/export/volunteers",
-
-            donations:
-                "/admin/export/donations",
-
-            annaprasada:
-                "/admin/export/annaprasada"
-
-        };
-
-
-        const endpoint =
-            exportEndpoints[currentType];
-
-
-        if (!endpoint) {
+        if (!table) {
 
             throw new Error(
-                "Invalid data type"
+                "No data to export."
             );
 
         }
 
 
-        const response =
-            await fetch(
-                endpoint,
-                {
-                    credentials:
-                        "include"
-                }
+        const headerCells =
+            Array.from(
+                table.querySelectorAll(
+                    "thead th"
+                )
             );
 
+        const skipIndexes =
+            headerCells
+                .map((th, i) => ({
+                    i,
+                    text: th.textContent.trim().toLowerCase()
+                }))
+                .filter(h => h.text === "actions")
+                .map(h => h.i);
 
-        if (response.status === 401) {
-
-            window.location.href =
-                "/admin/";
-
-            return;
-
-        }
+        const headers =
+            headerCells
+                .map(th => th.textContent.trim())
+                .filter((_, i) => !skipIndexes.includes(i));
 
 
-        if (!response.ok) {
+        const visibleRows =
+            Array.from(
+                table.querySelectorAll(
+                    "tbody tr"
+                )
+            ).filter(
+                row => row.style.display !== "none"
+            );
+
+        if (visibleRows.length === 0) {
 
             throw new Error(
-                "Excel export failed"
+                "No records match the current search - nothing to export."
             );
 
         }
 
 
-        const blob =
-            await response.blob();
+        const dataRows =
+            visibleRows.map(row => {
+
+                const cells =
+                    Array.from(
+                        row.querySelectorAll("td")
+                    );
+
+                return cells
+                    .filter((_, i) => !skipIndexes.includes(i))
+                    .map(td => td.textContent.trim());
+
+            });
 
 
-        const url =
-            window.URL.createObjectURL(
-                blob
+        const worksheet =
+            XLSX.utils.aoa_to_sheet(
+                [headers, ...dataRows]
             );
 
+        const workbook =
+            XLSX.utils.book_new();
 
-        const link =
-            document.createElement(
-                "a"
-            );
-
-
-        link.href = url;
+        XLSX.utils.book_append_sheet(
+            workbook,
+            worksheet,
+            "Data"
+        );
 
 
         const fileNames = {
@@ -3656,24 +3672,32 @@ async function exportExcel() {
 
         };
 
+        const baseFileName =
+            fileNames[currentType] ||
+            "export.xlsx";
 
-        link.download =
-            fileNames[currentType];
+        const searchInput =
+            document.getElementById(
+                "search-input"
+            );
+
+        const searchText =
+            searchInput ?
+                searchInput.value.trim() :
+                "";
+
+        const fileName =
+            searchText ?
+                baseFileName.replace(
+                    ".xlsx",
+                    "_filtered.xlsx"
+                ) :
+                baseFileName;
 
 
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-        link.remove();
-
-
-        window.URL.revokeObjectURL(
-            url
+        XLSX.writeFile(
+            workbook,
+            fileName
         );
 
 
